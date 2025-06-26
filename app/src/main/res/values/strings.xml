@@ -1,3 +1,6 @@
 <resources>
-    <string name="app_name">What-should-I-wear-today</string>
+    <string name="app_name">오늘 뭐 입을까?</string>
+    <string name="title_style">스타일</string>
+    <string name="title_home">홈</string>
+    <string name="title_closet">옷장</string>
 </resources>

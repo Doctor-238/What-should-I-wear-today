@@ -3,6 +3,7 @@ plugins {
     id("org.jetbrains.kotlin.android")
     id("kotlin-kapt")
     id("kotlin-parcelize")
+    id("org.jetbrains.kotlin.plugin.serialization")
 }
 
 android {
@@ -52,6 +53,7 @@ dependencies {
 
     // 로컬 데이터베이스
     implementation("androidx.room:room-runtime:2.6.1")
+    implementation("com.google.android.gms:play-services-mlkit-subject-segmentation:16.0.0-beta1")
     kapt("androidx.room:room-compiler:2.6.1")
     implementation("androidx.room:room-ktx:2.6.1")
 
@@ -64,8 +66,10 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.0")
 
     // AI 기능
-    implementation("com.google.mlkit:image-labeling:17.0.8")
-    implementation("com.google.mlkit:segmentation-selfie:16.0.0-beta5")
+    implementation("com.google.ai.client.generativeai:generativeai:0.6.0")
+
+    // [확인] SDK가 사용하는 직렬화 라이브러리
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
 
     // 위치 정보
     implementation("com.google.android.gms:play-services-location:21.3.0")
@@ -74,4 +78,9 @@ dependencies {
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
+
+    implementation("com.jakewharton.retrofit:retrofit2-kotlinx-serialization-converter:1.0.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("com.squareup.retrofit2:retrofit:2.11.0")
 }
