@@ -43,6 +43,7 @@ import java.util.Locale
 // AI 응답을 위한 데이터 클래스
 @Serializable
 data class ClothingAnalysis(
+    val is_wearable: Boolean,
     val category: String,
     val length_score: Int,
     val thickness_score: Int
@@ -135,10 +136,12 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing) {
             // 배경 제거에 성공했을 때만 스위치를 보여주고 활성화합니다.
             if (didSegmentationSucceed) {
                 switchRemoveBackground.visibility = View.VISIBLE
-                switchRemoveBackground.isChecked = false
+                switchRemoveBackground.isChecked = false // 기본으로 OFF
             } else {
                 switchRemoveBackground.visibility = View.GONE
-                Toast.makeText(requireContext(), "배경 제거 실패. 원본 이미지를 사용합니다.", Toast.LENGTH_SHORT).show()
+                if (originalBitmap != null) { // 분석은 성공했으나 배경제거만 실패한 경우
+                    Toast.makeText(requireContext(), "배경 제거 실패. 원본 이미지를 사용합니다.", Toast.LENGTH_SHORT).show()
+                }
             }
         } else {
             // 분석 중이거나 IDLE 상태일 때는 스위치를 숨깁니다.
@@ -153,29 +156,35 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing) {
     private fun startAiAnalysis(bitmap: Bitmap) {
         lifecycleScope.launch(Dispatchers.IO) {
             try {
-
-
                 val resizedBitmap = resizeBitmap(bitmap)
                 val inputContent = content {
                     image(resizedBitmap)
                     text("""
                         Please analyze the clothing item in this image and respond only in a valid JSON format.
-                        The JSON object should contain these exact keys: "category", "length_score", and "thickness_score".
-                        - "category" must be one of the following strings: '상의', '하의', '아우터', '신발', '가방', '모자', '기타'.
-                        - "length_score" must be an integer between 0 (shortest(end at shoulder) and 20 (longest(end at hand)).
+                        The JSON object should contain these exact keys: "is_wearable", "category", "length_score", and "thickness_score".
+                        - "is_wearable" must be a boolean (true if it's a wearable fashion item, false otherwise, for example an apple).
+                        - "category" must be one of the following strings: '상의', '하의', '아우터', '신발', '가방', '모자', '기타'. '기타' is for wearable items that don't fit other categories like a scarf. If "is_wearable" is false, set category to "해당 없음".
+                        - "length_score" must be an integer between 0 (shortest, end at shoulder) and 20 (longest, end at hand).
                         - "thickness_score" must be an integer between 1 (thinnest) and 10 (thickest).
                         Do not include any other text or explanations.
                     """.trimIndent())
                 }
 
                 val response = generativeModel.generateContent(inputContent)
-                clothingAnalysisResult = Json { ignoreUnknownKeys = true }.decodeFromString<ClothingAnalysis>(response.text!!)
+                val analysisResult = Json { ignoreUnknownKeys = true }.decodeFromString<ClothingAnalysis>(response.text!!)
 
                 withContext(Dispatchers.Main) {
-                    segmentWithMask(bitmap)
+                    if (!analysisResult.is_wearable) {
+                        handleAiFailure("올바른 사진을 입력해주세요")
+                    } else {
+                        clothingAnalysisResult = analysisResult
+                        segmentWithMask(bitmap) // 수치 기반 배경 제거 로직 호출
+                    }
                 }
             } catch (e: Exception) {
-                withContext(Dispatchers.Main) { handleAiFailure("분석 실패: ${e.message}") }
+                withContext(Dispatchers.Main) {
+                    handleAiFailure("분석 실패: ${e.message}")
+                }
             }
         }
     }
@@ -215,7 +224,7 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing) {
     }
 
     private fun handleAiSuccess(didSegmentationSucceed: Boolean) {
-        //imageViewPreview.setImageBitmap(processedBitmap)
+        imageViewPreview.setImageBitmap(originalBitmap) // 항상 원본을 먼저 보여줌
         clothingAnalysisResult?.let {
             textViewAiResult.text = "분류:${it.category}, 기장:${it.length_score}, 두께:${it.thickness_score}"
         }
@@ -253,9 +262,7 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing) {
                     category = analysis.category,
                     suitableTemperature = finalTemperature
                 )
-
                 AppDatabase.getDatabase(requireContext()).clothingDao().insert(newClothingItem)
-
                 withContext(Dispatchers.Main) {
                     Toast.makeText(requireContext(), "'$name'(${finalTemperature}°C)이(가) 옷장에 추가!", Toast.LENGTH_SHORT).show()
                     findNavController().popBackStack()
@@ -305,7 +312,7 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing) {
         val maskHeight = mask.height
         for (y in 0 until maskHeight) {
             for (x in 0 until maskWidth) {
-                if (maskBuffer.float > 0.0000000000001f) {
+                if (maskBuffer.float > 0.000000000000000000001f) {
                     maskedBitmap.setPixel(x, y, original.getPixel(x, y))
                 }
             }
