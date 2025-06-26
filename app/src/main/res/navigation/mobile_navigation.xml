@@ -25,6 +25,19 @@
         <action
             android:id="@+id/action_navigation_closet_to_addClothingFragment"
             app:destination="@id/addClothingFragment" />
+        <action
+            android:id="@+id/action_navigation_closet_to_editClothingFragment"
+            app:destination="@id/editClothingFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/editClothingFragment"
+        android:name="com.yehyun.whatshouldiweartoday.ui.closet.EditClothingFragment"
+        android:label="fragment_edit_clothing"
+        tools:layout="@layout/fragment_edit_clothing" >
+        <argument
+            android:name="clothingItemId"
+            app:argType="integer" />
     </fragment>
 
     <fragment
@@ -32,5 +45,7 @@
         android:name="com.yehyun.whatshouldiweartoday.ui.closet.AddClothingFragment"
         android:label="AddClothingFragment"
         tools:layout="@layout/fragment_add_clothing" />
+
+
 
 </navigation>

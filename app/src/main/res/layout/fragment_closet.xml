@@ -6,6 +6,45 @@
     android:layout_height="match_parent"
     tools:context=".ui.closet.ClosetFragment">
 
+    <!-- 검색창 -->
+    <androidx.appcompat.widget.SearchView
+        android:id="@+id/search_view_closet"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_margin="8dp"
+        android:background="@drawable/bg_dotted_border"
+        app:iconifiedByDefault="false"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:queryHint="옷 이름을 검색하세요" />
+
+    <!-- 카테고리 탭 -->
+    <com.google.android.material.tabs.TabLayout
+        android:id="@+id/tab_layout_category"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/search_view_closet"
+        app:tabMode="scrollable" />
+
+    <!-- 옷 목록을 보여줄 RecyclerView -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/recyclerView_closet"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:clipToPadding="false"
+        android:paddingHorizontal="4dp"
+        app:layoutManager="androidx.recyclerview.widget.GridLayoutManager"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/tab_layout_category"
+        app:spanCount="2"
+        tools:listitem="@layout/item_clothing" />
+
+    <!-- '옷 추가' 화면으로 이동하는 동그란 '+' 버튼 -->
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/fab_add_clothing"
         android:layout_width="wrap_content"

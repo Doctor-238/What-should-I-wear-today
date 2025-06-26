@@ -103,7 +103,6 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing) {
         imageViewPreview.setOnClickListener { openGallery() }
         buttonSave.setOnClickListener { saveClothingItem() }
 
-        // 스위치 상태 변경 리스너 설정
         switchRemoveBackground.setOnCheckedChangeListener { _, isChecked ->
             if (isChecked) {
                 imageViewPreview.setImageBitmap(processedBitmap)
@@ -133,18 +132,16 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing) {
         imageViewPreview.isClickable = state == UiState.IDLE
 
         if (isAnalyzed) {
-            // 배경 제거에 성공했을 때만 스위치를 보여주고 활성화합니다.
             if (didSegmentationSucceed) {
                 switchRemoveBackground.visibility = View.VISIBLE
                 switchRemoveBackground.isChecked = false // 기본으로 OFF
             } else {
                 switchRemoveBackground.visibility = View.GONE
-                if (originalBitmap != null) { // 분석은 성공했으나 배경제거만 실패한 경우
+                if (originalBitmap != null) {
                     Toast.makeText(requireContext(), "배경 제거 실패. 원본 이미지를 사용합니다.", Toast.LENGTH_SHORT).show()
                 }
             }
         } else {
-            // 분석 중이거나 IDLE 상태일 때는 스위치를 숨깁니다.
             switchRemoveBackground.visibility = View.GONE
         }
     }
@@ -156,6 +153,7 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing) {
     private fun startAiAnalysis(bitmap: Bitmap) {
         lifecycleScope.launch(Dispatchers.IO) {
             try {
+                // [요청사항 반영] 불필요한 API Key 확인 코드 완전 삭제
                 val resizedBitmap = resizeBitmap(bitmap)
                 val inputContent = content {
                     image(resizedBitmap)
@@ -178,7 +176,8 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing) {
                         handleAiFailure("올바른 사진을 입력해주세요")
                     } else {
                         clothingAnalysisResult = analysisResult
-                        segmentWithMask(bitmap) // 수치 기반 배경 제거 로직 호출
+                        // [요청사항 반영] 원래의 수치 기반 배경 제거 로직 호출
+                        segmentWithMask(bitmap)
                     }
                 }
             } catch (e: Exception) {
@@ -254,11 +253,18 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing) {
         val finalTemperature = calculateSuitableTemperature(analysis.category, analysis.length_score, analysis.thickness_score)
 
         lifecycleScope.launch(Dispatchers.IO) {
-            val imagePath = saveBitmapToInternalStorage(bitmapToSave)
-            if (imagePath != null) {
+            val originalImagePath = saveBitmapToInternalStorage(originalBitmap!!, "original_")
+            val processedImagePath = if (processedBitmap != null && !originalBitmap!!.sameAs(processedBitmap)) {
+                saveBitmapToInternalStorage(processedBitmap!!, "processed_")
+            } else {
+                null
+            }
+
+            if (originalImagePath != null) {
                 val newClothingItem = ClothingItem(
                     name = name,
-                    imageUri = imagePath,
+                    imageUri = originalImagePath,
+                    processedImageUri = processedImagePath,
                     category = analysis.category,
                     suitableTemperature = finalTemperature
                 )
@@ -277,19 +283,16 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing) {
 
     private fun calculateSuitableTemperature(category: String, lengthScore: Int, thickness: Int): Int {
         val baseTemp = when (category) {
-            "상의" -> 28
-            "하의" -> 26
-            "아우터" -> 20
-            else -> 22
+            "상의" -> 28; "하의" -> 26; "아우터" -> 20; else -> 22
         }
         val lengthAdjustment = lengthScore * -1.5
         val thicknessAdjustment = (thickness - 1) * -4
         return (baseTemp + lengthAdjustment + thicknessAdjustment).toInt()
     }
 
-    private fun saveBitmapToInternalStorage(bitmap: Bitmap): String? {
+    private fun saveBitmapToInternalStorage(bitmap: Bitmap, prefix: String): String? {
         val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
-        val fileName = "clothing_$timeStamp.png"
+        val fileName = "$prefix$timeStamp.png"
         val directory = requireContext().filesDir
         try {
             val file = File(directory, fileName)
@@ -304,7 +307,7 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing) {
         }
     }
 
-    // 요청하신 0.4f 수치 기반 배경 제거 함수
+    // [요청사항 반영] 0.000000000000000000001f 수치 기반 배경 제거 함수
     private fun createBitmapWithMask(original: Bitmap, mask: SegmentationMask): Bitmap {
         val maskedBitmap = Bitmap.createBitmap(original.width, original.height, Bitmap.Config.ARGB_8888)
         val maskBuffer = mask.buffer
@@ -312,6 +315,7 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing) {
         val maskHeight = mask.height
         for (y in 0 until maskHeight) {
             for (x in 0 until maskWidth) {
+                // 거의 0에 가까운 임계값, 아주 약간이라도 전경일 확률이 있으면 픽셀을 복사합니다.
                 if (maskBuffer.float > 0.000000000000000000001f) {
                     maskedBitmap.setPixel(x, y, original.getPixel(x, y))
                 }
