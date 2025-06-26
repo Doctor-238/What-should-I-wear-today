@@ -67,7 +67,7 @@ dependencies {
 
     // AI 기능
     implementation("com.google.ai.client.generativeai:generativeai:0.6.0")
-
+    implementation("com.google.mlkit:segmentation-selfie:16.0.0-beta5")
     // [확인] SDK가 사용하는 직렬화 라이브러리
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
 

@@ -58,17 +58,29 @@
 
             <TextView
                 android:id="@+id/textView_ai_result"
-                android:layout_width="wrap_content"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
                 android:textSize="16sp"
                 android:textStyle="bold"
                 android:visibility="gone"
-                app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/imageView_clothing_preview"
-                tools:text="인식 결과: 상의, 기장점수: 7"
+                tools:text="분류:상의, 기장:7, 두께:3"
                 tools:visibility="visible" />
+
+            <!-- 배경 제거 토글 스위치 (평소에는 숨김) -->
+            <com.google.android.material.switchmaterial.SwitchMaterial
+                android:id="@+id/switch_remove_background"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="배경 제거"
+                android:textSize="16sp"
+                android:visibility="gone"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/imageView_clothing_preview"
+                tools:visibility="visible"/>
 
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/textInputLayout_name"
@@ -79,7 +91,7 @@
                 android:hint="옷 이름"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/textView_ai_result">
+                app:layout_constraintTop_toBottomOf="@id/switch_remove_background">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/editText_clothing_name"
@@ -88,29 +100,10 @@
                     android:inputType="text" />
             </com.google.android.material.textfield.TextInputLayout>
 
-            <TextView
-                android:id="@+id/textView_thickness_label"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:text="두께를 선택해주세요 (1:얇음 ~ 5:두꺼움)"
-                android:visibility="gone"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/textInputLayout_name"
-                tools:visibility="visible" />
-
-            <RatingBar
-                android:id="@+id/ratingBar_thickness"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:numStars="5"
-                android:stepSize="1.0"
-                android:visibility="gone"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/textView_thickness_label"
-                tools:visibility="visible" />
+            <!-- 두께 입력 UI는 삭제 (Gemini가 분석) -->
 
         </androidx.constraintlayout.widget.ConstraintLayout>
+
     </ScrollView>
 
     <Button

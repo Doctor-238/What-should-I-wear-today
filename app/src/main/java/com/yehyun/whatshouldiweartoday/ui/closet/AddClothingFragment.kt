@@ -11,6 +11,7 @@ import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
@@ -18,7 +19,12 @@ import com.google.ai.client.generativeai.GenerativeModel
 import com.google.ai.client.generativeai.type.GenerationConfig
 import com.google.ai.client.generativeai.type.content
 import com.google.android.material.appbar.MaterialToolbar
+import com.google.android.material.switchmaterial.SwitchMaterial
 import com.google.android.material.textfield.TextInputEditText
+import com.google.mlkit.vision.common.InputImage
+import com.google.mlkit.vision.segmentation.Segmentation
+import com.google.mlkit.vision.segmentation.SegmentationMask
+import com.google.mlkit.vision.segmentation.selfie.SelfieSegmenterOptions
 import com.yehyun.whatshouldiweartoday.R
 import com.yehyun.whatshouldiweartoday.data.database.AppDatabase
 import com.yehyun.whatshouldiweartoday.data.database.ClothingItem
@@ -53,12 +59,13 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing) {
     private lateinit var toolbar: MaterialToolbar
     private lateinit var textViewAiResult: TextView
     private lateinit var progressBar: ProgressBar
+    private lateinit var switchRemoveBackground: SwitchMaterial
 
     // --- 상태 변수 ---
     private var originalBitmap: Bitmap? = null
+    private var processedBitmap: Bitmap? = null
     private var clothingAnalysisResult: ClothingAnalysis? = null
 
-    // Gemini AI 모델을 나중에 초기화하도록 변경
     private lateinit var generativeModel: GenerativeModel
 
     private val pickImageLauncher = registerForActivityResult(
@@ -75,34 +82,9 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing) {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
         initializeGenerativeModel()
         setupViews(view)
-        toolbar.setNavigationOnClickListener { findNavController().popBackStack() }
-        imageViewPreview.setOnClickListener { openGallery() }
-        buttonSave.setOnClickListener { saveClothingItem() }
-    }
-
-    private fun initializeGenerativeModel() {
-        val apiKey = getString(R.string.gemini_api_key)
-
-        val config = GenerationConfig.Builder().apply {
-            this.responseMimeType = "application/json"
-        }.build()
-
-        generativeModel = GenerativeModel(
-            modelName = "gemini-1.5-flash-latest",
-            apiKey = apiKey,
-            generationConfig = config
-        )
-    }
-
-    private fun updateUiState(state: UiState) {
-        progressBar.visibility = if (state == UiState.ANALYZING) View.VISIBLE else View.GONE
-        val isAnalyzed = state == UiState.ANALYZED
-        textViewAiResult.visibility = if (isAnalyzed) View.VISIBLE else View.GONE
-        buttonSave.isEnabled = isAnalyzed
-        imageViewPreview.isClickable = state == UiState.IDLE
+        setupListeners()
     }
 
     private fun setupViews(view: View) {
@@ -112,6 +94,56 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing) {
         toolbar = view.findViewById(R.id.toolbar)
         textViewAiResult = view.findViewById(R.id.textView_ai_result)
         progressBar = view.findViewById(R.id.progressBar)
+        switchRemoveBackground = view.findViewById(R.id.switch_remove_background)
+    }
+
+    private fun setupListeners() {
+        toolbar.setNavigationOnClickListener { findNavController().popBackStack() }
+        imageViewPreview.setOnClickListener { openGallery() }
+        buttonSave.setOnClickListener { saveClothingItem() }
+
+        // 스위치 상태 변경 리스너 설정
+        switchRemoveBackground.setOnCheckedChangeListener { _, isChecked ->
+            if (isChecked) {
+                imageViewPreview.setImageBitmap(processedBitmap)
+            } else {
+                imageViewPreview.setImageBitmap(originalBitmap)
+            }
+        }
+    }
+
+    private fun initializeGenerativeModel() {
+        val apiKey = getString(R.string.gemini_api_key)
+        val config = GenerationConfig.Builder().apply {
+            responseMimeType = "application/json"
+        }.build()
+        generativeModel = GenerativeModel(
+            modelName = "gemini-1.5-flash-latest",
+            apiKey = apiKey,
+            generationConfig = config
+        )
+    }
+
+    private fun updateUiState(state: UiState, didSegmentationSucceed: Boolean = false) {
+        progressBar.visibility = if (state == UiState.ANALYZING) View.VISIBLE else View.GONE
+        val isAnalyzed = state == UiState.ANALYZED
+        textViewAiResult.visibility = if (isAnalyzed) View.VISIBLE else View.GONE
+        buttonSave.isEnabled = isAnalyzed
+        imageViewPreview.isClickable = state == UiState.IDLE
+
+        if (isAnalyzed) {
+            // 배경 제거에 성공했을 때만 스위치를 보여주고 활성화합니다.
+            if (didSegmentationSucceed) {
+                switchRemoveBackground.visibility = View.VISIBLE
+                switchRemoveBackground.isChecked = false
+            } else {
+                switchRemoveBackground.visibility = View.GONE
+                Toast.makeText(requireContext(), "배경 제거 실패. 원본 이미지를 사용합니다.", Toast.LENGTH_SHORT).show()
+            }
+        } else {
+            // 분석 중이거나 IDLE 상태일 때는 스위치를 숨깁니다.
+            switchRemoveBackground.visibility = View.GONE
+        }
     }
 
     private fun openGallery() {
@@ -121,41 +153,47 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing) {
     private fun startAiAnalysis(bitmap: Bitmap) {
         lifecycleScope.launch(Dispatchers.IO) {
             try {
-                if (generativeModel.apiKey.isBlank() || generativeModel.apiKey == "ここにあなたのAPIキーを貼り付けてください") {
-                    withContext(Dispatchers.Main) {
-                        handleAiFailure("secrets.xml 파일에 Gemini API 키를 입력해주세요.")
-                    }
-                    return@launch
-                }
+
 
                 val resizedBitmap = resizeBitmap(bitmap)
-
                 val inputContent = content {
                     image(resizedBitmap)
                     text("""
                         Please analyze the clothing item in this image and respond only in a valid JSON format.
                         The JSON object should contain these exact keys: "category", "length_score", and "thickness_score".
                         - "category" must be one of the following strings: '상의', '하의', '아우터', '신발', '가방', '모자', '기타'.
-                        - "length_score" must be an integer between 0 (shortest) and 10 (longest).
-                        - "thickness_score" must be an integer between 1 (thinnest) and 5 (thickest).
+                        - "length_score" must be an integer between 0 (shortest(end at shoulder) and 20 (longest(end at hand)).
+                        - "thickness_score" must be an integer between 1 (thinnest) and 10 (thickest).
                         Do not include any other text or explanations.
                     """.trimIndent())
                 }
 
                 val response = generativeModel.generateContent(inputContent)
-
                 clothingAnalysisResult = Json { ignoreUnknownKeys = true }.decodeFromString<ClothingAnalysis>(response.text!!)
 
                 withContext(Dispatchers.Main) {
-                    handleAiSuccess()
+                    segmentWithMask(bitmap)
                 }
-
             } catch (e: Exception) {
-                withContext(Dispatchers.Main) {
-                    handleAiFailure("분석 실패: ${e.message}")
-                }
+                withContext(Dispatchers.Main) { handleAiFailure("분석 실패: ${e.message}") }
             }
         }
+    }
+
+    // 수치 기반 배경 제거 로직
+    private fun segmentWithMask(originalBitmap: Bitmap) {
+        val segmenter = Segmentation.getClient(SelfieSegmenterOptions.Builder().setDetectorMode(SelfieSegmenterOptions.SINGLE_IMAGE_MODE).build())
+        segmenter.process(InputImage.fromBitmap(originalBitmap, 0))
+            .addOnSuccessListener { mask ->
+                processedBitmap = createBitmapWithMask(originalBitmap, mask)
+                // 성공 여부를 판단하기 위해, 원본과 결과물이 다른지 비교
+                val succeed = !originalBitmap.sameAs(processedBitmap)
+                handleAiSuccess(didSegmentationSucceed = succeed)
+            }
+            .addOnFailureListener {
+                processedBitmap = originalBitmap
+                handleAiSuccess(didSegmentationSucceed = false)
+            }
     }
 
     private fun resizeBitmap(bitmap: Bitmap, maxDimension: Int = 512): Bitmap {
@@ -176,11 +214,12 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing) {
         return Bitmap.createScaledBitmap(bitmap, resizedWidth, resizedHeight, false)
     }
 
-    private fun handleAiSuccess() {
+    private fun handleAiSuccess(didSegmentationSucceed: Boolean) {
+        //imageViewPreview.setImageBitmap(processedBitmap)
         clothingAnalysisResult?.let {
             textViewAiResult.text = "분류:${it.category}, 기장:${it.length_score}, 두께:${it.thickness_score}"
         }
-        updateUiState(UiState.ANALYZED)
+        updateUiState(UiState.ANALYZED, didSegmentationSucceed)
     }
 
     private fun handleAiFailure(message: String) {
@@ -189,8 +228,13 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing) {
     }
 
     private fun saveClothingItem() {
+        val bitmapToSave = if (switchRemoveBackground.isVisible && switchRemoveBackground.isChecked) {
+            processedBitmap
+        } else {
+            originalBitmap
+        }
+
         val name = editTextName.text.toString().trim()
-        val bitmapToSave = originalBitmap
         val analysis = clothingAnalysisResult
 
         if (name.isEmpty() || bitmapToSave == null || analysis == null) {
@@ -251,5 +295,22 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing) {
             e.printStackTrace()
             return null
         }
+    }
+
+    // 요청하신 0.4f 수치 기반 배경 제거 함수
+    private fun createBitmapWithMask(original: Bitmap, mask: SegmentationMask): Bitmap {
+        val maskedBitmap = Bitmap.createBitmap(original.width, original.height, Bitmap.Config.ARGB_8888)
+        val maskBuffer = mask.buffer
+        val maskWidth = mask.width
+        val maskHeight = mask.height
+        for (y in 0 until maskHeight) {
+            for (x in 0 until maskWidth) {
+                if (maskBuffer.float > 0.0000000000001f) {
+                    maskedBitmap.setPixel(x, y, original.getPixel(x, y))
+                }
+            }
+        }
+        maskBuffer.rewind()
+        return maskedBitmap
     }
 }
