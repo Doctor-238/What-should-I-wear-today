@@ -20,4 +20,5 @@ class ClothingRepository(private val clothingDao: ClothingDao) {
     fun getItemById(id: Int): LiveData<ClothingItem> = clothingDao.getItemById(id)
     suspend fun update(item: ClothingItem) = clothingDao.update(item)
     suspend fun delete(item: ClothingItem) = clothingDao.delete(item)
+    suspend fun getAllItemsList(): List<ClothingItem> = clothingDao.getAllItemsList()
 }

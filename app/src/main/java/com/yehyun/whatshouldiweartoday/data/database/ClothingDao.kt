@@ -16,7 +16,6 @@ interface ClothingDao {
     @Query("SELECT * FROM clothing_items WHERE id = :id")
     fun getItemById(id: Int): LiveData<ClothingItem>
 
-    // 모든 정렬 쿼리를 포함
     @Query("SELECT * FROM clothing_items WHERE (:category = '전체' OR category = :category) AND name LIKE '%' || :query || '%' ORDER BY timestamp DESC")
     fun getItemsOrderByRecent(query: String, category: String): LiveData<List<ClothingItem>>
 
@@ -34,4 +33,8 @@ interface ClothingDao {
 
     @Query("SELECT * FROM clothing_items WHERE (:category = '전체' OR category = :category) AND name LIKE '%' || :query || '%' ORDER BY suitableTemperature DESC")
     fun getItemsOrderByTempDesc(query: String, category: String): LiveData<List<ClothingItem>>
+
+    // [추가] 옷 목록 전체를 LiveData가 아닌, List 형태로 직접 가져오는 명령어
+    @Query("SELECT * FROM clothing_items")
+    suspend fun getAllItemsList(): List<ClothingItem>
 }
