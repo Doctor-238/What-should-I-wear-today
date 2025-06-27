@@ -10,7 +10,8 @@ data class ClothingItem(
     val name: String,
     val imageUri: String,
     val processedImageUri: String?,
-    val useProcessedImage: Boolean = true,
+    var useProcessedImage: Boolean,
     val category: String,
-    val suitableTemperature: Int
+    val suitableTemperature: Int,
+    val timestamp: Long = System.currentTimeMillis()
 )

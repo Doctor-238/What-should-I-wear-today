@@ -2,6 +2,9 @@ package com.yehyun.whatshouldiweartoday.ui.closet
 
 import android.os.Bundle
 import android.view.View
+import android.widget.AdapterView
+import android.widget.ArrayAdapter
+import android.widget.Spinner
 import androidx.appcompat.widget.SearchView
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -22,6 +25,7 @@ class ClosetFragment : Fragment(R.layout.fragment_closet) {
         setupRecyclerView(view)
         setupTabs(view)
         setupSearch(view)
+        setupSortSpinner(view)
 
         view.findViewById<FloatingActionButton>(R.id.fab_add_clothing).setOnClickListener {
             findNavController().navigate(R.id.action_navigation_closet_to_addClothingFragment)
@@ -33,12 +37,7 @@ class ClosetFragment : Fragment(R.layout.fragment_closet) {
     }
 
     private fun setupRecyclerView(view: View) {
-        // 어댑터를 생성할 때, 클릭 시 실행될 동작을 람다로 전달합니다.
         clothingAdapter = ClothingAdapter { clickedItem ->
-            // [중요] 아래 코드가 오류 없이 작동하려면,
-            // 1. Safe Args 플러그인이 build.gradle에 모두 설정되어 있어야 하고,
-            // 2. mobile_navigation.xml 파일에 'editClothingFragment'와 관련 action이 정확히 정의되어 있어야 합니다.
-            // 3. EditClothingFragment.kt 파일이 존재해야 합니다.
             val action = ClosetFragmentDirections.actionNavigationClosetToEditClothingFragment(clickedItem.id)
             findNavController().navigate(action)
         }
@@ -74,5 +73,21 @@ class ClosetFragment : Fragment(R.layout.fragment_closet) {
                 return true
             }
         })
+    }
+
+    private fun setupSortSpinner(view: View) {
+        val spinner = view.findViewById<Spinner>(R.id.spinner_sort)
+        val sortOptions = listOf("최신순", "오래된 순", "이름 오름차순", "이름 내림차순", "온도 오름차순", "온도 내림차순")
+
+        val adapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, sortOptions)
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        spinner.adapter = adapter
+
+        spinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                viewModel.setSortType(sortOptions[position])
+            }
+            override fun onNothingSelected(parent: AdapterView<*>?) {}
+        }
     }
 }

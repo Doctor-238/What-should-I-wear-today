@@ -12,21 +12,13 @@ import kotlinx.coroutines.launch
 class EditClothingViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository: ClothingRepository
-
     init {
         val clothingDao = AppDatabase.getDatabase(application).clothingDao()
         repository = ClothingRepository(clothingDao)
     }
 
-    // 특정 ID의 옷 정보를 가져오는 함수
-    fun getClothingItem(id: Int): LiveData<ClothingItem> {
-        return repository.getItemById(id)
-    }
-
-    // 옷 정보를 업데이트하는 함수
-    fun updateClothingItem(item: ClothingItem) {
-        viewModelScope.launch {
-            repository.update(item)
-        }
-    }
+    fun getClothingItem(id: Int): LiveData<ClothingItem> = repository.getItemById(id)
+    fun updateClothingItem(item: ClothingItem) = viewModelScope.launch { repository.update(item) }
+    // [추가] 삭제 기능
+    fun deleteClothingItem(item: ClothingItem) = viewModelScope.launch { repository.delete(item) }
 }

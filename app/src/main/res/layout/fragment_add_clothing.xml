@@ -29,34 +29,46 @@
             android:layout_height="wrap_content"
             android:padding="16dp">
 
-            <ImageView
-                android:id="@+id/imageView_clothing_preview"
+            <!-- [변경] 사진 표시 영역을 FrameLayout으로 감싸서 아이콘과 이미지를 겹치게 합니다. -->
+            <FrameLayout
+                android:id="@+id/frameLayout_preview"
                 android:layout_width="0dp"
                 android:layout_height="0dp"
                 android:background="@drawable/bg_dotted_border"
-                android:clickable="true"
-                android:focusable="true"
                 android:padding="16dp"
-                android:scaleType="centerInside"
-                android:src="@drawable/ic_add_photo"
                 app:layout_constraintDimensionRatio="1:1"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent" />
+                app:layout_constraintTop_toTopOf="parent">
 
-            <ProgressBar
-                android:id="@+id/progressBar"
-                style="?android:attr/progressBarStyle"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:visibility="gone"
-                app:layout_constraintBottom_toBottomOf="@id/imageView_clothing_preview"
-                app:layout_constraintEnd_toEndOf="@id/imageView_clothing_preview"
-                app:layout_constraintStart_toStartOf="@id/imageView_clothing_preview"
-                app:layout_constraintTop_toTopOf="@id/imageView_clothing_preview"
-                tools:visibility="visible" />
+                <!-- [추가] 기본 카메라 아이콘을 위한 ImageView -->
+                <ImageView
+                    android:id="@+id/imageView_placeholder"
+                    android:layout_width="64dp"
+                    android:layout_height="64dp"
+                    android:layout_gravity="center"
+                    android:src="@drawable/ic_add_photo"
+                    app:tint="#AEAEAE" />
 
-            <!-- AI 분석 결과를 보여줄 텍스트뷰 -->
+                <!-- [수정] 사용자가 선택한 사진을 보여줄 ImageView -->
+                <ImageView
+                    android:id="@+id/imageView_clothing_preview"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:scaleType="fitCenter" />
+
+                <ProgressBar
+                    android:id="@+id/progressBar"
+                    style="?android:attr/progressBarStyle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:visibility="gone"
+                    tools:visibility="visible" />
+            </FrameLayout>
+
             <TextView
                 android:id="@+id/textView_ai_result"
                 android:layout_width="0dp"
@@ -69,11 +81,10 @@
                 android:visibility="gone"
                 app:layout_constraintEnd_toStartOf="@+id/switch_remove_background"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/imageView_clothing_preview"
+                app:layout_constraintTop_toBottomOf="@id/frameLayout_preview"
                 tools:text="분류:상의, 기장:7, 두께:3"
                 tools:visibility="visible" />
 
-            <!-- 배경 제거 토글 스위치 -->
             <com.google.android.material.switchmaterial.SwitchMaterial
                 android:id="@+id/switch_remove_background"
                 android:layout_width="wrap_content"
@@ -84,7 +95,7 @@
                 app:layout_constraintBottom_toBottomOf="@+id/textView_ai_result"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintTop_toTopOf="@+id/textView_ai_result"
-                tools:visibility="visible" />
+                tools:visibility="visible"/>
 
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/textInputLayout_name"

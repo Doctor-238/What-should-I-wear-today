@@ -162,7 +162,7 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing) {
                         The JSON object should contain these exact keys: "is_wearable", "category", "length_score", and "thickness_score".
                         - "is_wearable" must be a boolean (true if it's a wearable fashion item, false otherwise, for example an apple).
                         - "category" must be one of the following strings: '상의', '하의', '아우터', '신발', '가방', '모자', '기타'. '기타' is for wearable items that don't fit other categories like a scarf. If "is_wearable" is false, set category to "해당 없음".
-                        - "length_score" must be an integer between 0 (shortest, end at shoulder) and 20 (longest, end at hand).
+                        - "length_score" must be an integer between 0 (shortest) and 20 (longest). Please rate based on sleeve length only.
                         - "thickness_score" must be an integer between 1 (thinnest) and 10 (thickest).
                         Do not include any other text or explanations.
                     """.trimIndent())
@@ -236,12 +236,7 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing) {
     }
 
     private fun saveClothingItem() {
-        val bitmapToSave = if (switchRemoveBackground.isVisible && switchRemoveBackground.isChecked) {
-            processedBitmap
-        } else {
-            originalBitmap
-        }
-
+        val bitmapToSave = originalBitmap
         val name = editTextName.text.toString().trim()
         val analysis = clothingAnalysisResult
 
@@ -253,18 +248,16 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing) {
         val finalTemperature = calculateSuitableTemperature(analysis.category, analysis.length_score, analysis.thickness_score)
 
         lifecycleScope.launch(Dispatchers.IO) {
-            val originalImagePath = saveBitmapToInternalStorage(originalBitmap!!, "original_")
-            val processedImagePath = if (processedBitmap != null && !originalBitmap!!.sameAs(processedBitmap)) {
-                saveBitmapToInternalStorage(processedBitmap!!, "processed_")
-            } else {
-                null
-            }
+            val originalImagePath = saveBitmapToInternalStorage(bitmapToSave, "original_")
+            val processedImagePath = processedBitmap?.let { saveBitmapToInternalStorage(it, "processed_") }
 
             if (originalImagePath != null) {
                 val newClothingItem = ClothingItem(
                     name = name,
                     imageUri = originalImagePath,
                     processedImageUri = processedImagePath,
+                    // [해결 2] 현재 스위치 상태를 저장합니다.
+                    useProcessedImage = switchRemoveBackground.isChecked,
                     category = analysis.category,
                     suitableTemperature = finalTemperature
                 )
@@ -272,10 +265,6 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing) {
                 withContext(Dispatchers.Main) {
                     Toast.makeText(requireContext(), "'$name'(${finalTemperature}°C)이(가) 옷장에 추가!", Toast.LENGTH_SHORT).show()
                     findNavController().popBackStack()
-                }
-            } else {
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(requireContext(), "이미지 파일 저장에 실패했습니다.", Toast.LENGTH_SHORT).show()
                 }
             }
         }
@@ -316,7 +305,7 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing) {
         for (y in 0 until maskHeight) {
             for (x in 0 until maskWidth) {
                 // 거의 0에 가까운 임계값, 아주 약간이라도 전경일 확률이 있으면 픽셀을 복사합니다.
-                if (maskBuffer.float > 0.000000000000000000001f) {
+                if (maskBuffer.float > 0.1f) {
                     maskedBitmap.setPixel(x, y, original.getPixel(x, y))
                 }
             }

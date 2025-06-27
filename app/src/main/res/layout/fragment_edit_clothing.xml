@@ -29,6 +29,7 @@
 
     </com.google.android.material.appbar.MaterialToolbar>
 
+    <!-- 스크롤이 필요한 모든 콘텐츠를 담는 영역 -->
     <ScrollView
         android:layout_width="0dp"
         android:layout_height="0dp"
@@ -42,44 +43,56 @@
             android:layout_height="wrap_content"
             android:padding="16dp">
 
-            <ImageView
-                android:id="@+id/imageView_edit_preview"
+            <!-- 이미지 표시 영역 (FrameLayout으로 겹치기 구조 생성) -->
+            <FrameLayout
+                android:id="@+id/frameLayout_edit_preview"
                 android:layout_width="0dp"
                 android:layout_height="0dp"
                 android:background="@drawable/bg_dotted_border"
                 android:padding="16dp"
-                android:scaleType="centerInside"
                 app:layout_constraintDimensionRatio="1:1"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent"
-                tools:src="@tools:sample/backgrounds/scenic" />
+                app:layout_constraintTop_toTopOf="parent">
 
-            <!-- 배경 제거 토글 스위치 -->
+                <!-- 옷 이미지를 보여줄 ImageView -->
+                <ImageView
+                    android:id="@+id/imageView_edit_preview"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:scaleType="fitCenter"
+                    tools:src="@tools:sample/backgrounds/scenic" />
+            </FrameLayout>
+
+            <!-- [해결] 적정 온도 TextView: 이미지 바로 아래, 왼쪽에 위치 -->
+            <TextView
+                android:id="@+id/textView_edit_temperature"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:layout_marginEnd="8dp"
+                android:gravity="start|center_vertical"
+                android:paddingVertical="8dp"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                app:layout_constraintEnd_toStartOf="@+id/switch_edit_remove_background"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/frameLayout_edit_preview"
+                tools:text="적정 온도: 15°C" />
+
+            <!-- [해결] 배경 제거 Switch: 온도 TextView와 같은 높이를 유지하며 오른쪽에 위치 -->
             <com.google.android.material.switchmaterial.SwitchMaterial
                 android:id="@+id/switch_edit_remove_background"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
                 android:text="배경 제거"
                 android:visibility="gone"
+                app:layout_constraintBottom_toBottomOf="@+id/textView_edit_temperature"
                 app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/imageView_edit_preview"
+                app:layout_constraintTop_toTopOf="@+id/textView_edit_temperature"
                 tools:visibility="visible" />
 
-            <!-- 적정 온도 표시 -->
-            <TextView
-                android:id="@+id/textView_edit_temperature"
-                android:layout_width="0dp"
-                android:layout_height="0dp"
-                android:gravity="center_vertical"
-                android:textStyle="bold"
-                app:layout_constraintBottom_toBottomOf="@id/switch_edit_remove_background"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="@id/switch_edit_remove_background"
-                tools:text="적정 온도: 15°C" />
-
-
+            <!-- 이름 입력창 -->
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/textInputLayout_edit_name"
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
@@ -89,8 +102,7 @@
                 android:hint="옷 이름"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/switch_edit_remove_background">
-
+                app:layout_constraintTop_toBottomOf="@id/textView_edit_temperature">
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/editText_edit_name"
                     android:layout_width="match_parent"
@@ -120,7 +132,6 @@
                 app:layout_constraintTop_toBottomOf="@id/textView_edit_category_label"
                 app:selectionRequired="true"
                 app:singleSelection="true">
-
                 <com.google.android.material.chip.Chip style="@style/Widget.MaterialComponents.Chip.Choice" android:id="@+id/chip_edit_top" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="상의" />
                 <com.google.android.material.chip.Chip style="@style/Widget.MaterialComponents.Chip.Choice" android:id="@+id/chip_edit_bottom" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="하의" />
                 <com.google.android.material.chip.Chip style="@style/Widget.MaterialComponents.Chip.Choice" android:id="@+id/chip_edit_outer" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="아우터" />
@@ -128,8 +139,21 @@
                 <com.google.android.material.chip.Chip style="@style/Widget.MaterialComponents.Chip.Choice" android:id="@+id/chip_edit_bag" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="가방" />
                 <com.google.android.material.chip.Chip style="@style/Widget.MaterialComponents.Chip.Choice" android:id="@+id/chip_edit_hat" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="모자" />
                 <com.google.android.material.chip.Chip style="@style/Widget.MaterialComponents.Chip.Choice" android:id="@+id/chip_edit_other" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="기타" />
-
             </com.google.android.material.chip.ChipGroup>
+
+            <!-- 삭제 버튼 -->
+            <Button
+                android:id="@+id/button_delete"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="60dp"
+                android:layout_marginTop="32dp"
+                android:text="삭제하기"
+                android:textColor="?attr/colorError"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/chipGroup_edit_category"
+                app:strokeColor="?attr/colorError" />
 
         </androidx.constraintlayout.widget.ConstraintLayout>
 

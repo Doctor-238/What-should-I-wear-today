@@ -29,6 +29,13 @@ class ClothingAdapter(private val onItemClicked: (ClothingItem) -> Unit) : Recyc
         holder.bind(currentItem)
     }
 
+    override fun getItemCount(): Int = items.size
+
+    fun submitList(newItems: List<ClothingItem>) {
+        items = newItems
+        notifyDataSetChanged()
+    }
+
     class ClothingViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val imageView: ImageView = itemView.findViewById(R.id.item_image)
         private val nameView: TextView = itemView.findViewById(R.id.item_name)
@@ -36,7 +43,7 @@ class ClothingAdapter(private val onItemClicked: (ClothingItem) -> Unit) : Recyc
         fun bind(item: ClothingItem) {
             nameView.text = item.name
 
-            // [수정] useProcessedImage 값에 따라 보여줄 이미지를 결정합니다.
+            // [해결 2] useProcessedImage 값에 따라 대표 이미지를 정확히 표시합니다.
             val imageToShow = if (item.useProcessedImage && item.processedImageUri != null) {
                 item.processedImageUri
             } else {
@@ -48,13 +55,4 @@ class ClothingAdapter(private val onItemClicked: (ClothingItem) -> Unit) : Recyc
                 .into(imageView)
         }
     }
-
-    override fun getItemCount(): Int = items.size
-
-    fun submitList(newItems: List<ClothingItem>) {
-        items = newItems
-        notifyDataSetChanged()
-    }
-
-
 }
