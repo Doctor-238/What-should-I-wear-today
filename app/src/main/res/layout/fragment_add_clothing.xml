@@ -29,7 +29,6 @@
             android:layout_height="wrap_content"
             android:padding="16dp">
 
-            <!-- [변경] 사진 표시 영역을 FrameLayout으로 감싸서 아이콘과 이미지를 겹치게 합니다. -->
             <FrameLayout
                 android:id="@+id/frameLayout_preview"
                 android:layout_width="0dp"
@@ -41,7 +40,6 @@
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent">
 
-                <!-- [추가] 기본 카메라 아이콘을 위한 ImageView -->
                 <ImageView
                     android:id="@+id/imageView_placeholder"
                     android:layout_width="64dp"
@@ -50,7 +48,6 @@
                     android:src="@drawable/ic_add_photo"
                     app:tint="#AEAEAE" />
 
-                <!-- [수정] 사용자가 선택한 사진을 보여줄 ImageView -->
                 <ImageView
                     android:id="@+id/imageView_clothing_preview"
                     android:layout_width="match_parent"
@@ -69,33 +66,57 @@
                     tools:visibility="visible" />
             </FrameLayout>
 
-            <TextView
-                android:id="@+id/textView_ai_result"
+            <LinearLayout
+                android:id="@+id/layout_ai_info_row"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
-                android:layout_marginEnd="8dp"
-                android:gravity="start|center_vertical"
-                android:textSize="16sp"
-                android:textStyle="bold"
-                android:visibility="gone"
-                app:layout_constraintEnd_toStartOf="@+id/switch_remove_background"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/frameLayout_preview"
-                tools:text="분류:상의, 기장:7, 두께:3"
-                tools:visibility="visible" />
-
-            <com.google.android.material.switchmaterial.SwitchMaterial
-                android:id="@+id/switch_remove_background"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="배경 제거"
-                android:textSize="14sp"
-                android:visibility="gone"
-                app:layout_constraintBottom_toBottomOf="@+id/textView_ai_result"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
                 app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintTop_toTopOf="@+id/textView_ai_result"
-                tools:visibility="visible"/>
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/frameLayout_preview">
+
+                <TextView
+                    android:id="@+id/textView_ai_result"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:visibility="gone"
+                    tools:text="분류:상의, 기장:7, 두께:3"
+                    tools:visibility="visible" />
+
+                <TextView
+                    android:id="@+id/textView_color_label_add"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="4dp"
+                    android:text="색상:"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:visibility="gone"
+                    tools:visibility="visible" />
+
+                <View
+                    android:id="@+id/view_color_swatch"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:layout_marginEnd="16dp"
+                    android:visibility="gone"
+                    tools:background="#4A6E8A"
+                    tools:visibility="visible" />
+
+                <com.google.android.material.switchmaterial.SwitchMaterial
+                    android:id="@+id/switch_remove_background"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="배경 제거"
+                    android:textSize="14sp"
+                    android:visibility="gone"
+                    tools:visibility="visible"/>
+            </LinearLayout>
 
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/textInputLayout_name"
@@ -108,7 +129,7 @@
                 app:counterMaxLength="20"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/textView_ai_result">
+                app:layout_constraintTop_toBottomOf="@id/layout_ai_info_row">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/editText_clothing_name"

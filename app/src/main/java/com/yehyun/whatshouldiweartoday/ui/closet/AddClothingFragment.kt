@@ -1,9 +1,11 @@
 package com.yehyun.whatshouldiweartoday.ui.closet
 
 import android.graphics.Bitmap
+import android.graphics.Color
 import android.net.Uri
 import android.os.Bundle
 import android.provider.MediaStore
+import android.util.Log
 import android.view.View
 import android.widget.Button
 import android.widget.ImageView
@@ -11,7 +13,6 @@ import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
@@ -28,8 +29,6 @@ import com.google.mlkit.vision.segmentation.selfie.SelfieSegmenterOptions
 import com.yehyun.whatshouldiweartoday.R
 import com.yehyun.whatshouldiweartoday.data.database.AppDatabase
 import com.yehyun.whatshouldiweartoday.data.database.ClothingItem
-import com.yehyun.whatshouldiweartoday.ui.OnTabReselectedListener
-import com.yehyun.whatshouldiweartoday.util.TemperatureCalculator
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -42,20 +41,19 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-// AI 응답을 위한 데이터 클래스
+// 필드 이름은 suitable_temperature를 그대로 사용합니다.
 @Serializable
 data class ClothingAnalysis(
     val is_wearable: Boolean,
     val category: String,
-    val length_score: Int,
-    val thickness_score: Int
+    val suitable_temperature: Double,
+    val color_hex: String
 )
 
-class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabReselectedListener {
+class AddClothingFragment : Fragment(R.layout.fragment_add_clothing) {
 
     private enum class UiState { IDLE, ANALYZING, ANALYZED }
 
-    // --- UI 요소 ---
     private lateinit var imageViewPreview: ImageView
     private lateinit var editTextName: TextInputEditText
     private lateinit var buttonSave: Button
@@ -63,8 +61,9 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabResel
     private lateinit var textViewAiResult: TextView
     private lateinit var progressBar: ProgressBar
     private lateinit var switchRemoveBackground: SwitchMaterial
+    private lateinit var viewColorSwatch: View
+    private lateinit var textColorLabel: TextView
 
-    // --- 상태 변수 ---
     private var originalBitmap: Bitmap? = null
     private var processedBitmap: Bitmap? = null
     private var clothingAnalysisResult: ClothingAnalysis? = null
@@ -98,6 +97,8 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabResel
         textViewAiResult = view.findViewById(R.id.textView_ai_result)
         progressBar = view.findViewById(R.id.progressBar)
         switchRemoveBackground = view.findViewById(R.id.switch_remove_background)
+        viewColorSwatch = view.findViewById(R.id.view_color_swatch)
+        textColorLabel = view.findViewById(R.id.textView_color_label_add)
     }
 
     private fun setupListeners() {
@@ -133,10 +134,14 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabResel
         buttonSave.isEnabled = isAnalyzed
         imageViewPreview.isClickable = state == UiState.IDLE
 
+        val colorVisible = isAnalyzed && clothingAnalysisResult != null
+        viewColorSwatch.visibility = if(colorVisible) View.VISIBLE else View.GONE
+        textColorLabel.visibility = if(colorVisible) View.VISIBLE else View.GONE
+
         if (isAnalyzed) {
             if (didSegmentationSucceed) {
                 switchRemoveBackground.visibility = View.VISIBLE
-                switchRemoveBackground.isChecked = false // 기본으로 OFF
+                switchRemoveBackground.isChecked = false
             } else {
                 switchRemoveBackground.visibility = View.GONE
                 if (originalBitmap != null) {
@@ -155,22 +160,27 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabResel
     private fun startAiAnalysis(bitmap: Bitmap) {
         lifecycleScope.launch(Dispatchers.IO) {
             try {
-                // [요청사항 반영] 불필요한 API Key 확인 코드 완전 삭제
                 val resizedBitmap = resizeBitmap(bitmap)
                 val inputContent = content {
                     image(resizedBitmap)
+                    // [핵심 수정] "최대 권장 온도"를 "추위 덜 타는 사람 기준"으로 높게 설정해달라고 최종 요청
                     text("""
-                        Please analyze the clothing item in this image and respond only in a valid JSON format.
-                        The JSON object should contain these exact keys: "is_wearable", "category", "length_score", and "thickness_score".
-                        - "is_wearable" must be a boolean (true if it's a wearable fashion item, false otherwise, for example an apple).
-                        - "category" must be one of the following strings: '상의', '하의', '아우터', '신발', '가방', '모자', '기타'. '기타' is for wearable items that don't fit other categories like a scarf. If "is_wearable" is false, set category to "해당 없음".
-                        - "length_score" must be an integer between 0 (shortest) and 20 (longest). Please rate based on sleeve length only.
-                        - "thickness_score" must be an integer between 1 (thinnest) and 10 (thickest).
-                        Do not include any other text or explanations.
+                        You are a Precise Climate & Fashion Analyst for Korean weather.
+                        Your task is to analyze the clothing item in the image and provide a detailed analysis in a strict JSON format, without any additional text or explanations.
+
+                        Your JSON response MUST contain ONLY the following keys: "is_wearable", "category", "suitable_temperature", and "color_hex".
+
+                        - "is_wearable": (boolean) True if the item is wearable clothing.
+                        - "category": (string) One of '상의', '하의', '아우터', '신발', '가방', '모자', '기타'.
+                        - "color_hex": (string) The dominant color of the item as a hex string.
+                        - "suitable_temperature": (double) This is the most important. Estimate the MAXIMUM comfortable temperature for this item, calibrated for a person who is LESS SENSITIVE to cold. The final value should be slightly higher than the average standard. You MUST provide a specific, non-round number with one decimal place (e.g., 23.5, 8.0, -2.5). A generic integer like 15.0 is a bad response. Base your judgment on the visual evidence of material, thickness, and design.
                     """.trimIndent())
                 }
 
                 val response = generativeModel.generateContent(inputContent)
+
+                Log.d("AI_RESPONSE", "Raw JSON from AI: ${response.text}")
+
                 val analysisResult = Json { ignoreUnknownKeys = true }.decodeFromString<ClothingAnalysis>(response.text!!)
 
                 withContext(Dispatchers.Main) {
@@ -178,25 +188,23 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabResel
                         handleAiFailure("올바른 사진을 입력해주세요")
                     } else {
                         clothingAnalysisResult = analysisResult
-                        // [요청사항 반영] 원래의 수치 기반 배경 제거 로직 호출
                         segmentWithMask(bitmap)
                     }
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
+                    Log.e("AI_ERROR", "Error during AI analysis", e)
                     handleAiFailure("분석 실패: ${e.message}")
                 }
             }
         }
     }
 
-    // 수치 기반 배경 제거 로직
     private fun segmentWithMask(originalBitmap: Bitmap) {
         val segmenter = Segmentation.getClient(SelfieSegmenterOptions.Builder().setDetectorMode(SelfieSegmenterOptions.SINGLE_IMAGE_MODE).build())
         segmenter.process(InputImage.fromBitmap(originalBitmap, 0))
             .addOnSuccessListener { mask ->
                 processedBitmap = createBitmapWithMask(originalBitmap, mask)
-                // 성공 여부를 판단하기 위해, 원본과 결과물이 다른지 비교
                 val succeed = !originalBitmap.sameAs(processedBitmap)
                 handleAiSuccess(didSegmentationSucceed = succeed)
             }
@@ -225,9 +233,18 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabResel
     }
 
     private fun handleAiSuccess(didSegmentationSucceed: Boolean) {
-        imageViewPreview.setImageBitmap(originalBitmap) // 항상 원본을 먼저 보여줌
+        imageViewPreview.setImageBitmap(originalBitmap)
         clothingAnalysisResult?.let {
-            textViewAiResult.text = "분류:${it.category}, 기장:${it.length_score}, 두께:${it.thickness_score}"
+            // [수정] UI 텍스트를 원래대로 되돌립니다.
+            textViewAiResult.text = "분류:${it.category}, 적정 온도:${String.format("%.1f", it.suitable_temperature)}°C"
+            try {
+                viewColorSwatch.setBackgroundColor(Color.parseColor(it.color_hex))
+                viewColorSwatch.visibility = View.VISIBLE
+                textColorLabel.visibility = View.VISIBLE
+            } catch (e: IllegalArgumentException) {
+                viewColorSwatch.visibility = View.GONE
+                textColorLabel.visibility = View.GONE
+            }
         }
         updateUiState(UiState.ANALYZED, didSegmentationSucceed)
     }
@@ -247,12 +264,7 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabResel
             return
         }
 
-        // [핵심 수정] 새로 만든 TemperatureCalculator를 사용하여 온도 계산
-        val finalTemperature = TemperatureCalculator.calculate(
-            analysis.length_score,
-            analysis.thickness_score,
-            analysis.category
-        )
+        val finalTemperature = analysis.suitable_temperature
 
         lifecycleScope.launch(Dispatchers.IO) {
             val originalImagePath = saveBitmapToInternalStorage(bitmapToSave, "original_")
@@ -266,20 +278,32 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabResel
                     useProcessedImage = switchRemoveBackground.isChecked,
                     category = analysis.category,
                     suitableTemperature = finalTemperature,
-                    // [핵심 추가] AI 분석 점수를 DB에 함께 저장
-                    lengthScore = analysis.length_score,
-                    thicknessScore = analysis.thickness_score
+                    colorHex = analysis.color_hex
                 )
                 AppDatabase.getDatabase(requireContext()).clothingDao().insert(newClothingItem)
                 withContext(Dispatchers.Main) {
-                    Toast.makeText(requireContext(), "'$name'(${finalTemperature}°C)이(가) 옷장에 추가!", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(requireContext(), "'$name'(${String.format("%.1f", finalTemperature)}°C)이(가) 옷장에 추가!", Toast.LENGTH_SHORT).show()
                     findNavController().popBackStack()
                 }
             }
         }
     }
 
-
+    private fun createBitmapWithMask(original: Bitmap, mask: SegmentationMask): Bitmap {
+        val maskedBitmap = Bitmap.createBitmap(original.width, original.height, Bitmap.Config.ARGB_8888)
+        val maskBuffer = mask.buffer
+        val maskWidth = mask.width
+        val maskHeight = mask.height
+        for (y in 0 until maskHeight) {
+            for (x in 0 until maskWidth) {
+                if (maskBuffer.float > 0.1f) {
+                    maskedBitmap.setPixel(x, y, original.getPixel(x, y))
+                }
+            }
+        }
+        maskBuffer.rewind()
+        return maskedBitmap
+    }
 
     private fun saveBitmapToInternalStorage(bitmap: Bitmap, prefix: String): String? {
         val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
@@ -296,27 +320,5 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabResel
             e.printStackTrace()
             return null
         }
-    }
-
-    // [요청사항 반영] 0.000000000000000000001f 수치 기반 배경 제거 함수
-    private fun createBitmapWithMask(original: Bitmap, mask: SegmentationMask): Bitmap {
-        val maskedBitmap = Bitmap.createBitmap(original.width, original.height, Bitmap.Config.ARGB_8888)
-        val maskBuffer = mask.buffer
-        val maskWidth = mask.width
-        val maskHeight = mask.height
-        for (y in 0 until maskHeight) {
-            for (x in 0 until maskWidth) {
-                // 거의 0에 가까운 임계값, 아주 약간이라도 전경일 확률이 있으면 픽셀을 복사합니다.
-                if (maskBuffer.float > 0.1f) {
-                    maskedBitmap.setPixel(x, y, original.getPixel(x, y))
-                }
-            }
-        }
-        maskBuffer.rewind()
-        return maskedBitmap
-    }
-    override fun onTabReselected() {
-        // 이 화면들에서는 즉시 이전 화면으로 돌아갑니다.
-        findNavController().popBackStack()
     }
 }
