@@ -32,10 +32,7 @@ class RecommendationAdapter(
 
     override fun onBindViewHolder(holder: RecommendationViewHolder, position: Int) {
         val currentItem = items[position]
-        holder.itemView.setOnClickListener {
-            onItemClicked(currentItem)
-        }
-        // [개선] 챙겨갈 아우터인지 여부를 함께 전달하여 아이콘 표시
+        holder.itemView.setOnClickListener { onItemClicked(currentItem) }
         holder.bind(currentItem, currentItem.id == packableOuterId)
     }
 
@@ -48,12 +45,8 @@ class RecommendationAdapter(
         fun bind(item: ClothingItem, isPackable: Boolean) {
             val imageToShow = if (item.useProcessedImage && item.processedImageUri != null) {
                 item.processedImageUri
-            } else {
-                item.imageUri
-            }
+            } else { item.imageUri }
             Glide.with(itemView.context).load(Uri.fromFile(File(imageToShow))).into(imageView)
-
-            // 챙겨갈 아우터일 경우에만 아이콘 표시
             iconView.isVisible = isPackable
         }
     }

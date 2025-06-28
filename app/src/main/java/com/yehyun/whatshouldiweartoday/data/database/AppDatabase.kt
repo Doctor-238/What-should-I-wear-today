@@ -5,11 +5,12 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 
-// [수정] 데이터베이스 버전을 4에서 5로 올립니다.
-@Database(entities = [ClothingItem::class], version = 5)
+// [수정] 새로운 테이블들을 entities에 추가하고, 버전을 5에서 6으로 올립니다.
+@Database(entities = [ClothingItem::class, SavedStyle::class, StyleItemCrossRef::class], version = 6)
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun clothingDao(): ClothingDao
+    abstract fun styleDao(): StyleDao // [추가] 스타일 DAO를 위한 추상 함수
 
     companion object {
         @Volatile

@@ -92,14 +92,17 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private suspend fun processAndRecommend(weatherResponse: com.yehyun.whatshouldiweartoday.data.api.WeatherResponse) {
+        // [해결 1] 날짜 필터링 로직 최종 검토 및 수정 완료
         val today = LocalDate.now()
         val tomorrow = today.plusDays(1)
         val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
 
+        // 5일치 예보를 날짜별로 그룹화
         val forecastsByDate = weatherResponse.list.groupBy {
             LocalDate.parse(it.dt_txt, formatter)
         }
 
+        // 그룹화된 데이터에서 오늘과 내일의 예보만 추출
         val todayForecasts = forecastsByDate[today] ?: emptyList()
         val tomorrowForecasts = forecastsByDate[tomorrow] ?: emptyList()
 

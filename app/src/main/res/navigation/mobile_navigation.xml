@@ -10,12 +10,15 @@
         android:name="com.yehyun.whatshouldiweartoday.ui.home.HomeFragment"
         android:label="@string/title_home"
         tools:layout="@layout/fragment_home" >
+        <!-- [수정] 홈 -> 스타일 저장 화면으로 가는 길 -->
+        <action
+            android:id="@+id/action_navigation_home_to_saveStyleFragment"
+            app:destination="@id/saveStyleFragment" />
+        <!-- [수정] 홈 -> 옷 수정 화면으로 가는 길 -->
         <action
             android:id="@+id/action_navigation_home_to_editClothingFragment"
             app:destination="@id/editClothingFragment" />
     </fragment>
-
-
 
     <fragment
         android:id="@+id/navigation_style"
@@ -52,18 +55,23 @@
         android:label="AddClothingFragment"
         tools:layout="@layout/fragment_add_clothing" />
 
-<!--    <fragment-->
-<!--        android:id="@+id/saveStyleFragment"-->
-<!--        android:name="com.yehyun.whatshouldiweartoday.ui.style.SaveStyleFragment"-->
-<!--        android:label="fragment_save_style"-->
-<!--        tools:layout="@layout/fragment_save_style" >-->
-<!--        &lt;!&ndash; 추천된 옷들의 ID 목록을 인자로 받습니다. (기본값: 빈 배열) &ndash;&gt;-->
-<!--        <argument-->
-<!--            android:name="preselected_ids"-->
-<!--            app:argType="integer[]"-->
-<!--            android:defaultValue="@array/empty_int_array" />-->
-<!--    </fragment>-->
+    <!-- '스타일 저장' 화면을 등록합니다. -->
+    <fragment
+        android:id="@+id/saveStyleFragment"
+        android:name="com.yehyun.whatshouldiweartoday.ui.style.SaveStyleFragment"
+        android:label="fragment_save_style"
+        tools:layout="@layout/fragment_save_style" >
+        <!-- [수정] Safe Args 규칙에 맞게 nullable로 수정 -->
+        <argument
+            android:name="preselected_ids"
+            app:argType="integer[]"
+            app:nullable="true"
+            android:defaultValue="@null" />
+    </fragment>
 
-
+    <!-- 어느 화면에서든 '스타일 저장' 화면으로 갈 수 있는 전역 액션 -->
+    <action
+        android:id="@+id/action_global_saveStyleFragment"
+        app:destination="@id/saveStyleFragment" />
 
 </navigation>
