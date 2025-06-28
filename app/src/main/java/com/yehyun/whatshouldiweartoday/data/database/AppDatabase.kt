@@ -10,7 +10,6 @@ import androidx.room.RoomDatabase
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun clothingDao(): ClothingDao
-    abstract fun styleDao(): StyleDao // [추가] 스타일 DAO를 위한 추상 함수
     abstract fun styleDao(): StyleDao
 
     companion object {
