@@ -28,6 +28,8 @@ import com.google.mlkit.vision.segmentation.selfie.SelfieSegmenterOptions
 import com.yehyun.whatshouldiweartoday.R
 import com.yehyun.whatshouldiweartoday.data.database.AppDatabase
 import com.yehyun.whatshouldiweartoday.data.database.ClothingItem
+import com.yehyun.whatshouldiweartoday.ui.OnTabReselectedListener
+import com.yehyun.whatshouldiweartoday.util.TemperatureCalculator
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -49,7 +51,7 @@ data class ClothingAnalysis(
     val thickness_score: Int
 )
 
-class AddClothingFragment : Fragment(R.layout.fragment_add_clothing) {
+class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabReselectedListener {
 
     private enum class UiState { IDLE, ANALYZING, ANALYZED }
 
@@ -245,7 +247,12 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing) {
             return
         }
 
-        val finalTemperature = calculateSuitableTemperature(analysis.category, analysis.length_score, analysis.thickness_score)
+        // [핵심 수정] 새로 만든 TemperatureCalculator를 사용하여 온도 계산
+        val finalTemperature = TemperatureCalculator.calculate(
+            analysis.length_score,
+            analysis.thickness_score,
+            analysis.category
+        )
 
         lifecycleScope.launch(Dispatchers.IO) {
             val originalImagePath = saveBitmapToInternalStorage(bitmapToSave, "original_")
@@ -256,10 +263,12 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing) {
                     name = name,
                     imageUri = originalImagePath,
                     processedImageUri = processedImagePath,
-                    // [해결 2] 현재 스위치 상태를 저장합니다.
                     useProcessedImage = switchRemoveBackground.isChecked,
                     category = analysis.category,
-                    suitableTemperature = finalTemperature
+                    suitableTemperature = finalTemperature,
+                    // [핵심 추가] AI 분석 점수를 DB에 함께 저장
+                    lengthScore = analysis.length_score,
+                    thicknessScore = analysis.thickness_score
                 )
                 AppDatabase.getDatabase(requireContext()).clothingDao().insert(newClothingItem)
                 withContext(Dispatchers.Main) {
@@ -270,14 +279,7 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing) {
         }
     }
 
-    private fun calculateSuitableTemperature(category: String, lengthScore: Int, thickness: Int): Int {
-        val baseTemp = when (category) {
-            "상의" -> 28; "하의" -> 26; "아우터" -> 20; else -> 22
-        }
-        val lengthAdjustment = lengthScore * -1.5
-        val thicknessAdjustment = (thickness - 1) * -4
-        return (baseTemp + lengthAdjustment + thicknessAdjustment).toInt()
-    }
+
 
     private fun saveBitmapToInternalStorage(bitmap: Bitmap, prefix: String): String? {
         val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
@@ -312,5 +314,9 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing) {
         }
         maskBuffer.rewind()
         return maskedBitmap
+    }
+    override fun onTabReselected() {
+        // 이 화면들에서는 즉시 이전 화면으로 돌아갑니다.
+        findNavController().popBackStack()
     }
 }

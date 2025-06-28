@@ -9,6 +9,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import androidx.viewpager2.widget.ViewPager2
 import com.google.android.gms.location.LocationServices
 import com.google.android.material.tabs.TabLayout
@@ -32,11 +33,26 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        // [추가] SwipeRefreshLayout을 찾습니다.
+        val swipeRefreshLayout = view.findViewById<View>(R.id.swipe_refresh_layout) as SwipeRefreshLayout
+
         setupViewPager(view)
         checkLocationPermission()
 
+        // [추가] 새로고침 리스너를 설정합니다.
+        swipeRefreshLayout.setOnRefreshListener {
+            // 사용자가 화면을 당기면, 위치를 다시 가져오는 것으로 모든 과정을 다시 시작합니다.
+            checkLocationPermission()
+        }
+
         homeViewModel.error.observe(viewLifecycleOwner) { errorMessage ->
             Toast.makeText(requireContext(), errorMessage, Toast.LENGTH_LONG).show()
+        }
+
+        // [추가] 로딩 상태를 관찰하여 새로고침 아이콘을 제어합니다.
+        homeViewModel.isLoading.observe(viewLifecycleOwner) { isLoading ->
+            // ViewModel의 로딩 상태에 따라 새로고침 아이콘을 보여주거나 숨깁니다.
+            swipeRefreshLayout.isRefreshing = isLoading
         }
     }
 
