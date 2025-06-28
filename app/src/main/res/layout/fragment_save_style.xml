@@ -41,12 +41,22 @@
         android:id="@+id/tv_selection_guide"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
         android:layout_marginStart="16dp"
+        android:layout_marginTop="16dp"
         android:text="스타일에 포함할 옷을 선택하세요 (최대 10개)"
         android:textStyle="bold"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/textInputLayout_style_name"/>
+        app:layout_constraintTop_toBottomOf="@id/textInputLayout_style_name" />
+
+    <com.google.android.material.tabs.TabLayout
+        android:id="@+id/tab_layout_save_style_category"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tv_selection_guide"
+        app:tabMode="scrollable" />
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rv_clothing_selection"
@@ -57,9 +67,9 @@
         app:layout_constraintBottom_toTopOf="@id/button_save_style_final"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/tv_selection_guide"
+        app:layout_constraintTop_toBottomOf="@id/tab_layout_save_style_category"
         app:spanCount="4"
-        tools:listitem="@layout/item_clothing_selectable"/>
+        tools:listitem="@layout/item_clothing_selectable" />
 
     <Button
         android:id="@+id/button_save_style_final"
@@ -69,6 +79,6 @@
         android:text="이 스타일 저장하기"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"/>
+        app:layout_constraintStart_toStartOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

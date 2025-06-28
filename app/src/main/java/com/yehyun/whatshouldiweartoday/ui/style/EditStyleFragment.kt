@@ -20,16 +20,20 @@ import com.google.android.material.textfield.TextInputEditText
 import com.yehyun.whatshouldiweartoday.R
 import com.yehyun.whatshouldiweartoday.data.database.ClothingItem
 import com.yehyun.whatshouldiweartoday.data.database.SavedStyle
+import com.yehyun.whatshouldiweartoday.ui.OnTabReselectedListener
 import com.yehyun.whatshouldiweartoday.ui.home.RecommendationAdapter
 
-class EditStyleFragment : Fragment(R.layout.fragment_edit_style) {
+// 참고: 사용자가 제공한 코드를 기반으로 재작성 및 수정
+class EditStyleFragment : Fragment(R.layout.fragment_edit_style), OnTabReselectedListener {
 
     private val viewModel: EditStyleViewModel by viewModels()
     private val args: EditStyleFragmentArgs by navArgs()
     private lateinit var tabLayout: TabLayout
 
-    // [수정] 원본 데이터와 현재 선택된 아이템 목록을 명확히 구분
-    private var initialStyleData: Pair<String, List<Int>>? = null
+    // --- 문제 해결의 핵심: 원본 데이터를 안전하게 보관할 변수들 ---
+    private var originalStyle: SavedStyle? = null
+    private var initialItemIds: Set<Int>? = null
+
     private val currentSelectedItems = mutableListOf<ClothingItem>()
 
     private lateinit var adapterForAll: SaveStyleAdapter
@@ -38,9 +42,11 @@ class EditStyleFragment : Fragment(R.layout.fragment_edit_style) {
     private lateinit var buttonSave: Button
     private lateinit var tvSelectedItemLabel: TextView
     private lateinit var editTextName: TextInputEditText
+    private lateinit var toolbar: MaterialToolbar
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        toolbar = view.findViewById(R.id.toolbar_edit_style)
         setupViews(view)
         setupAdapters(view)
         observeViewModel()
@@ -57,15 +63,38 @@ class EditStyleFragment : Fragment(R.layout.fragment_edit_style) {
         tabLayout = view.findViewById(R.id.tab_layout_edit_style_category)
     }
 
+    private fun observeViewModel() {
+        viewModel.getStyleWithItems(args.styleId).observe(viewLifecycleOwner) { styleWithItems ->
+            // 화면에 처음 진입했을 때 딱 한 번만 실행
+            if (styleWithItems != null && initialItemIds == null) {
+                originalStyle = styleWithItems.style
+                initialItemIds = styleWithItems.items.map { it.id }.toSet()
+
+                currentSelectedItems.clear()
+                currentSelectedItems.addAll(styleWithItems.items)
+
+                toolbar.title = "'${originalStyle!!.styleName}' 수정"
+                editTextName.setText(originalStyle!!.styleName)
+                updateAdaptersAndCheckChanges()
+            }
+        }
+
+        viewModel.filteredClothes.observe(viewLifecycleOwner) { filteredClothes ->
+            adapterForAll.submitList(filteredClothes)
+            adapterForAll.setSelectedItems(currentSelectedItems.map { it.id }.toSet())
+        }
+    }
+
+    // (이하 다른 함수들은 이전 답변과 동일하게 유지)
+    // ... setupAdapters, setupListeners, etc.
+
     private fun setupAdapters(view: View) {
-        // 선택된 아이템 목록을 보여주는 어댑터
         adapterForSelected = RecommendationAdapter { item ->
             currentSelectedItems.remove(item)
             updateAdaptersAndCheckChanges()
         }
         view.findViewById<RecyclerView>(R.id.rv_selected_items).adapter = adapterForSelected
 
-        // 옷장 전체 목록을 보여주는 어댑터
         adapterForAll = SaveStyleAdapter { item, isSelected ->
             if (isSelected) {
                 currentSelectedItems.remove(item)
@@ -81,40 +110,7 @@ class EditStyleFragment : Fragment(R.layout.fragment_edit_style) {
         view.findViewById<RecyclerView>(R.id.rv_all_items_for_edit).adapter = adapterForAll
     }
 
-    private fun observeViewModel() {
-        // 수정할 스타일 정보를 DB에서 가져옴
-        viewModel.getStyleWithItems(args.styleId).observe(viewLifecycleOwner) { styleWithItems ->
-            if (styleWithItems != null && initialStyleData == null) {
-                val style = styleWithItems.style
-                val items = styleWithItems.items
-
-                // 원본 데이터를 저장 (변경 여부 확인용)
-                initialStyleData = Pair(style.styleName, items.map { it.id })
-                currentSelectedItems.addAll(items)
-
-                editTextName.setText(style.styleName)
-                updateAdaptersAndCheckChanges()
-            }
-        }
-
-        // 옷장 전체 목록을 가져옴
-        viewModel.allClothes.observe(viewLifecycleOwner) { allClothes ->
-            adapterForAll.submitList(allClothes)
-        }
-    }
-
-    private fun updateAdaptersAndCheckChanges() {
-        // 선택된 아이템 목록 UI 업데이트
-        adapterForSelected.submitList(currentSelectedItems.toList())
-        // 옷장 목록의 선택 상태 UI 업데이트
-        adapterForAll.setSelectedItems(currentSelectedItems.map { it.id }.toSet())
-        tvSelectedItemLabel.text = "현재 스타일 (${currentSelectedItems.size}/10)"
-        // 변경사항 확인
-        checkForChanges()
-    }
-
     private fun setupListeners(view: View) {
-        val toolbar = view.findViewById<MaterialToolbar>(R.id.toolbar_edit_style)
         val deleteButton = view.findViewById<Button>(R.id.button_delete_style)
 
         toolbar.setNavigationOnClickListener { handleBackButton() }
@@ -128,54 +124,110 @@ class EditStyleFragment : Fragment(R.layout.fragment_edit_style) {
         })
     }
 
-    private fun checkForChanges() {
-        if (initialStyleData == null) return
-        val initialName = initialStyleData!!.first
-        val initialIds = initialStyleData!!.second.toSet()
+    private fun updateAdaptersAndCheckChanges() {
+        // [개선점] 정렬 로직 추가
+        val categoryOrder = mapOf(
+            "상의" to 1, "하의" to 2, "아우터" to 3, "신발" to 4,
+            "가방" to 5, "모자" to 6, "기타" to 7
+        )
+        val sortedItems = currentSelectedItems.sortedWith(
+            compareBy<ClothingItem> { categoryOrder[it.category] ?: 8 }
+                .thenBy { it.suitableTemperature }
+        )
+        // 정렬된 목록을 어댑터에 전달
+        adapterForSelected.submitList(sortedItems)
 
-        val currentName = editTextName.text.toString()
+        // 이하 코드는 기존과 동일
+        adapterForAll.setSelectedItems(currentSelectedItems.map { it.id }.toSet())
+        tvSelectedItemLabel.text = "현재 스타일 (${currentSelectedItems.size}/10)"
+        checkForChanges()
+    }
+
+    private fun checkForChanges() {
+        if (originalStyle == null || initialItemIds == null) return
+
+        val initialName = originalStyle!!.styleName
+        val currentName = editTextName.text.toString().trim()
         val currentIds = currentSelectedItems.map { it.id }.toSet()
 
-        val isChanged = initialName != currentName || initialIds != currentIds
-        buttonSave.isEnabled = isChanged
+        val isChanged = initialName != currentName || initialItemIds != currentIds
+        buttonSave.isEnabled = isChanged && currentName.isNotEmpty()
     }
 
     private fun handleBackButton() {
-        if (buttonSave.isEnabled) { showSaveChangesDialog() }
-        else { findNavController().popBackStack() }
+        if (buttonSave.isEnabled) {
+            showSaveChangesDialog()
+        } else {
+            findNavController().popBackStack()
+        }
     }
 
-    private fun showSaveChangesDialog() { /* ... */ }
-    private fun showDeleteConfirmDialog() { /* ... */ }
+    private fun showSaveChangesDialog() {
+        AlertDialog.Builder(requireContext())
+            .setMessage("변경사항을 저장하시겠습니까?")
+            .setPositiveButton("예") { _, _ -> saveChangesAndExit() }
+            .setNegativeButton("아니오") { _, _ -> findNavController().popBackStack() }
+            .setCancelable(false)
+            .show()
+    }
 
+    private fun showDeleteConfirmDialog() {
+        originalStyle?.let { styleToDelete ->
+            AlertDialog.Builder(requireContext())
+                .setTitle("삭제 확인")
+                .setMessage("'${styleToDelete.styleName}' 스타일을 정말 삭제하시겠습니까?")
+                .setPositiveButton("예") { _, _ ->
+                    viewModel.deleteStyle(styleToDelete)
+                    Toast.makeText(context, "'${styleToDelete.styleName}' 스타일이 삭제되었습니다.", Toast.LENGTH_SHORT).show()
+                    findNavController().popBackStack()
+                }
+                .setNegativeButton("아니오", null)
+                .show()
+        }
+    }
+
+    // [핵심 수정] 저장하기 함수
     private fun saveChangesAndExit() {
+        val styleName = editTextName.text.toString().trim()
+        if (styleName.isEmpty()) {
+            Toast.makeText(context, "스타일 이름을 입력해주세요.", Toast.LENGTH_SHORT).show()
+            return
+        }
         if (currentSelectedItems.isEmpty()) {
             Toast.makeText(context, "스타일에 추가된 옷이 없습니다.", Toast.LENGTH_SHORT).show()
             return
         }
 
-        val updatedStyle = viewModel.getStyleWithItems(args.styleId).value?.style?.copy(
-            styleName = editTextName.text.toString()
-        ) ?: return
-
-        viewModel.updateStyle(updatedStyle, currentSelectedItems.toList())
-        findNavController().popBackStack()
+        // 저장 버튼을 누를 때, 멤버 변수에 저장된 원본 데이터(originalStyle)를 사용합니다.
+        originalStyle?.let { styleToUpdate ->
+            // 이름만 현재 입력된 내용으로 변경하여 새로운 객체를 만듭니다. (id는 그대로 유지)
+            val updatedStyle = styleToUpdate.copy(styleName = styleName)
+            // ViewModel의 업데이트 함수를 호출합니다.
+            viewModel.updateStyle(updatedStyle, currentSelectedItems.toList())
+            Toast.makeText(context, "저장되었습니다.", Toast.LENGTH_SHORT).show()
+            findNavController().popBackStack()
+        }
     }
 
     private fun setupBackButtonHandler() {
-        requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner) { handleBackButton() }
+        requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, true) {
+            handleBackButton()
+        }
     }
-    // [개선점 5] 카테고리 탭 설정 함수
+
     private fun setupTabs(view: View) {
         val categories = listOf("전체", "상의", "하의", "아우터", "신발", "가방", "모자", "기타")
         categories.forEach { tabLayout.addTab(tabLayout.newTab().setText(it)) }
-        tabLayout.addOnTabSelectedListener(object: TabLayout.OnTabSelectedListener {
+        tabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
             override fun onTabSelected(tab: TabLayout.Tab?) {
-                // ViewModel에 필터링 요청 (ViewModel 수정 필요)
                 viewModel.setClothingFilter(tab?.text.toString())
             }
             override fun onTabUnselected(tab: TabLayout.Tab?) {}
             override fun onTabReselected(tab: TabLayout.Tab?) {}
         })
+    }
+    override fun onTabReselected() {
+        // 기존의 뒤로가기 버튼 로직을 그대로 재사용
+        handleBackButton()
     }
 }

@@ -12,8 +12,9 @@ import com.yehyun.whatshouldiweartoday.R
 import com.yehyun.whatshouldiweartoday.data.database.ClothingItem
 import java.io.File
 
+// [핵심 수정 1] onItemClicked를 선택적 파라미터로 변경
 class RecommendationAdapter(
-    private val onItemClicked: (ClothingItem) -> Unit
+    private val onItemClicked: ((ClothingItem) -> Unit)? = null
 ) : RecyclerView.Adapter<RecommendationAdapter.RecommendationViewHolder>() {
 
     private var items: List<ClothingItem> = listOf()
@@ -32,7 +33,10 @@ class RecommendationAdapter(
 
     override fun onBindViewHolder(holder: RecommendationViewHolder, position: Int) {
         val currentItem = items[position]
-        holder.itemView.setOnClickListener { onItemClicked(currentItem) }
+        // [핵심 수정 2] onItemClicked가 null이 아닐 때만 클릭 리스너를 설정
+        onItemClicked?.let { listener ->
+            holder.itemView.setOnClickListener { listener(currentItem) }
+        }
         holder.bind(currentItem, currentItem.id == packableOuterId)
     }
 

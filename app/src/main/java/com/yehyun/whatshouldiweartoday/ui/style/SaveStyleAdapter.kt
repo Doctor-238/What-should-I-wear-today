@@ -18,13 +18,11 @@ class SaveStyleAdapter(
     private var allItems: List<ClothingItem> = listOf()
     private var selectedItemIds = setOf<Int>()
 
-    // Fragment로부터 전체 옷 목록을 전달받는 함수
     fun submitList(items: List<ClothingItem>) {
         this.allItems = items
         notifyDataSetChanged()
     }
 
-    // Fragment로부터 현재 선택된 아이템들의 ID 목록을 전달받아, 체크 표시를 업데이트하는 함수
     fun setSelectedItems(ids: Set<Int>) {
         this.selectedItemIds = ids
         notifyDataSetChanged()
@@ -41,7 +39,6 @@ class SaveStyleAdapter(
 
         holder.bind(item, isSelected)
         holder.itemView.setOnClickListener {
-            // 아이템이 클릭되면, Fragment에게 "이 아이템이 클릭되었고, 현재 선택 상태는 OOO입니다" 라고 보고합니다.
             onItemClicked(item, isSelected)
         }
     }
@@ -53,9 +50,14 @@ class SaveStyleAdapter(
         private val checkIcon: ImageView = itemView.findViewById(R.id.icon_checked)
 
         fun bind(item: ClothingItem, isSelected: Boolean) {
-            val imageToShow = item.processedImageUri ?: item.imageUri
+            // [수정] RecommendationAdapter와 동일하게, 배경 제거 이미지 표시 로직을 적용
+            val imageToShow = if (item.useProcessedImage && item.processedImageUri != null) {
+                item.processedImageUri
+            } else {
+                item.imageUri
+            }
             Glide.with(itemView.context)
-                .load(Uri.fromFile(File(imageToShow!!)))
+                .load(Uri.fromFile(File(imageToShow)))
                 .into(imageView)
 
             checkIcon.visibility = if (isSelected) View.VISIBLE else View.GONE

@@ -23,6 +23,7 @@ import com.google.android.material.switchmaterial.SwitchMaterial
 import com.google.android.material.textfield.TextInputEditText
 import com.yehyun.whatshouldiweartoday.R
 import com.yehyun.whatshouldiweartoday.data.database.ClothingItem
+import com.yehyun.whatshouldiweartoday.util.TemperatureCalculator
 import java.io.File
 
 class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing) {
@@ -61,12 +62,9 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing) {
 
     private fun observeViewModel() {
         viewModel.getClothingItem(args.clothingItemId).observe(viewLifecycleOwner) { item ->
-            // observe는 화면 회전 등에서 여러 번 호출될 수 있으므로,
-            // currentClothingItem이 아직 설정되지 않았을 때만 데이터를 바인딩합니다.
             if (item != null && currentClothingItem == null) {
                 currentClothingItem = item
                 bindDataToViews(item)
-                // 데이터가 화면에 모두 그려진 후에 리스너를 설정해야 정확하게 작동합니다.
                 setupListeners()
             }
         }
@@ -75,7 +73,6 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing) {
     private fun bindDataToViews(item: ClothingItem) {
         toolbar.title = "'${item.name}' 수정"
         editTextName.setText(item.name)
-        // [해결 1] 적정 온도 텍스트뷰가 확실히 표시되도록 수정
         textViewTemperature.text = "적정 온도: ${item.suitableTemperature}°C"
 
         for (i in 0 until chipGroupCategory.childCount) {
@@ -86,12 +83,11 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing) {
             }
         }
 
-        // [해결 2] DB에 저장된 useProcessedImage 값에 따라 스위치 초기 상태 설정
         if (item.processedImageUri != null) {
             switchRemoveBackground.visibility = View.VISIBLE
             switchRemoveBackground.isChecked = item.useProcessedImage
             val imageUri = if(item.useProcessedImage) item.processedImageUri else item.imageUri
-            Glide.with(this).load(Uri.fromFile(File(imageUri))).into(imageViewPreview)
+            Glide.with(this).load(Uri.fromFile(File(imageUri!!))).into(imageViewPreview)
         } else {
             switchRemoveBackground.visibility = View.GONE
             Glide.with(this).load(Uri.fromFile(File(item.imageUri))).into(imageViewPreview)
@@ -110,8 +106,29 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing) {
         }
         editTextName.addTextChangedListener(textWatcher)
 
-        chipGroupCategory.setOnCheckedStateChangeListener { _, _ -> checkForChanges() }
-        // [해결 2] 스위치 토글 시, 실시간으로 이미지뷰를 업데이트합니다.
+        // [핵심 오류 수정] singleSelection일 때 사용하는 setOnCheckedChangeListener로 변경
+        chipGroupCategory.setOnCheckedChangeListener { group, checkedId ->
+            // checkedId는 선택된 Chip의 고유 ID(Int)입니다.
+            if (checkedId != View.NO_ID) {
+                currentClothingItem?.let { item ->
+                    // 올바른 ID로 Chip을 찾습니다.
+                    val selectedChip = group.findViewById<Chip>(checkedId)
+                    val newCategory = selectedChip.text.toString()
+
+                    // 새 종류로 온도를 다시 계산합니다.
+                    val newTemp = TemperatureCalculator.calculate(
+                        item.lengthScore,
+                        item.thicknessScore,
+                        newCategory
+                    )
+                    // 화면의 온도 텍스트를 실시간으로 업데이트합니다.
+                    textViewTemperature.text = "적정 온도: ${newTemp}°C"
+                }
+            }
+            // 변경사항 감지
+            checkForChanges()
+        }
+
         switchRemoveBackground.setOnCheckedChangeListener { _, isChecked ->
             val imageUri = if (isChecked) currentClothingItem?.processedImageUri else currentClothingItem?.imageUri
             imageUri?.let {
@@ -121,17 +138,15 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing) {
         }
     }
 
-    // [해결 1] 데이터 변경 여부를 정확히 감지하는 로직
     private fun checkForChanges() {
         if (currentClothingItem == null) return
 
         val nameChanged = editTextName.text.toString() != currentClothingItem!!.name
         val selectedChip = view?.findViewById<Chip>(chipGroupCategory.checkedChipId)
-        // 선택된 칩이 없을 경우를 대비하여, 원래 카테고리와 비교
         val categoryChanged = if (selectedChip != null) {
             selectedChip.text.toString() != currentClothingItem!!.category
         } else {
-            true // 칩이 선택되지 않았다면 변경된 것으로 간주
+            true
         }
         val switchChanged = switchRemoveBackground.isChecked != currentClothingItem!!.useProcessedImage
 
@@ -145,7 +160,6 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing) {
     }
 
     private fun handleBackButton() {
-        // 버튼의 활성화 상태로 변경 여부를 판단
         if (buttonSave.isEnabled) {
             showSaveChangesDialog()
         } else {
@@ -176,17 +190,27 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing) {
     }
 
     private fun saveChangesAndExit() {
-        val updatedName = editTextName.text.toString()
+        val updatedName = editTextName.text.toString().trim()
         val selectedChipId = chipGroupCategory.checkedChipId
-        if (selectedChipId == View.NO_ID) { return }
+        if (selectedChipId == View.NO_ID) {
+            Toast.makeText(context, "옷 종류를 선택해주세요.", Toast.LENGTH_SHORT).show()
+            return
+        }
         val updatedCategory = view?.findViewById<Chip>(selectedChipId)?.text.toString()
         val useProcessed = switchRemoveBackground.isChecked
 
         currentClothingItem?.let {
+            val updatedTemperature = TemperatureCalculator.calculate(
+                it.lengthScore,
+                it.thicknessScore,
+                updatedCategory
+            )
+
             val updatedItem = it.copy(
                 name = updatedName,
                 category = updatedCategory,
-                useProcessedImage = useProcessed
+                useProcessedImage = useProcessed,
+                suitableTemperature = updatedTemperature
             )
             viewModel.updateClothingItem(updatedItem)
             findNavController().popBackStack()

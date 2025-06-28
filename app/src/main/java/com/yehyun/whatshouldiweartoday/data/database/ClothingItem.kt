@@ -8,10 +8,14 @@ data class ClothingItem(
     @PrimaryKey(autoGenerate = true)
     val id: Int = 0,
     val name: String,
-    val imageUri: String, // 원본 이미지 경로
-    val processedImageUri: String?, // 배경 제거 이미지 경로
-    var useProcessedImage: Boolean, // [수정] 대표 이미지 선택 여부
+    val imageUri: String,
+    val processedImageUri: String?,
+    var useProcessedImage: Boolean,
     val category: String,
     val suitableTemperature: Int,
-    val timestamp: Long = System.currentTimeMillis() // 등록 시간
+    val timestamp: Long = System.currentTimeMillis(),
+
+    // [핵심 추가] 온도 재계산을 위해 AI 분석 점수를 DB에 저장합니다.
+    val lengthScore: Int,
+    val thicknessScore: Int
 )
