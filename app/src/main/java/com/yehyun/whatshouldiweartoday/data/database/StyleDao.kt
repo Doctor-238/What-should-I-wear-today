@@ -27,11 +27,19 @@ interface StyleDao {
 
     @Transaction
     @Query("SELECT * FROM saved_styles WHERE styleName LIKE '%' || :query || '%' ORDER BY timestamp DESC")
-    fun getStyles(query: String): LiveData<List<StyleWithItems>>
+    fun getStylesOrderByRecent(query: String): LiveData<List<StyleWithItems>>
 
     @Transaction
-    @Query("SELECT * FROM saved_styles WHERE styleId = :styleId")
-    fun getStyleById(styleId: Long): LiveData<StyleWithItems>
+    @Query("SELECT * FROM saved_styles WHERE styleName LIKE '%' || :query || '%' ORDER BY timestamp ASC")
+    fun getStylesOrderByOldest(query: String): LiveData<List<StyleWithItems>>
+
+    @Transaction
+    @Query("SELECT * FROM saved_styles WHERE styleName LIKE '%' || :query || '%' ORDER BY styleName ASC")
+    fun getStylesOrderByNameAsc(query: String): LiveData<List<StyleWithItems>>
+
+    @Transaction
+    @Query("SELECT * FROM saved_styles WHERE styleName LIKE '%' || :query || '%' ORDER BY styleName DESC")
+    fun getStylesOrderByNameDesc(query: String): LiveData<List<StyleWithItems>>
 
     @Update
     suspend fun updateStyle(style: SavedStyle)
@@ -63,4 +71,7 @@ interface StyleDao {
         deleteCrossRefsForStyle(style.styleId)
         deleteStyle(style)
     }
+    @Transaction
+    @Query("SELECT * FROM saved_styles WHERE styleId = :styleId")
+    fun getStyleById(styleId: Long): LiveData<StyleWithItems>
 }

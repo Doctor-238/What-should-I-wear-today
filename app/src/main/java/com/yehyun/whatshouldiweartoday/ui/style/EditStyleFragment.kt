@@ -15,6 +15,7 @@ import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.appbar.MaterialToolbar
+import com.google.android.material.tabs.TabLayout
 import com.google.android.material.textfield.TextInputEditText
 import com.yehyun.whatshouldiweartoday.R
 import com.yehyun.whatshouldiweartoday.data.database.ClothingItem
@@ -25,6 +26,7 @@ class EditStyleFragment : Fragment(R.layout.fragment_edit_style) {
 
     private val viewModel: EditStyleViewModel by viewModels()
     private val args: EditStyleFragmentArgs by navArgs()
+    private lateinit var tabLayout: TabLayout
 
     // [수정] 원본 데이터와 현재 선택된 아이템 목록을 명확히 구분
     private var initialStyleData: Pair<String, List<Int>>? = null
@@ -44,6 +46,7 @@ class EditStyleFragment : Fragment(R.layout.fragment_edit_style) {
         observeViewModel()
         setupListeners(view)
         setupBackButtonHandler()
+        setupTabs(view)
     }
 
     private fun setupViews(view: View) {
@@ -51,6 +54,7 @@ class EditStyleFragment : Fragment(R.layout.fragment_edit_style) {
         tvSelectedItemLabel = view.findViewById(R.id.tv_selected_items_label)
         editTextName = view.findViewById(R.id.editText_edit_style_name)
         buttonSave.isEnabled = false
+        tabLayout = view.findViewById(R.id.tab_layout_edit_style_category)
     }
 
     private fun setupAdapters(view: View) {
@@ -160,5 +164,18 @@ class EditStyleFragment : Fragment(R.layout.fragment_edit_style) {
 
     private fun setupBackButtonHandler() {
         requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner) { handleBackButton() }
+    }
+    // [개선점 5] 카테고리 탭 설정 함수
+    private fun setupTabs(view: View) {
+        val categories = listOf("전체", "상의", "하의", "아우터", "신발", "가방", "모자", "기타")
+        categories.forEach { tabLayout.addTab(tabLayout.newTab().setText(it)) }
+        tabLayout.addOnTabSelectedListener(object: TabLayout.OnTabSelectedListener {
+            override fun onTabSelected(tab: TabLayout.Tab?) {
+                // ViewModel에 필터링 요청 (ViewModel 수정 필요)
+                viewModel.setClothingFilter(tab?.text.toString())
+            }
+            override fun onTabUnselected(tab: TabLayout.Tab?) {}
+            override fun onTabReselected(tab: TabLayout.Tab?) {}
+        })
     }
 }

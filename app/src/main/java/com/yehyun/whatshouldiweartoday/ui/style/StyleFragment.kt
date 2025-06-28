@@ -2,6 +2,9 @@ package com.yehyun.whatshouldiweartoday.ui.style
 
 import android.os.Bundle
 import android.view.View
+import android.widget.AdapterView
+import android.widget.ArrayAdapter
+import android.widget.Spinner
 import androidx.appcompat.widget.SearchView
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -21,6 +24,7 @@ class StyleFragment : Fragment(R.layout.fragment_style) {
 
         setupRecyclerView(view)
         setupSearch(view)
+        setupSortSpinner(view)
 
         view.findViewById<FloatingActionButton>(R.id.fab_add_style).setOnClickListener {
             findNavController().navigate(R.id.action_global_saveStyleFragment)
@@ -51,5 +55,21 @@ class StyleFragment : Fragment(R.layout.fragment_style) {
                 return true
             }
         })
+    }
+    private fun setupSortSpinner(view: View) {
+        val spinner = view.findViewById<Spinner>(R.id.spinner_sort_style)
+        // [수정] 온도 관련 정렬 제거
+        val sortOptions = listOf("최신순", "오래된 순", "이름 오름차순", "이름 내림차순")
+
+        val adapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, sortOptions)
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        spinner.adapter = adapter
+
+        spinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                viewModel.setSortType(sortOptions[position])
+            }
+            override fun onNothingSelected(parent: AdapterView<*>?) {}
+        }
     }
 }

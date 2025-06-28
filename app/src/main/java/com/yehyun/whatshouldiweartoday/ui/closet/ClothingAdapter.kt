@@ -42,17 +42,13 @@ class ClothingAdapter(private val onItemClicked: (ClothingItem) -> Unit) : Recyc
 
         fun bind(item: ClothingItem) {
             nameView.text = item.name
-
-            // [해결 2] useProcessedImage 값에 따라 대표 이미지를 정확히 표시합니다.
+            // [해결] useProcessedImage 값에 따라 보여줄 이미지를 정확히 결정합니다.
             val imageToShow = if (item.useProcessedImage && item.processedImageUri != null) {
                 item.processedImageUri
             } else {
                 item.imageUri
             }
-
-            Glide.with(itemView.context)
-                .load(Uri.fromFile(File(imageToShow)))
-                .into(imageView)
+            Glide.with(itemView.context).load(Uri.fromFile(File(imageToShow))).into(imageView)
         }
     }
 }

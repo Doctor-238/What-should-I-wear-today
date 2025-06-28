@@ -15,8 +15,13 @@ class StyleRepository(private val styleDao: StyleDao) {
     }
 
     // 저장된 모든 스타일을 가져오기 (이름으로 검색 가능)
-    fun getStyles(query: String): LiveData<List<StyleWithItems>> {
-        return styleDao.getStyles(query)
+    fun getStyles(query: String, sortType: String): LiveData<List<StyleWithItems>> {
+        return when (sortType) {
+            "오래된 순" -> styleDao.getStylesOrderByOldest(query)
+            "이름 오름차순" -> styleDao.getStylesOrderByNameAsc(query)
+            "이름 내림차순" -> styleDao.getStylesOrderByNameDesc(query)
+            else -> styleDao.getStylesOrderByRecent(query) // 기본값: 최신순
+        }
     }
 
     // [추가] ID로 스타일 정보 가져오기
@@ -32,4 +37,5 @@ class StyleRepository(private val styleDao: StyleDao) {
     suspend fun deleteStyleAndRefs(style: SavedStyle) {
         styleDao.deleteStyleAndRefs(style)
     }
+
 }

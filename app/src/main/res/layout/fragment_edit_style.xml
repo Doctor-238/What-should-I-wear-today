@@ -74,6 +74,14 @@
                 android:layout_marginTop="24dp"
                 android:text="옷장에서 아이템 추가/제거"
                 android:textStyle="bold" />
+
+            <!-- [추가] 옷장 필터링을 위한 카테고리 탭 -->
+            <com.google.android.material.tabs.TabLayout
+                android:id="@+id/tab_layout_edit_style_category"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:tabMode="scrollable" />
+
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/rv_all_items_for_edit"
                 android:layout_width="match_parent"

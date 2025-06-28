@@ -10,13 +10,26 @@
         android:id="@+id/search_view_style"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_margin="8dp"
+        android:layout_marginStart="8dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="8dp"
         android:background="@drawable/bg_dotted_border"
         app:iconifiedByDefault="false"
-        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintEnd_toStartOf="@+id/spinner_sort_style"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         app:queryHint="스타일 이름을 검색하세요" />
+
+    <Spinner
+        android:id="@+id/spinner_sort_style"
+        android:layout_width="wrap_content"
+        android:layout_height="0dp"
+        android:layout_marginEnd="8dp"
+        android:background="@drawable/bg_dotted_border"
+        android:paddingHorizontal="8dp"
+        app:layout_constraintBottom_toBottomOf="@id/search_view_style"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="@id/search_view_style" />
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rv_saved_styles"
