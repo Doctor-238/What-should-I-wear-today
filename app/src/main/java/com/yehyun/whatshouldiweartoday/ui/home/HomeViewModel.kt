@@ -41,9 +41,11 @@ data class DailyWeatherSummary(
 
 class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
+    // --- Repositories ---
     private val weatherRepository: WeatherRepository
     private val clothingRepository: ClothingRepository
 
+    // --- LiveData ---
     private val _todayWeatherSummary = MutableLiveData<DailyWeatherSummary>()
     val todayWeatherSummary: LiveData<DailyWeatherSummary> = _todayWeatherSummary
     private val _tomorrowWeatherSummary = MutableLiveData<DailyWeatherSummary>()
@@ -54,7 +56,10 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     val tomorrowRecommendation: LiveData<RecommendationResult> = _tomorrowRecommendation
     private val _error = MutableLiveData<String>()
     val error: LiveData<String> = _error
+    private val _isLoading = MutableLiveData<Boolean>()
+    val isLoading: LiveData<Boolean> = _isLoading
 
+    // --- 상수 ---
     companion object {
         private const val TEMPERATURE_TOLERANCE = 4
         private const val SIGNIFICANT_TEMP_DIFFERENCE = 10
@@ -67,19 +72,21 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun fetchWeatherData(latitude: Double, longitude: Double, apiKey: String) {
+        _isLoading.value = true
         viewModelScope.launch {
             try {
                 val response = weatherRepository.getFiveDayForecast(latitude, longitude, apiKey)
                 if (response.isSuccessful && response.body() != null) {
                     processAndRecommend(response.body()!!)
                 } else {
-                    // [개선] 서버가 보내준 상세 오류 메시지를 로그로 출력
                     val errorBody = response.errorBody()?.string() ?: "알 수 없는 오류"
                     Log.e("HomeViewModel", "API Error: ${response.code()} - $errorBody")
-                    _error.postValue("날씨 정보를 가져오는 데 실패했습니다. (에러 코드: ${response.code()})")
+                    _error.postValue("날씨 정보를 가져오는 데 실패했습니다. (코드: ${response.code()})")
                 }
             } catch (e: Exception) {
                 _error.postValue("네트워크 오류가 발생했습니다: ${e.message}")
+            } finally {
+                _isLoading.postValue(false)
             }
         }
     }
@@ -89,30 +96,28 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         val tomorrow = today.plusDays(1)
         val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
 
-        val todayForecasts = weatherResponse.list.filter { LocalDate.parse(it.dt_txt, formatter).isEqual(today) }
-        val tomorrowForecasts = weatherResponse.list.filter { LocalDate.parse(it.dt_txt, formatter).isEqual(tomorrow) }
-
-        if (todayForecasts.isNotEmpty()) {
-            _todayWeatherSummary.postValue(createDailySummary(todayForecasts, "오늘"))
-        }
-        if (tomorrowForecasts.isNotEmpty()) {
-            _tomorrowWeatherSummary.postValue(createDailySummary(tomorrowForecasts, "내일"))
+        val forecastsByDate = weatherResponse.list.groupBy {
+            LocalDate.parse(it.dt_txt, formatter)
         }
 
-        // DB에서 옷 목록을 안전하게 가져옵니다.
+        val todayForecasts = forecastsByDate[today] ?: emptyList()
+        val tomorrowForecasts = forecastsByDate[tomorrow] ?: emptyList()
+
         val allClothes = clothingRepository.getAllItemsList()
 
         if (todayForecasts.isNotEmpty()) {
-            val summary = createDailySummary(todayForecasts, "오늘")
+            val summary = createDailySummary(todayForecasts)
+            _todayWeatherSummary.postValue(summary)
             _todayRecommendation.postValue(generateRecommendation(summary, allClothes))
         }
         if (tomorrowForecasts.isNotEmpty()) {
-            val summary = createDailySummary(tomorrowForecasts, "내일")
+            val summary = createDailySummary(tomorrowForecasts)
+            _tomorrowWeatherSummary.postValue(summary)
             _tomorrowRecommendation.postValue(generateRecommendation(summary, allClothes))
         }
     }
 
-    private fun createDailySummary(forecasts: List<Forecast>, dateLabel: String): DailyWeatherSummary {
+    private fun createDailySummary(forecasts: List<Forecast>): DailyWeatherSummary {
         val maxTemp = forecasts.maxOf { it.main.temp_max }
         val minTemp = forecasts.minOf { it.main.temp_min }
         val maxFeelsLike = forecasts.maxOf { it.main.feels_like }
@@ -125,11 +130,10 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             else -> forecasts.first().weather.first().description
         }
 
-        return DailyWeatherSummary(dateLabel, maxTemp, minTemp, maxFeelsLike, minFeelsLike, weatherCondition, pop)
+        return DailyWeatherSummary("", maxTemp, minTemp, maxFeelsLike, minFeelsLike, weatherCondition, pop)
     }
 
     private fun generateRecommendation(summary: DailyWeatherSummary, allClothes: List<ClothingItem>): RecommendationResult {
-        // [수정] Double 타입의 체감 온도를 반올림하여 Int로 변환합니다.
         val roundedMaxFeelsLike = summary.maxFeelsLike.roundToInt()
         val roundedMinFeelsLike = summary.minFeelsLike.roundToInt()
 
@@ -144,12 +148,9 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         }
 
         val packableOuter = if ((summary.maxTemp - summary.minTemp) >= SIGNIFICANT_TEMP_DIFFERENCE) {
-            allClothes
-                .filter { it.category == "아우터" }
+            allClothes.filter { it.category == "아우터" }
                 .minByOrNull { abs(it.suitableTemperature - roundedMinFeelsLike) }
-        } else {
-            null
-        }
+        } else { null }
 
         val bestTop = recommendedTops.minByOrNull { abs(it.suitableTemperature - roundedMaxFeelsLike) }
         val bestBottom = recommendedBottoms.minByOrNull { abs(it.suitableTemperature - roundedMaxFeelsLike) }
@@ -162,13 +163,6 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             else -> ""
         }
 
-        return RecommendationResult(
-            recommendedTops,
-            recommendedBottoms,
-            recommendedOuters,
-            bestCombination,
-            packableOuter,
-            umbrellaRecommendation
-        )
+        return RecommendationResult(recommendedTops, recommendedBottoms, recommendedOuters, bestCombination, packableOuter, umbrellaRecommendation)
     }
 }

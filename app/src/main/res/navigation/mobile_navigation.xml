@@ -10,10 +10,9 @@
         android:name="com.yehyun.whatshouldiweartoday.ui.home.HomeFragment"
         android:label="@string/title_home"
         tools:layout="@layout/fragment_home" >
-        <!-- [추가] 홈 -> 스타일 저장 화면으로 가는 길 -->
-<!--        <action-->
-<!--            android:id="@+id/action_navigation_home_to_saveStyleFragment"-->
-<!--            app:destination="@id/saveStyleFragment" />-->
+        <action
+            android:id="@+id/action_navigation_home_to_editClothingFragment"
+            app:destination="@id/editClothingFragment" />
     </fragment>
 
 
