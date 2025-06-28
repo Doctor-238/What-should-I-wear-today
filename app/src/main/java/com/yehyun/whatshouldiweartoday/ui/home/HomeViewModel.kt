@@ -18,7 +18,6 @@ import java.time.format.DateTimeFormatter
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
-// 추천 결과를 담을 데이터 클래스
 data class RecommendationResult(
     val recommendedTops: List<ClothingItem>,
     val recommendedBottoms: List<ClothingItem>,
@@ -28,7 +27,6 @@ data class RecommendationResult(
     val umbrellaRecommendation: String
 )
 
-// 하루의 날씨 요약 정보를 담을 데이터 클래스
 data class DailyWeatherSummary(
     val date: String,
     val maxTemp: Double,
@@ -41,11 +39,9 @@ data class DailyWeatherSummary(
 
 class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
-    // --- Repositories ---
     private val weatherRepository: WeatherRepository
     private val clothingRepository: ClothingRepository
 
-    // --- LiveData ---
     private val _todayWeatherSummary = MutableLiveData<DailyWeatherSummary>()
     val todayWeatherSummary: LiveData<DailyWeatherSummary> = _todayWeatherSummary
     private val _tomorrowWeatherSummary = MutableLiveData<DailyWeatherSummary>()
@@ -59,10 +55,9 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     private val _isLoading = MutableLiveData<Boolean>()
     val isLoading: LiveData<Boolean> = _isLoading
 
-    // --- 상수 ---
     companion object {
-        private const val TEMPERATURE_TOLERANCE = 4
-        private const val SIGNIFICANT_TEMP_DIFFERENCE = 10
+        private const val TEMPERATURE_TOLERANCE = 4.0 // Double로 변경
+        private const val SIGNIFICANT_TEMP_DIFFERENCE = 10.0 // Double로 변경
     }
 
     init {
@@ -92,17 +87,14 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private suspend fun processAndRecommend(weatherResponse: com.yehyun.whatshouldiweartoday.data.api.WeatherResponse) {
-        // [해결 1] 날짜 필터링 로직 최종 검토 및 수정 완료
         val today = LocalDate.now()
         val tomorrow = today.plusDays(1)
         val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
 
-        // 5일치 예보를 날짜별로 그룹화
         val forecastsByDate = weatherResponse.list.groupBy {
             LocalDate.parse(it.dt_txt, formatter)
         }
 
-        // 그룹화된 데이터에서 오늘과 내일의 예보만 추출
         val todayForecasts = forecastsByDate[today] ?: emptyList()
         val tomorrowForecasts = forecastsByDate[tomorrow] ?: emptyList()
 
@@ -137,27 +129,29 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun generateRecommendation(summary: DailyWeatherSummary, allClothes: List<ClothingItem>): RecommendationResult {
-        val roundedMaxFeelsLike = summary.maxFeelsLike.roundToInt()
-        val roundedMinFeelsLike = summary.minFeelsLike.roundToInt()
+        // [핵심 수정] 모든 온도 비교를 Double 타입으로 수행합니다.
+        val maxFeelsLike = summary.maxFeelsLike
+        val minFeelsLike = summary.minFeelsLike
 
         val recommendedTops = allClothes.filter {
-            it.category == "상의" && it.suitableTemperature in (roundedMaxFeelsLike - TEMPERATURE_TOLERANCE)..(roundedMaxFeelsLike + TEMPERATURE_TOLERANCE)
+            it.category == "상의" && it.suitableTemperature in (maxFeelsLike - TEMPERATURE_TOLERANCE)..(maxFeelsLike + TEMPERATURE_TOLERANCE)
         }
         val recommendedBottoms = allClothes.filter {
-            it.category == "하의" && it.suitableTemperature in (roundedMaxFeelsLike - TEMPERATURE_TOLERANCE)..(roundedMaxFeelsLike + TEMPERATURE_TOLERANCE)
+            it.category == "하의" && it.suitableTemperature in (maxFeelsLike - TEMPERATURE_TOLERANCE)..(maxFeelsLike + TEMPERATURE_TOLERANCE)
         }
         val recommendedOuters = allClothes.filter {
-            it.category == "아우터" && it.suitableTemperature in (roundedMaxFeelsLike - TEMPERATURE_TOLERANCE)..(roundedMaxFeelsLike + TEMPERATURE_TOLERANCE)
+            it.category == "아우터" && it.suitableTemperature in (maxFeelsLike - TEMPERATURE_TOLERANCE)..(maxFeelsLike + TEMPERATURE_TOLERANCE)
         }
 
         val packableOuter = if ((summary.maxTemp - summary.minTemp) >= SIGNIFICANT_TEMP_DIFFERENCE) {
             allClothes.filter { it.category == "아우터" }
-                .minByOrNull { abs(it.suitableTemperature - roundedMinFeelsLike) }
+                .minByOrNull { abs(it.suitableTemperature - minFeelsLike) }
         } else { null }
 
-        val bestTop = recommendedTops.minByOrNull { abs(it.suitableTemperature - roundedMaxFeelsLike) }
-        val bestBottom = recommendedBottoms.minByOrNull { abs(it.suitableTemperature - roundedMaxFeelsLike) }
-        val bestOuter = recommendedOuters.minByOrNull { abs(it.suitableTemperature - roundedMaxFeelsLike) }
+        // 오류가 발생했던 부분: 체감 온도(Double)와의 차이를 계산하여 가장 가까운 옷을 찾습니다.
+        val bestTop = recommendedTops.minByOrNull { abs(it.suitableTemperature - maxFeelsLike) }
+        val bestBottom = recommendedBottoms.minByOrNull { abs(it.suitableTemperature - maxFeelsLike) }
+        val bestOuter = recommendedOuters.minByOrNull { abs(it.suitableTemperature - maxFeelsLike) }
         val bestCombination = listOfNotNull(bestTop, bestBottom, bestOuter)
 
         val umbrellaRecommendation = when {

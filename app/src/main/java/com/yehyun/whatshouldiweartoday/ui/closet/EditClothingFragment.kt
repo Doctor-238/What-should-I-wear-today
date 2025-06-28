@@ -1,5 +1,6 @@
 package com.yehyun.whatshouldiweartoday.ui.closet
 
+import android.graphics.Color
 import android.net.Uri
 import android.os.Bundle
 import android.text.Editable
@@ -9,7 +10,7 @@ import android.widget.Button
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
-import androidx.activity.addCallback
+import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -23,15 +24,17 @@ import com.google.android.material.switchmaterial.SwitchMaterial
 import com.google.android.material.textfield.TextInputEditText
 import com.yehyun.whatshouldiweartoday.R
 import com.yehyun.whatshouldiweartoday.data.database.ClothingItem
-import com.yehyun.whatshouldiweartoday.util.TemperatureCalculator
+import com.yehyun.whatshouldiweartoday.ui.OnTabReselectedListener
 import java.io.File
+import java.util.Locale
 
-class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing) {
+class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabReselectedListener {
 
     private val viewModel: EditClothingViewModel by viewModels()
     private val args: EditClothingFragmentArgs by navArgs()
 
     private var currentClothingItem: ClothingItem? = null
+    private lateinit var onBackPressedCallback: OnBackPressedCallback
 
     private lateinit var imageViewPreview: ImageView
     private lateinit var switchRemoveBackground: SwitchMaterial
@@ -41,11 +44,14 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing) {
     private lateinit var buttonSave: Button
     private lateinit var buttonDelete: Button
     private lateinit var toolbar: MaterialToolbar
+    private lateinit var viewColorSwatch: View
+    private lateinit var textColorLabel: TextView
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         setupViews(view)
         observeViewModel()
+        setupBackButtonHandler()
     }
 
     private fun setupViews(view: View) {
@@ -57,6 +63,8 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing) {
         buttonSave = view.findViewById(R.id.button_menu_save)
         buttonDelete = view.findViewById(R.id.button_delete)
         toolbar = view.findViewById(R.id.toolbar_edit)
+        viewColorSwatch = view.findViewById(R.id.view_color_swatch_edit)
+        textColorLabel = view.findViewById(R.id.textView_color_label_edit)
         buttonSave.isEnabled = false
     }
 
@@ -73,7 +81,17 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing) {
     private fun bindDataToViews(item: ClothingItem) {
         toolbar.title = "'${item.name}' 수정"
         editTextName.setText(item.name)
-        textViewTemperature.text = "적정 온도: ${item.suitableTemperature}°C"
+        // [핵심 수정] 소수점 첫째 자리까지 온도를 표시
+        textViewTemperature.text = "적정 온도: ${String.format(Locale.US, "%.1f", item.suitableTemperature)}°C"
+
+        try {
+            viewColorSwatch.setBackgroundColor(Color.parseColor(item.colorHex))
+            viewColorSwatch.visibility = View.VISIBLE
+            textColorLabel.visibility = View.VISIBLE
+        } catch (e: Exception) {
+            viewColorSwatch.visibility = View.GONE
+            textColorLabel.visibility = View.GONE
+        }
 
         for (i in 0 until chipGroupCategory.childCount) {
             val chip = chipGroupCategory.getChildAt(i) as Chip
@@ -87,10 +105,10 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing) {
             switchRemoveBackground.visibility = View.VISIBLE
             switchRemoveBackground.isChecked = item.useProcessedImage
             val imageUri = if(item.useProcessedImage) item.processedImageUri else item.imageUri
-            Glide.with(this).load(Uri.fromFile(File(imageUri!!))).into(imageViewPreview)
+            imageUri?.let { Glide.with(this).load(Uri.fromFile(File(it))).into(imageViewPreview) }
         } else {
             switchRemoveBackground.visibility = View.GONE
-            Glide.with(this).load(Uri.fromFile(File(item.imageUri))).into(imageViewPreview)
+            item.imageUri.let { Glide.with(this).load(Uri.fromFile(File(it))).into(imageViewPreview) }
         }
     }
 
@@ -106,34 +124,11 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing) {
         }
         editTextName.addTextChangedListener(textWatcher)
 
-        // [핵심 오류 수정] singleSelection일 때 사용하는 setOnCheckedChangeListener로 변경
-        chipGroupCategory.setOnCheckedChangeListener { group, checkedId ->
-            // checkedId는 선택된 Chip의 고유 ID(Int)입니다.
-            if (checkedId != View.NO_ID) {
-                currentClothingItem?.let { item ->
-                    // 올바른 ID로 Chip을 찾습니다.
-                    val selectedChip = group.findViewById<Chip>(checkedId)
-                    val newCategory = selectedChip.text.toString()
-
-                    // 새 종류로 온도를 다시 계산합니다.
-                    val newTemp = TemperatureCalculator.calculate(
-                        item.lengthScore,
-                        item.thicknessScore,
-                        newCategory
-                    )
-                    // 화면의 온도 텍스트를 실시간으로 업데이트합니다.
-                    textViewTemperature.text = "적정 온도: ${newTemp}°C"
-                }
-            }
-            // 변경사항 감지
+        chipGroupCategory.setOnCheckedChangeListener { _, _ ->
             checkForChanges()
         }
 
-        switchRemoveBackground.setOnCheckedChangeListener { _, isChecked ->
-            val imageUri = if (isChecked) currentClothingItem?.processedImageUri else currentClothingItem?.imageUri
-            imageUri?.let {
-                Glide.with(this).load(Uri.fromFile(File(it))).into(imageViewPreview)
-            }
+        switchRemoveBackground.setOnCheckedChangeListener { _, _ ->
             checkForChanges()
         }
     }
@@ -150,13 +145,18 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing) {
         }
         val switchChanged = switchRemoveBackground.isChecked != currentClothingItem!!.useProcessedImage
 
-        buttonSave.isEnabled = nameChanged || categoryChanged || switchChanged
+        val hasChanges = nameChanged || categoryChanged || switchChanged
+        buttonSave.isEnabled = hasChanges
+        onBackPressedCallback.isEnabled = hasChanges
     }
 
     private fun setupBackButtonHandler() {
-        requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner) {
-            handleBackButton()
+        onBackPressedCallback = object : OnBackPressedCallback(false) {
+            override fun handleOnBackPressed() {
+                showSaveChangesDialog()
+            }
         }
+        requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, onBackPressedCallback)
     }
 
     private fun handleBackButton() {
@@ -200,20 +200,17 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing) {
         val useProcessed = switchRemoveBackground.isChecked
 
         currentClothingItem?.let {
-            val updatedTemperature = TemperatureCalculator.calculate(
-                it.lengthScore,
-                it.thicknessScore,
-                updatedCategory
-            )
-
             val updatedItem = it.copy(
                 name = updatedName,
                 category = updatedCategory,
-                useProcessedImage = useProcessed,
-                suitableTemperature = updatedTemperature
+                useProcessedImage = useProcessed
             )
             viewModel.updateClothingItem(updatedItem)
             findNavController().popBackStack()
         }
+    }
+
+    override fun onTabReselected() {
+        handleBackButton()
     }
 }

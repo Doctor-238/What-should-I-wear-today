@@ -7,7 +7,7 @@ import android.view.View
 import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
-import androidx.activity.addCallback
+import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -23,18 +23,18 @@ import com.yehyun.whatshouldiweartoday.data.database.SavedStyle
 import com.yehyun.whatshouldiweartoday.ui.OnTabReselectedListener
 import com.yehyun.whatshouldiweartoday.ui.home.RecommendationAdapter
 
-// 참고: 사용자가 제공한 코드를 기반으로 재작성 및 수정
 class EditStyleFragment : Fragment(R.layout.fragment_edit_style), OnTabReselectedListener {
 
     private val viewModel: EditStyleViewModel by viewModels()
     private val args: EditStyleFragmentArgs by navArgs()
     private lateinit var tabLayout: TabLayout
 
-    // --- 문제 해결의 핵심: 원본 데이터를 안전하게 보관할 변수들 ---
     private var originalStyle: SavedStyle? = null
     private var initialItemIds: Set<Int>? = null
 
     private val currentSelectedItems = mutableListOf<ClothingItem>()
+
+    private lateinit var onBackPressedCallback: OnBackPressedCallback
 
     private lateinit var adapterForAll: SaveStyleAdapter
     private lateinit var adapterForSelected: RecommendationAdapter
@@ -65,7 +65,6 @@ class EditStyleFragment : Fragment(R.layout.fragment_edit_style), OnTabReselecte
 
     private fun observeViewModel() {
         viewModel.getStyleWithItems(args.styleId).observe(viewLifecycleOwner) { styleWithItems ->
-            // 화면에 처음 진입했을 때 딱 한 번만 실행
             if (styleWithItems != null && initialItemIds == null) {
                 originalStyle = styleWithItems.style
                 initialItemIds = styleWithItems.items.map { it.id }.toSet()
@@ -84,9 +83,6 @@ class EditStyleFragment : Fragment(R.layout.fragment_edit_style), OnTabReselecte
             adapterForAll.setSelectedItems(currentSelectedItems.map { it.id }.toSet())
         }
     }
-
-    // (이하 다른 함수들은 이전 답변과 동일하게 유지)
-    // ... setupAdapters, setupListeners, etc.
 
     private fun setupAdapters(view: View) {
         adapterForSelected = RecommendationAdapter { item ->
@@ -125,7 +121,6 @@ class EditStyleFragment : Fragment(R.layout.fragment_edit_style), OnTabReselecte
     }
 
     private fun updateAdaptersAndCheckChanges() {
-        // [개선점] 정렬 로직 추가
         val categoryOrder = mapOf(
             "상의" to 1, "하의" to 2, "아우터" to 3, "신발" to 4,
             "가방" to 5, "모자" to 6, "기타" to 7
@@ -134,10 +129,8 @@ class EditStyleFragment : Fragment(R.layout.fragment_edit_style), OnTabReselecte
             compareBy<ClothingItem> { categoryOrder[it.category] ?: 8 }
                 .thenBy { it.suitableTemperature }
         )
-        // 정렬된 목록을 어댑터에 전달
         adapterForSelected.submitList(sortedItems)
 
-        // 이하 코드는 기존과 동일
         adapterForAll.setSelectedItems(currentSelectedItems.map { it.id }.toSet())
         tvSelectedItemLabel.text = "현재 스타일 (${currentSelectedItems.size}/10)"
         checkForChanges()
@@ -150,8 +143,18 @@ class EditStyleFragment : Fragment(R.layout.fragment_edit_style), OnTabReselecte
         val currentName = editTextName.text.toString().trim()
         val currentIds = currentSelectedItems.map { it.id }.toSet()
 
-        val isChanged = initialName != currentName || initialItemIds != currentIds
-        buttonSave.isEnabled = isChanged && currentName.isNotEmpty()
+        val hasChanges = initialName != currentName || initialItemIds != currentIds
+        buttonSave.isEnabled = hasChanges && currentName.isNotEmpty()
+        onBackPressedCallback.isEnabled = hasChanges
+    }
+
+    private fun setupBackButtonHandler() {
+        onBackPressedCallback = object : OnBackPressedCallback(false) {
+            override fun handleOnBackPressed() {
+                showSaveChangesDialog()
+            }
+        }
+        requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, onBackPressedCallback)
     }
 
     private fun handleBackButton() {
@@ -186,7 +189,6 @@ class EditStyleFragment : Fragment(R.layout.fragment_edit_style), OnTabReselecte
         }
     }
 
-    // [핵심 수정] 저장하기 함수
     private fun saveChangesAndExit() {
         val styleName = editTextName.text.toString().trim()
         if (styleName.isEmpty()) {
@@ -198,20 +200,11 @@ class EditStyleFragment : Fragment(R.layout.fragment_edit_style), OnTabReselecte
             return
         }
 
-        // 저장 버튼을 누를 때, 멤버 변수에 저장된 원본 데이터(originalStyle)를 사용합니다.
         originalStyle?.let { styleToUpdate ->
-            // 이름만 현재 입력된 내용으로 변경하여 새로운 객체를 만듭니다. (id는 그대로 유지)
             val updatedStyle = styleToUpdate.copy(styleName = styleName)
-            // ViewModel의 업데이트 함수를 호출합니다.
             viewModel.updateStyle(updatedStyle, currentSelectedItems.toList())
             Toast.makeText(context, "저장되었습니다.", Toast.LENGTH_SHORT).show()
             findNavController().popBackStack()
-        }
-    }
-
-    private fun setupBackButtonHandler() {
-        requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, true) {
-            handleBackButton()
         }
     }
 
@@ -226,8 +219,8 @@ class EditStyleFragment : Fragment(R.layout.fragment_edit_style), OnTabReselecte
             override fun onTabReselected(tab: TabLayout.Tab?) {}
         })
     }
+
     override fun onTabReselected() {
-        // 기존의 뒤로가기 버튼 로직을 그대로 재사용
         handleBackButton()
     }
 }

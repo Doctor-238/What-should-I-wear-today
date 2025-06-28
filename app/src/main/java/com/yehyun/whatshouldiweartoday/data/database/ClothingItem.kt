@@ -12,10 +12,8 @@ data class ClothingItem(
     val processedImageUri: String?,
     var useProcessedImage: Boolean,
     val category: String,
-    val suitableTemperature: Int,
+    // [핵심 수정] 온도를 소수점까지 저장하기 위해 Double 타입으로 변경
+    val suitableTemperature: Double,
     val timestamp: Long = System.currentTimeMillis(),
-
-    // [핵심 추가] 온도 재계산을 위해 AI 분석 점수를 DB에 저장합니다.
-    val lengthScore: Int,
-    val thicknessScore: Int
+    val colorHex: String
 )
