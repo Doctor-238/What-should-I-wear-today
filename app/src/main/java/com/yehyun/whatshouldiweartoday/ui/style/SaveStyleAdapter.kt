@@ -5,31 +5,29 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
-import android.widget.Toast
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.yehyun.whatshouldiweartoday.R
 import com.yehyun.whatshouldiweartoday.data.database.ClothingItem
 import java.io.File
 
-class SaveStyleAdapter : RecyclerView.Adapter<SaveStyleAdapter.SelectableViewHolder>() {
+class SaveStyleAdapter(
+    private val onItemClicked: (item: ClothingItem, isSelected: Boolean) -> Unit
+) : RecyclerView.Adapter<SaveStyleAdapter.SelectableViewHolder>() {
 
     private var allItems: List<ClothingItem> = listOf()
-    private val selectedItemIds = mutableSetOf<Int>()
+    private var selectedItemIds = setOf<Int>()
 
+    // Fragment로부터 전체 옷 목록을 전달받는 함수
     fun submitList(items: List<ClothingItem>) {
         this.allItems = items
         notifyDataSetChanged()
     }
 
-    fun setPreselectedItems(ids: IntArray) {
-        selectedItemIds.clear()
-        selectedItemIds.addAll(ids.toList())
+    // Fragment로부터 현재 선택된 아이템들의 ID 목록을 전달받아, 체크 표시를 업데이트하는 함수
+    fun setSelectedItems(ids: Set<Int>) {
+        this.selectedItemIds = ids
         notifyDataSetChanged()
-    }
-
-    fun getSelectedItems(): List<ClothingItem> {
-        return allItems.filter { it.id in selectedItemIds }
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): SelectableViewHolder {
@@ -43,16 +41,8 @@ class SaveStyleAdapter : RecyclerView.Adapter<SaveStyleAdapter.SelectableViewHol
 
         holder.bind(item, isSelected)
         holder.itemView.setOnClickListener {
-            if (isSelected) {
-                selectedItemIds.remove(item.id)
-            } else {
-                if (selectedItemIds.size < 10) {
-                    selectedItemIds.add(item.id)
-                } else {
-                    Toast.makeText(holder.itemView.context, "최대 10개까지 선택할 수 있습니다.", Toast.LENGTH_SHORT).show()
-                }
-            }
-            notifyItemChanged(position)
+            // 아이템이 클릭되면, Fragment에게 "이 아이템이 클릭되었고, 현재 선택 상태는 OOO입니다" 라고 보고합니다.
+            onItemClicked(item, isSelected)
         }
     }
 
@@ -65,7 +55,7 @@ class SaveStyleAdapter : RecyclerView.Adapter<SaveStyleAdapter.SelectableViewHol
         fun bind(item: ClothingItem, isSelected: Boolean) {
             val imageToShow = item.processedImageUri ?: item.imageUri
             Glide.with(itemView.context)
-                .load(Uri.fromFile(File(imageToShow)))
+                .load(Uri.fromFile(File(imageToShow!!)))
                 .into(imageView)
 
             checkIcon.visibility = if (isSelected) View.VISIBLE else View.GONE

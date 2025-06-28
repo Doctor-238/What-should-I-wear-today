@@ -24,7 +24,12 @@
         android:id="@+id/navigation_style"
         android:name="com.yehyun.whatshouldiweartoday.ui.style.StyleFragment"
         android:label="@string/title_style"
-        tools:layout="@layout/fragment_style" />
+        tools:layout="@layout/fragment_style" >
+        <!-- [추가] 스타일 목록 -> 스타일 수정 화면으로 가는 길 -->
+        <action
+            android:id="@+id/action_navigation_style_to_editStyleFragment"
+            app:destination="@id/editStyleFragment" />
+    </fragment>
 
     <fragment
         android:id="@+id/navigation_closet"
@@ -67,6 +72,17 @@
             app:argType="integer[]"
             app:nullable="true"
             android:defaultValue="@null" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/editStyleFragment"
+        android:name="com.yehyun.whatshouldiweartoday.ui.style.EditStyleFragment"
+        android:label="fragment_edit_style"
+        tools:layout="@layout/fragment_edit_style" >
+        <!-- 수정할 스타일의 ID를 인자로 받습니다. -->
+        <argument
+            android:name="styleId"
+            app:argType="long" />
     </fragment>
 
     <!-- 어느 화면에서든 '스타일 저장' 화면으로 갈 수 있는 전역 액션 -->

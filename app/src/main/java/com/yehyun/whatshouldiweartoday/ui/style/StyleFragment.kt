@@ -32,7 +32,11 @@ class StyleFragment : Fragment(R.layout.fragment_style) {
     }
 
     private fun setupRecyclerView(view: View) {
-        adapter = SavedStylesAdapter()
+        // [수정] 클릭 이벤트를 정의하고, 수정 화면으로 이동시킴
+        adapter = SavedStylesAdapter { clickedStyle ->
+            val action = StyleFragmentDirections.actionNavigationStyleToEditStyleFragment(clickedStyle.style.styleId)
+            findNavController().navigate(action)
+        }
         val recyclerView = view.findViewById<RecyclerView>(R.id.rv_saved_styles)
         recyclerView.layoutManager = LinearLayoutManager(requireContext())
         recyclerView.adapter = adapter

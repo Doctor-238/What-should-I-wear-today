@@ -18,4 +18,18 @@ class StyleRepository(private val styleDao: StyleDao) {
     fun getStyles(query: String): LiveData<List<StyleWithItems>> {
         return styleDao.getStyles(query)
     }
+
+    // [추가] ID로 스타일 정보 가져오기
+    fun getStyleById(styleId: Long): LiveData<StyleWithItems> {
+        return styleDao.getStyleById(styleId)
+    }
+
+    // [추가] 스타일 정보 업데이트하기
+    suspend fun updateStyleWithItems(style: SavedStyle, items: List<ClothingItem>) {
+        styleDao.updateStyleWithItems(style, items)
+    }
+
+    suspend fun deleteStyleAndRefs(style: SavedStyle) {
+        styleDao.deleteStyleAndRefs(style)
+    }
 }
