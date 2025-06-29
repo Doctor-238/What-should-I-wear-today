@@ -17,7 +17,6 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import kotlin.math.abs
 
-// ... (Data classes는 이전과 동일) ...
 data class RecommendationResult(
     val recommendedTops: List<ClothingItem>,
     val recommendedBottoms: List<ClothingItem>,
@@ -38,9 +37,8 @@ data class DailyWeatherSummary(
     val precipitationProbability: Int
 )
 
-
 class HomeViewModel(application: Application) : AndroidViewModel(application) {
-    // ... (기존 LiveData 선언) ...
+
     private val weatherRepository: WeatherRepository
     private val clothingRepository: ClothingRepository
 
@@ -56,8 +54,6 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     val error: LiveData<String> = _error
     private val _isLoading = MutableLiveData<Boolean>()
     val isLoading: LiveData<Boolean> = _isLoading
-
-    // [추가] 스크롤 상태를 관리하기 위한 LiveData
     private val _isRecommendationScrolledToTop = MutableLiveData(true)
     val isRecommendationScrolledToTop: LiveData<Boolean> = _isRecommendationScrolledToTop
 
@@ -66,7 +62,6 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         private const val TEMPERATURE_TOLERANCE = 3.0
     }
 
-    // [추가] RecommendationFragment에서 스크롤 상태를 업데이트하는 함수
     fun setScrollState(isAtTop: Boolean) {
         if (_isRecommendationScrolledToTop.value != isAtTop) {
             _isRecommendationScrolledToTop.value = isAtTop
@@ -99,21 +94,16 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    // ... (processAndRecommend, createDailySummary, generateRecommendation 함수는 이전과 동일) ...
-    private suspend fun processAndRecommend(weatherResponse: com.yehyun.whatshouldiweartoday.data.api.WeatherResponse) {
+    suspend fun processAndRecommend(weatherResponse: com.yehyun.whatshouldiweartoday.data.api.WeatherResponse) {
         val today = LocalDate.now()
         val tomorrow = today.plusDays(1)
         val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
-
         val forecastsByDate = weatherResponse.list.groupBy {
             LocalDate.parse(it.dt_txt, formatter)
         }
-
         val todayForecasts = forecastsByDate[today] ?: emptyList()
         val tomorrowForecasts = forecastsByDate[tomorrow] ?: emptyList()
-
         val allClothes = clothingRepository.getAllItemsList()
-
         if (todayForecasts.isNotEmpty()) {
             val summary = createDailySummary(todayForecasts)
             _todayWeatherSummary.postValue(summary)
@@ -132,25 +122,33 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         val maxFeelsLike = forecasts.maxOf { it.main.feels_like }
         val minFeelsLike = forecasts.minOf { it.main.feels_like }
         val pop = (forecasts.maxOf { it.pop } * 100).toInt()
-
         val weatherCondition = when {
             forecasts.any { it.weather.any { w -> w.main.equals("Rain", true) } } -> "비"
             forecasts.any { it.weather.any { w -> w.main.equals("Snow", true) } } -> "눈"
             else -> forecasts.first().weather.first().description
         }
-
         return DailyWeatherSummary("", maxTemp, minTemp, maxFeelsLike, minFeelsLike, weatherCondition, pop)
     }
 
-    private fun generateRecommendation(summary: DailyWeatherSummary, allClothes: List<ClothingItem>): RecommendationResult {
+    fun generateRecommendation(summary: DailyWeatherSummary, allClothes: List<ClothingItem>): RecommendationResult {
         val maxTempCriteria = (summary.maxTemp + summary.maxFeelsLike) / 2
         val minTempCriteria = (summary.minTemp + summary.minFeelsLike) / 2
 
         val recommendedClothes = allClothes.filter {
-            val tempRange = (it.suitableTemperature - TEMPERATURE_TOLERANCE)..(it.suitableTemperature + TEMPERATURE_TOLERANCE)
-            val isFitForMaxTemp = tempRange.contains(maxTempCriteria)
-            val isFitForHotDay = maxTempCriteria > 30 && tempRange.contains(30.0)
-            isFitForMaxTemp || isFitForHotDay
+            val itemMinTemp = it.suitableTemperature - TEMPERATURE_TOLERANCE
+            val itemMaxTemp = it.suitableTemperature + TEMPERATURE_TOLERANCE
+
+            // 1. 기본 조건: 오늘의 최고 기준 온도가 옷의 적정 온도 범위에 들어가는 경우
+            val isFitForMaxTemp = maxTempCriteria in itemMinTemp..itemMaxTemp
+
+            // 2. 더운 날 조건: 최고 기준 온도가 30도를 넘고, 옷의 적정 온도 범위 중 일부라도 30도 이상인 경우
+            val isFitForHotDay = maxTempCriteria > 30 && itemMaxTemp >= 30
+
+            // 3. 추운 날 조건: 최저 기준 온도가 0도 미만이고, 옷의 적정 온도 범위 중 일부라도 0도 이하인 경우
+            val isFitForFreezingDay = minTempCriteria < 0 && itemMinTemp <= 0
+
+            // 위 세 조건 중 하나라도 만족하면 추천 대상에 포함
+            isFitForMaxTemp || isFitForHotDay || isFitForFreezingDay
         }
 
         val recommendedTops = recommendedClothes.filter { it.category == "상의" }
