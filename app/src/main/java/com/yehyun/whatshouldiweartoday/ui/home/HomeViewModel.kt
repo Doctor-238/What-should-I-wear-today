@@ -16,15 +16,16 @@ import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import kotlin.math.abs
-import kotlin.math.roundToInt
 
+// ... (Data classes는 이전과 동일) ...
 data class RecommendationResult(
     val recommendedTops: List<ClothingItem>,
     val recommendedBottoms: List<ClothingItem>,
     val recommendedOuters: List<ClothingItem>,
     val bestCombination: List<ClothingItem>,
     val packableOuter: ClothingItem?,
-    val umbrellaRecommendation: String
+    val umbrellaRecommendation: String,
+    val isTempDifferenceSignificant: Boolean
 )
 
 data class DailyWeatherSummary(
@@ -37,8 +38,9 @@ data class DailyWeatherSummary(
     val precipitationProbability: Int
 )
 
-class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
+class HomeViewModel(application: Application) : AndroidViewModel(application) {
+    // ... (기존 LiveData 선언) ...
     private val weatherRepository: WeatherRepository
     private val clothingRepository: ClothingRepository
 
@@ -55,9 +57,20 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     private val _isLoading = MutableLiveData<Boolean>()
     val isLoading: LiveData<Boolean> = _isLoading
 
+    // [추가] 스크롤 상태를 관리하기 위한 LiveData
+    private val _isRecommendationScrolledToTop = MutableLiveData(true)
+    val isRecommendationScrolledToTop: LiveData<Boolean> = _isRecommendationScrolledToTop
+
     companion object {
-        private const val TEMPERATURE_TOLERANCE = 4.0 // Double로 변경
-        private const val SIGNIFICANT_TEMP_DIFFERENCE = 10.0 // Double로 변경
+        private const val SIGNIFICANT_TEMP_DIFFERENCE = 12.0
+        private const val TEMPERATURE_TOLERANCE = 3.0
+    }
+
+    // [추가] RecommendationFragment에서 스크롤 상태를 업데이트하는 함수
+    fun setScrollState(isAtTop: Boolean) {
+        if (_isRecommendationScrolledToTop.value != isAtTop) {
+            _isRecommendationScrolledToTop.value = isAtTop
+        }
     }
 
     init {
@@ -86,6 +99,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    // ... (processAndRecommend, createDailySummary, generateRecommendation 함수는 이전과 동일) ...
     private suspend fun processAndRecommend(weatherResponse: com.yehyun.whatshouldiweartoday.data.api.WeatherResponse) {
         val today = LocalDate.now()
         val tomorrow = today.plusDays(1)
@@ -129,37 +143,43 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun generateRecommendation(summary: DailyWeatherSummary, allClothes: List<ClothingItem>): RecommendationResult {
-        // [핵심 수정] 모든 온도 비교를 Double 타입으로 수행합니다.
-        val maxFeelsLike = summary.maxFeelsLike
-        val minFeelsLike = summary.minFeelsLike
+        val maxTempCriteria = (summary.maxTemp + summary.maxFeelsLike) / 2
+        val minTempCriteria = (summary.minTemp + summary.minFeelsLike) / 2
 
-        val recommendedTops = allClothes.filter {
-            it.category == "상의" && it.suitableTemperature in (maxFeelsLike - TEMPERATURE_TOLERANCE)..(maxFeelsLike + TEMPERATURE_TOLERANCE)
-        }
-        val recommendedBottoms = allClothes.filter {
-            it.category == "하의" && it.suitableTemperature in (maxFeelsLike - TEMPERATURE_TOLERANCE)..(maxFeelsLike + TEMPERATURE_TOLERANCE)
-        }
-        val recommendedOuters = allClothes.filter {
-            it.category == "아우터" && it.suitableTemperature in (maxFeelsLike - TEMPERATURE_TOLERANCE)..(maxFeelsLike + TEMPERATURE_TOLERANCE)
+        val recommendedClothes = allClothes.filter {
+            val tempRange = (it.suitableTemperature - TEMPERATURE_TOLERANCE)..(it.suitableTemperature + TEMPERATURE_TOLERANCE)
+            val isFitForMaxTemp = tempRange.contains(maxTempCriteria)
+            val isFitForHotDay = maxTempCriteria > 30 && tempRange.contains(30.0)
+            isFitForMaxTemp || isFitForHotDay
         }
 
-        val packableOuter = if ((summary.maxTemp - summary.minTemp) >= SIGNIFICANT_TEMP_DIFFERENCE) {
+        val recommendedTops = recommendedClothes.filter { it.category == "상의" }
+        val recommendedBottoms = recommendedClothes.filter { it.category == "하의" }
+        val recommendedOuters = recommendedClothes.filter { it.category == "아우터" }
+
+        val isTempDifferenceSignificant = (maxTempCriteria - minTempCriteria) >= SIGNIFICANT_TEMP_DIFFERENCE
+        val packableOuter = if (isTempDifferenceSignificant) {
             allClothes.filter { it.category == "아우터" }
-                .minByOrNull { abs(it.suitableTemperature - minFeelsLike) }
-        } else { null }
+                .filter {
+                    val tempRangeForMin = (it.suitableTemperature - TEMPERATURE_TOLERANCE)..it.suitableTemperature
+                    tempRangeForMin.contains(minTempCriteria)
+                }
+                .minByOrNull { abs(it.suitableTemperature - minTempCriteria) }
+        } else {
+            null
+        }
 
-        // 오류가 발생했던 부분: 체감 온도(Double)와의 차이를 계산하여 가장 가까운 옷을 찾습니다.
-        val bestTop = recommendedTops.minByOrNull { abs(it.suitableTemperature - maxFeelsLike) }
-        val bestBottom = recommendedBottoms.minByOrNull { abs(it.suitableTemperature - maxFeelsLike) }
-        val bestOuter = recommendedOuters.minByOrNull { abs(it.suitableTemperature - maxFeelsLike) }
+        val bestTop = recommendedTops.minByOrNull { abs(it.suitableTemperature - maxTempCriteria) }
+        val bestBottom = recommendedBottoms.minByOrNull { abs(it.suitableTemperature - maxTempCriteria) }
+        val bestOuter = recommendedOuters.minByOrNull { abs(it.suitableTemperature - maxTempCriteria) }
         val bestCombination = listOfNotNull(bestTop, bestBottom, bestOuter)
 
         val umbrellaRecommendation = when {
-            summary.weatherCondition == "비" && summary.precipitationProbability > 70 -> "비가 많이 와요. 큰 우산은 필수!"
-            summary.weatherCondition == "비" && summary.precipitationProbability > 40 -> "비가 올 수 있으니, 우산을 챙기세요."
+            summary.precipitationProbability >= 70 -> "비가 올 예정이니 우산을 꼭 챙겨주세요!"
+            summary.precipitationProbability >= 40 -> "비올 확률이 있어요. 우산을 챙겨주세요!"
             else -> ""
         }
 
-        return RecommendationResult(recommendedTops, recommendedBottoms, recommendedOuters, bestCombination, packableOuter, umbrellaRecommendation)
+        return RecommendationResult(recommendedTops, recommendedBottoms, recommendedOuters, bestCombination, packableOuter, umbrellaRecommendation, isTempDifferenceSignificant)
     }
 }

@@ -3,20 +3,25 @@ package com.yehyun.whatshouldiweartoday.ui.home
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.view.LayoutInflater
 import android.view.View
+import android.view.ViewGroup
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
-import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
-import androidx.viewpager2.widget.ViewPager2
+import androidx.navigation.fragment.findNavController
 import com.google.android.gms.location.LocationServices
-import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
 import com.yehyun.whatshouldiweartoday.R
+import com.yehyun.whatshouldiweartoday.databinding.FragmentHomeBinding
+import com.yehyun.whatshouldiweartoday.ui.OnTabReselectedListener
 
-class HomeFragment : Fragment(R.layout.fragment_home) {
+class HomeFragment : Fragment(), OnTabReselectedListener {
+
+    private var _binding: FragmentHomeBinding? = null
+    private val binding get() = _binding!!
 
     private val homeViewModel: HomeViewModel by activityViewModels()
 
@@ -30,43 +35,59 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
         }
     }
 
+    override fun onCreateView(
+        inflater: LayoutInflater, container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View {
+        _binding = FragmentHomeBinding.inflate(inflater, container, false)
+        return binding.root
+    }
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
-        // [추가] SwipeRefreshLayout을 찾습니다.
-        val swipeRefreshLayout = view.findViewById<View>(R.id.swipe_refresh_layout) as SwipeRefreshLayout
-
-        setupViewPager(view)
+        setupViewPager()
         checkLocationPermission()
-
-        // [추가] 새로고침 리스너를 설정합니다.
-        swipeRefreshLayout.setOnRefreshListener {
-            // 사용자가 화면을 당기면, 위치를 다시 가져오는 것으로 모든 과정을 다시 시작합니다.
-            checkLocationPermission()
+        binding.swipeRefreshLayout.setOnRefreshListener { checkLocationPermission() }
+        homeViewModel.error.observe(viewLifecycleOwner) {
+            Toast.makeText(requireContext(), it, Toast.LENGTH_LONG).show()
         }
-
-        homeViewModel.error.observe(viewLifecycleOwner) { errorMessage ->
-            Toast.makeText(requireContext(), errorMessage, Toast.LENGTH_LONG).show()
+        homeViewModel.isLoading.observe(viewLifecycleOwner) {
+            binding.swipeRefreshLayout.isRefreshing = it
         }
-
-        // [추가] 로딩 상태를 관찰하여 새로고침 아이콘을 제어합니다.
-        homeViewModel.isLoading.observe(viewLifecycleOwner) { isLoading ->
-            // ViewModel의 로딩 상태에 따라 새로고침 아이콘을 보여주거나 숨깁니다.
-            swipeRefreshLayout.isRefreshing = isLoading
+        homeViewModel.isRecommendationScrolledToTop.observe(viewLifecycleOwner) {
+            binding.swipeRefreshLayout.isEnabled = it
         }
     }
 
-    private fun setupViewPager(view: View) {
-        val viewPager = view.findViewById<ViewPager2>(R.id.view_pager_home)
-        val tabLayout = view.findViewById<TabLayout>(R.id.tab_layout_home)
-
-        viewPager.adapter = HomeViewPagerAdapter(this)
-
-        TabLayoutMediator(tabLayout, viewPager) { tab, position ->
+    private fun setupViewPager() {
+        binding.viewPagerHome.adapter = HomeViewPagerAdapter(this)
+        binding.viewPagerHome.isUserInputEnabled = false
+        TabLayoutMediator(binding.tabLayoutHome, binding.viewPagerHome) { tab, position ->
             tab.text = if (position == 0) "오늘" else "내일"
         }.attach()
     }
 
+    override fun onTabReselected() {
+        val navController = findNavController()
+        // 홈 탭의 시작점(HomeFragment)이 아닌 다른 화면(예: 옷 수정)에 있을 경우
+        if (navController.currentDestination?.id != R.id.navigation_home) {
+            // 홈 탭의 시작점으로 돌아갑니다 (뒤로가기).
+            navController.popBackStack(R.id.navigation_home, false)
+            return
+        }
+
+        // 이미 홈 화면일 경우,
+        // '내일' 탭을 보고 있었다면 '오늘' 탭으로 이동
+        if (binding.viewPagerHome.currentItem != 0) {
+            binding.viewPagerHome.currentItem = 0
+        } else {
+            // 이미 '오늘' 탭이라면, 스크롤을 맨 위로
+            val currentFragment = childFragmentManager.findFragmentByTag("f0")
+            (currentFragment as? RecommendationFragment)?.scrollToTop()
+        }
+    }
+
+    // ... (나머지 코드는 이전과 동일)
     private fun checkLocationPermission() {
         when {
             ContextCompat.checkSelfPermission(
@@ -75,31 +96,35 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
             ) == PackageManager.PERMISSION_GRANTED -> {
                 getCurrentLocation()
             }
-            else -> {
-                locationPermissionRequest.launch(Manifest.permission.ACCESS_COARSE_LOCATION)
-            }
+            else -> locationPermissionRequest.launch(Manifest.permission.ACCESS_COARSE_LOCATION)
         }
     }
 
     private fun getCurrentLocation() {
-        if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            return
-        }
+        if (ContextCompat.checkSelfPermission(
+                requireContext(),
+                Manifest.permission.ACCESS_COARSE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED
+        ) return
 
         val fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireActivity())
         fusedLocationClient.lastLocation
             .addOnSuccessListener { location ->
                 if (location != null) {
-                    val apiKey = getString(R.string.openweathermap_api_key)
-                    // API Key가 입력되었는지 확인
+                    val apiKey = getString(com.yehyun.whatshouldiweartoday.R.string.openweathermap_api_key)
                     if (apiKey.isBlank() || apiKey == "YOUR_OPENWEATHERMAP_API_KEY") {
-                        Toast.makeText(requireContext(), "secrets.xml 파일에 날씨 API 키를 입력해주세요.", Toast.LENGTH_LONG).show()
+                        Toast.makeText(context, "secrets.xml 파일에 날씨 API 키를 입력해주세요.", Toast.LENGTH_LONG).show()
                         return@addOnSuccessListener
                     }
                     homeViewModel.fetchWeatherData(location.latitude, location.longitude, apiKey)
                 } else {
-                    Toast.makeText(requireContext(), "위치 정보를 가져올 수 없습니다. 위치 설정을 확인해주세요.", Toast.LENGTH_LONG).show()
+                    Toast.makeText(context, "위치 정보를 가져올 수 없습니다. 위치 설정을 확인해주세요.", Toast.LENGTH_LONG).show()
                 }
             }
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
     }
 }

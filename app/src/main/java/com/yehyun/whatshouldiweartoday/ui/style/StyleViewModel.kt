@@ -23,10 +23,9 @@ class StyleViewModel(application: Application) : AndroidViewModel(application) {
         val styleDao = AppDatabase.getDatabase(application).styleDao()
         repository = StyleRepository(styleDao)
 
-        // 필터나 정렬 기준이 바뀔 때마다 DB에 새로운 쿼리를 요청하도록 설정
         styles.addSource(_searchQuery) { updateStylesSource() }
         styles.addSource(_sortType) { updateStylesSource() }
-        updateStylesSource() // 초기 데이터 로드
+        updateStylesSource()
     }
 
     private fun updateStylesSource() {
@@ -35,7 +34,6 @@ class StyleViewModel(application: Application) : AndroidViewModel(application) {
 
         currentSource?.let { styles.removeSource(it) }
 
-        // [수정 완료] 이제 Repository가 정렬 기능을 지원하므로, 오류 없이 작동합니다.
         val newSource = repository.getStyles(query, sort)
         currentSource = newSource
 

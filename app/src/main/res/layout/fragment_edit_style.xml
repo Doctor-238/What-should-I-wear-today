@@ -54,6 +54,26 @@
             </com.google.android.material.textfield.TextInputLayout>
 
             <TextView
+                android:id="@+id/tv_season_label_edit"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="계절"
+                android:textStyle="bold" />
+            <com.google.android.material.chip.ChipGroup
+                android:id="@+id/chip_group_season_edit"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                app:selectionRequired="true"
+                app:singleSelection="true">
+                <com.google.android.material.chip.Chip style="@style/Widget.MaterialComponents.Chip.Choice" android:id="@+id/chip_spring_edit" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="봄" />
+                <com.google.android.material.chip.Chip style="@style/Widget.MaterialComponents.Chip.Choice" android:id="@+id/chip_summer_edit" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="여름" />
+                <com.google.android.material.chip.Chip style="@style/Widget.MaterialComponents.Chip.Choice" android:id="@+id/chip_fall_edit" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="가을" />
+                <com.google.android.material.chip.Chip style="@style/Widget.MaterialComponents.Chip.Choice" android:id="@+id/chip_winter_edit" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="겨울" />
+            </com.google.android.material.chip.ChipGroup>
+
+            <TextView
                 android:id="@+id/tv_selected_items_label"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -75,7 +95,6 @@
                 android:text="옷장에서 아이템 추가/제거"
                 android:textStyle="bold" />
 
-            <!-- [추가] 옷장 필터링을 위한 카테고리 탭 -->
             <com.google.android.material.tabs.TabLayout
                 android:id="@+id/tab_layout_edit_style_category"
                 android:layout_width="match_parent"

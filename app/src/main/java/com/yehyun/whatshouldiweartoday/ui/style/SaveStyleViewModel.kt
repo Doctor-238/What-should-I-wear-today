@@ -8,6 +8,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import com.yehyun.whatshouldiweartoday.data.database.AppDatabase
 import com.yehyun.whatshouldiweartoday.data.database.ClothingItem
+import com.yehyun.whatshouldiweartoday.data.database.SavedStyle
 import com.yehyun.whatshouldiweartoday.data.repository.ClothingRepository
 import com.yehyun.whatshouldiweartoday.data.repository.StyleRepository
 import kotlinx.coroutines.launch
@@ -51,9 +52,10 @@ class SaveStyleViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
-    fun saveStyle(styleName: String, selectedItems: List<ClothingItem>) {
+    fun saveStyle(styleName: String, season: String, selectedItems: List<ClothingItem>) {
         viewModelScope.launch {
-            styleRepository.insertStyleWithItems(styleName, selectedItems)
+            val newStyle = SavedStyle(styleName = styleName, season = season)
+            styleRepository.insertStyleWithItems(newStyle, selectedItems)
         }
     }
 }
