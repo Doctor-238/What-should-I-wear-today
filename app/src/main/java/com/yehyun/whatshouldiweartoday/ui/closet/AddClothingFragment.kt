@@ -29,7 +29,7 @@ import com.google.mlkit.vision.segmentation.selfie.SelfieSegmenterOptions
 import com.yehyun.whatshouldiweartoday.R
 import com.yehyun.whatshouldiweartoday.data.database.AppDatabase
 import com.yehyun.whatshouldiweartoday.data.database.ClothingItem
-import com.yehyun.whatshouldiweartoday.ui.OnTabReselectedListener // import 추가
+import com.yehyun.whatshouldiweartoday.ui.OnTabReselectedListener
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -49,17 +49,9 @@ data class ClothingAnalysis(
     val suitable_temperature: Double,
     val color_hex: String
 )
-// [수정] 리스너 인터페이스 구현
+
 class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabReselectedListener {
-    // ... (기존 코드는 모두 동일)
-    // ...
 
-    // [추가] 탭 재선택 시 뒤로가기
-    override fun onTabReselected() {
-        findNavController().popBackStack()
-    }
-
-    // ... (기존 코드는 모두 동일)
     private enum class UiState { IDLE, ANALYZING, ANALYZED }
 
     private lateinit var imageViewPreview: ImageView
@@ -142,11 +134,9 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabResel
     private fun updateUiState(state: UiState, didSegmentationSucceed: Boolean = false) {
         progressBar.visibility = if (state == UiState.ANALYZING) View.VISIBLE else View.GONE
         val isAnalyzed = state == UiState.ANALYZED
-
         textViewAiResult.visibility = if (isAnalyzed) View.VISIBLE else View.GONE
-        viewColorSwatch.visibility = if(isAnalyzed && clothingAnalysisResult != null) View.VISIBLE else View.GONE
-        textColorLabel.visibility = if(isAnalyzed && clothingAnalysisResult != null) View.VISIBLE else View.GONE
-
+        viewColorSwatch.visibility = if (isAnalyzed && clothingAnalysisResult != null) View.VISIBLE else View.GONE
+        textColorLabel.visibility = if (isAnalyzed && clothingAnalysisResult != null) View.VISIBLE else View.GONE
         buttonSave.isEnabled = isAnalyzed
         imageViewPreview.isClickable = state == UiState.IDLE
 
@@ -171,6 +161,7 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabResel
                 val resizedBitmap = resizeBitmap(bitmap)
                 val inputContent = content {
                     image(resizedBitmap)
+                    // [최종 수정] suitable_temperature 설명에 마이너스 값 관련 문구 추가
                     text("""
                         You are a Precise Climate & Fashion Analyst for Korean weather.
                         Your task is to analyze the clothing item in the image and provide a detailed analysis in a strict JSON format, without any additional text or explanations.
@@ -180,7 +171,7 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabResel
                         - "is_wearable": (boolean) True if the item is wearable clothing.
                         - "category": (string) One of '상의', '하의', '아우터', '신발', '가방', '모자', '기타'.
                         - "color_hex": (string) The dominant color of the item as a hex string.
-                        - "suitable_temperature": (double) This is the most important. Estimate the MAXIMUM comfortable temperature for this item, calibrated for a person who is LESS SENSITIVE to cold. The final value should be slightly higher than the average standard. You MUST provide a specific, non-round number with one decimal place (e.g., 23.5, 8.0, -2.5). A generic integer like 15.0 is a bad response. Base your judgment on the visual evidence of material, thickness, and design.
+                        - "suitable_temperature": (double) This is the most important. Estimate the MAXIMUM comfortable temperature for this item. The value can be negative for winter clothing. You MUST provide a specific, non-round number with one decimal place (e.g., 23.5, 8.0, -2.5). A generic integer like 15.0 is a bad response. Base your judgment on the visual evidence of material, thickness, and design.
                     """.trimIndent())
                 }
 
@@ -328,5 +319,9 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabResel
             e.printStackTrace()
             return null
         }
+    }
+
+    override fun onTabReselected() {
+        findNavController().popBackStack()
     }
 }
