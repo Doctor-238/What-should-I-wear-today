@@ -21,22 +21,45 @@
         style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_margin="16dp"
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginTop="16dp"
         android:hint="스타일 이름"
-        app:counterEnabled="true"
-        app:counterMaxLength="20"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/toolbar_save_style">
-
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/editText_style_name"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:inputType="text"
-            android:maxLength="20" />
+            android:inputType="text" />
     </com.google.android.material.textfield.TextInputLayout>
 
+    <TextView
+        android:id="@+id/tv_season_label"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="16dp"
+        android:text="계절 선택"
+        android:textStyle="bold"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/textInputLayout_style_name" />
+    <com.google.android.material.chip.ChipGroup
+        android:id="@+id/chip_group_season_save"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginTop="8dp"
+        app:selectionRequired="true"
+        app:singleSelection="true"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tv_season_label">
+        <com.google.android.material.chip.Chip style="@style/Widget.MaterialComponents.Chip.Choice" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="봄" />
+        <com.google.android.material.chip.Chip style="@style/Widget.MaterialComponents.Chip.Choice" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="여름" />
+        <com.google.android.material.chip.Chip style="@style/Widget.MaterialComponents.Chip.Choice" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="가을" />
+        <com.google.android.material.chip.Chip style="@style/Widget.MaterialComponents.Chip.Choice" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="겨울" />
+    </com.google.android.material.chip.ChipGroup>
     <TextView
         android:id="@+id/tv_selection_guide"
         android:layout_width="wrap_content"
@@ -46,7 +69,7 @@
         android:text="스타일에 포함할 옷을 선택하세요 (최대 10개)"
         android:textStyle="bold"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/textInputLayout_style_name" />
+        app:layout_constraintTop_toBottomOf="@id/chip_group_season_save" />
 
     <com.google.android.material.tabs.TabLayout
         android:id="@+id/tab_layout_save_style_category"

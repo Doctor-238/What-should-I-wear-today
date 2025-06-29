@@ -66,12 +66,14 @@
         android:name="com.yehyun.whatshouldiweartoday.ui.style.SaveStyleFragment"
         android:label="fragment_save_style"
         tools:layout="@layout/fragment_save_style" >
-        <!-- [수정] Safe Args 규칙에 맞게 nullable로 수정 -->
         <argument
             android:name="preselected_ids"
             app:argType="integer[]"
             app:nullable="true"
             android:defaultValue="@null" />
+        <action
+            android:id="@+id/action_saveStyleFragment_to_editClothingFragment"
+            app:destination="@id/editClothingFragment" />
     </fragment>
 
     <fragment
@@ -79,10 +81,12 @@
         android:name="com.yehyun.whatshouldiweartoday.ui.style.EditStyleFragment"
         android:label="fragment_edit_style"
         tools:layout="@layout/fragment_edit_style" >
-        <!-- 수정할 스타일의 ID를 인자로 받습니다. -->
         <argument
             android:name="styleId"
             app:argType="long" />
+        <action
+            android:id="@+id/action_editStyleFragment_to_editClothingFragment"
+            app:destination="@id/editClothingFragment" />
     </fragment>
 
     <!-- 어느 화면에서든 '스타일 저장' 화면으로 갈 수 있는 전역 액션 -->

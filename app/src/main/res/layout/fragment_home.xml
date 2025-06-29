@@ -1,5 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- [수정] 최상단 레이아웃을 SwipeRefreshLayout으로 변경합니다. -->
 <androidx.swiperefreshlayout.widget.SwipeRefreshLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
@@ -8,13 +7,11 @@
     android:layout_height="match_parent"
     tools:context=".ui.home.HomeFragment">
 
-    <!-- 기존의 모든 내용은 이 안에 그대로 들어갑니다. -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical">
 
-        <!-- '오늘' / '내일' 탭 -->
         <com.google.android.material.tabs.TabLayout
             android:id="@+id/tab_layout_home"
             android:layout_width="match_parent"
@@ -22,7 +19,6 @@
             app:tabGravity="fill"
             app:tabMode="fixed" />
 
-        <!-- 탭에 따라 다른 내용을 보여줄 ViewPager -->
         <androidx.viewpager2.widget.ViewPager2
             android:id="@+id/view_pager_home"
             android:layout_width="match_parent"

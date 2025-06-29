@@ -11,8 +11,10 @@ import com.yehyun.whatshouldiweartoday.R
 import com.yehyun.whatshouldiweartoday.data.database.ClothingItem
 import java.io.File
 
+// [수정] 생성자에 onItemLongClicked 람다 추가
 class SaveStyleAdapter(
-    private val onItemClicked: (item: ClothingItem, isSelected: Boolean) -> Unit
+    private val onItemClicked: (item: ClothingItem, isSelected: Boolean) -> Unit,
+    private val onItemLongClicked: (item: ClothingItem) -> Unit // 꾹 누르기 이벤트 핸들러
 ) : RecyclerView.Adapter<SaveStyleAdapter.SelectableViewHolder>() {
 
     private var allItems: List<ClothingItem> = listOf()
@@ -38,8 +40,16 @@ class SaveStyleAdapter(
         val isSelected = item.id in selectedItemIds
 
         holder.bind(item, isSelected)
+
+        // 일반 클릭 이벤트
         holder.itemView.setOnClickListener {
             onItemClicked(item, isSelected)
+        }
+
+        // [추가] 꾹 누르기(Long Click) 이벤트
+        holder.itemView.setOnLongClickListener {
+            onItemLongClicked(item)
+            true // 이벤트를 소비했음을 시스템에 알림
         }
     }
 
@@ -50,7 +60,6 @@ class SaveStyleAdapter(
         private val checkIcon: ImageView = itemView.findViewById(R.id.icon_checked)
 
         fun bind(item: ClothingItem, isSelected: Boolean) {
-            // [수정] RecommendationAdapter와 동일하게, 배경 제거 이미지 표시 로직을 적용
             val imageToShow = if (item.useProcessedImage && item.processedImageUri != null) {
                 item.processedImageUri
             } else {

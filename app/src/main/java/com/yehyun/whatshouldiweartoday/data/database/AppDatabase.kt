@@ -6,7 +6,7 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 
 // [핵심 수정] 데이터베이스 버전을 10에서 11로 올립니다.
-@Database(entities = [ClothingItem::class, SavedStyle::class, StyleItemCrossRef::class], version = 11)
+@Database(entities = [ClothingItem::class, SavedStyle::class, StyleItemCrossRef::class], version = 12)
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun clothingDao(): ClothingDao

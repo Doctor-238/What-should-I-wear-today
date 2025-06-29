@@ -29,6 +29,7 @@ import com.google.mlkit.vision.segmentation.selfie.SelfieSegmenterOptions
 import com.yehyun.whatshouldiweartoday.R
 import com.yehyun.whatshouldiweartoday.data.database.AppDatabase
 import com.yehyun.whatshouldiweartoday.data.database.ClothingItem
+import com.yehyun.whatshouldiweartoday.ui.OnTabReselectedListener // import 추가
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -41,7 +42,6 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-// 필드 이름은 suitable_temperature를 그대로 사용합니다.
 @Serializable
 data class ClothingAnalysis(
     val is_wearable: Boolean,
@@ -49,9 +49,17 @@ data class ClothingAnalysis(
     val suitable_temperature: Double,
     val color_hex: String
 )
+// [수정] 리스너 인터페이스 구현
+class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabReselectedListener {
+    // ... (기존 코드는 모두 동일)
+    // ...
 
-class AddClothingFragment : Fragment(R.layout.fragment_add_clothing) {
+    // [추가] 탭 재선택 시 뒤로가기
+    override fun onTabReselected() {
+        findNavController().popBackStack()
+    }
 
+    // ... (기존 코드는 모두 동일)
     private enum class UiState { IDLE, ANALYZING, ANALYZED }
 
     private lateinit var imageViewPreview: ImageView
@@ -115,6 +123,10 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing) {
         }
     }
 
+    private fun openGallery() {
+        pickImageLauncher.launch("image/*")
+    }
+
     private fun initializeGenerativeModel() {
         val apiKey = getString(R.string.gemini_api_key)
         val config = GenerationConfig.Builder().apply {
@@ -130,13 +142,13 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing) {
     private fun updateUiState(state: UiState, didSegmentationSucceed: Boolean = false) {
         progressBar.visibility = if (state == UiState.ANALYZING) View.VISIBLE else View.GONE
         val isAnalyzed = state == UiState.ANALYZED
+
         textViewAiResult.visibility = if (isAnalyzed) View.VISIBLE else View.GONE
+        viewColorSwatch.visibility = if(isAnalyzed && clothingAnalysisResult != null) View.VISIBLE else View.GONE
+        textColorLabel.visibility = if(isAnalyzed && clothingAnalysisResult != null) View.VISIBLE else View.GONE
+
         buttonSave.isEnabled = isAnalyzed
         imageViewPreview.isClickable = state == UiState.IDLE
-
-        val colorVisible = isAnalyzed && clothingAnalysisResult != null
-        viewColorSwatch.visibility = if(colorVisible) View.VISIBLE else View.GONE
-        textColorLabel.visibility = if(colorVisible) View.VISIBLE else View.GONE
 
         if (isAnalyzed) {
             if (didSegmentationSucceed) {
@@ -153,17 +165,12 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing) {
         }
     }
 
-    private fun openGallery() {
-        pickImageLauncher.launch("image/*")
-    }
-
     private fun startAiAnalysis(bitmap: Bitmap) {
         lifecycleScope.launch(Dispatchers.IO) {
             try {
                 val resizedBitmap = resizeBitmap(bitmap)
                 val inputContent = content {
                     image(resizedBitmap)
-                    // [핵심 수정] "최대 권장 온도"를 "추위 덜 타는 사람 기준"으로 높게 설정해달라고 최종 요청
                     text("""
                         You are a Precise Climate & Fashion Analyst for Korean weather.
                         Your task is to analyze the clothing item in the image and provide a detailed analysis in a strict JSON format, without any additional text or explanations.
@@ -178,9 +185,6 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing) {
                 }
 
                 val response = generativeModel.generateContent(inputContent)
-
-                Log.d("AI_RESPONSE", "Raw JSON from AI: ${response.text}")
-
                 val analysisResult = Json { ignoreUnknownKeys = true }.decodeFromString<ClothingAnalysis>(response.text!!)
 
                 withContext(Dispatchers.Main) {
@@ -205,8 +209,7 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing) {
         segmenter.process(InputImage.fromBitmap(originalBitmap, 0))
             .addOnSuccessListener { mask ->
                 processedBitmap = createBitmapWithMask(originalBitmap, mask)
-                val succeed = !originalBitmap.sameAs(processedBitmap)
-                handleAiSuccess(didSegmentationSucceed = succeed)
+                handleAiSuccess(didSegmentationSucceed = true)
             }
             .addOnFailureListener {
                 processedBitmap = originalBitmap
@@ -235,13 +238,17 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing) {
     private fun handleAiSuccess(didSegmentationSucceed: Boolean) {
         imageViewPreview.setImageBitmap(originalBitmap)
         clothingAnalysisResult?.let {
-            // [핵심 수정] UI에 표시할 때도 +4.0을 더해서 보여줍니다.
-            val finalTemperature = it.suitable_temperature + 3.0
-            textViewAiResult.text = "분류:${it.category}, 적정 온도:${String.format("%.1f", finalTemperature)}°C"
+            val categoryText = "분류:${it.category}"
+            val temperatureText = if (it.category in listOf("상의", "하의", "아우터")) {
+                val baseTemp = it.suitable_temperature
+                val minTemp = baseTemp - 3.0
+                val maxTemp = baseTemp + 3.0
+                ", 적정 온도:${String.format("%.1f", minTemp)}°C ~ ${String.format("%.1f", maxTemp)}°C"
+            } else { "" }
+            textViewAiResult.text = categoryText + temperatureText
+
             try {
                 viewColorSwatch.setBackgroundColor(Color.parseColor(it.color_hex))
-                viewColorSwatch.visibility = View.VISIBLE
-                textColorLabel.visibility = View.VISIBLE
             } catch (e: IllegalArgumentException) {
                 viewColorSwatch.visibility = View.GONE
                 textColorLabel.visibility = View.GONE
@@ -265,7 +272,7 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing) {
             return
         }
 
-        val finalTemperature = analysis.suitable_temperature + 3.0
+        val finalTemperature = analysis.suitable_temperature
 
         lifecycleScope.launch(Dispatchers.IO) {
             val originalImagePath = saveBitmapToInternalStorage(bitmapToSave, "original_")
@@ -283,7 +290,7 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing) {
                 )
                 AppDatabase.getDatabase(requireContext()).clothingDao().insert(newClothingItem)
                 withContext(Dispatchers.Main) {
-                    Toast.makeText(requireContext(), "'$name'(${String.format("%.1f", finalTemperature)}°C)이(가) 옷장에 추가!", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(requireContext(), "'$name'이(가) 옷장에 추가!", Toast.LENGTH_SHORT).show()
                     findNavController().popBackStack()
                 }
             }

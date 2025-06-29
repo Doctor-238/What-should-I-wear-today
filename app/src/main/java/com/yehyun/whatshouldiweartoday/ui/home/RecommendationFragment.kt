@@ -3,13 +3,13 @@ package com.yehyun.whatshouldiweartoday.ui.home
 import android.os.Bundle
 import android.view.View
 import android.widget.Button
+import android.widget.ScrollView
 import android.widget.TextView
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.navigation.fragment.findNavController
-import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.yehyun.whatshouldiweartoday.R
 import java.util.Locale
@@ -18,34 +18,32 @@ class RecommendationFragment : Fragment(R.layout.fragment_recommendation) {
 
     private val homeViewModel: HomeViewModel by activityViewModels()
     private val isToday: Boolean by lazy { arguments?.getBoolean(ARG_IS_TODAY, true) ?: true }
+    private lateinit var scrollView: ScrollView
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        scrollView = view as ScrollView
 
-        // 모든 UI 요소들을 찾습니다.
+        scrollView.setOnScrollChangeListener { _, _, scrollY, _, _ ->
+            homeViewModel.setScrollState(scrollY == 0)
+        }
+
         val tvNoRecommendation = view.findViewById<TextView>(R.id.tv_no_recommendation)
         val weatherSummaryTextView = view.findViewById<TextView>(R.id.tv_weather_summary)
-
         val layoutBestCombo = view.findViewById<ConstraintLayout>(R.id.layout_best_combo)
         val rvBestCombo = view.findViewById<RecyclerView>(R.id.rv_best_combo)
         val tvNoBestCombo = view.findViewById<TextView>(R.id.tv_no_best_combo)
         val saveStyleButton = view.findViewById<Button>(R.id.button_save_style)
-
         val tvTopsTitle = view.findViewById<TextView>(R.id.tv_tops_title)
         val rvTops = view.findViewById<RecyclerView>(R.id.rv_tops)
         val tvNoTops = view.findViewById<TextView>(R.id.tv_no_tops)
-
         val tvBottomsTitle = view.findViewById<TextView>(R.id.tv_bottoms_title)
         val rvBottoms = view.findViewById<RecyclerView>(R.id.rv_bottoms)
         val tvNoBottoms = view.findViewById<TextView>(R.id.tv_no_bottoms)
-
         val tvOutersTitle = view.findViewById<TextView>(R.id.tv_outers_title)
         val rvOuters = view.findViewById<RecyclerView>(R.id.rv_outers)
         val tvNoOuters = view.findViewById<TextView>(R.id.tv_no_outers)
-
-        val tvPackableOuterTitle = view.findViewById<TextView>(R.id.tv_packable_outer_title)
-        val rvPackableOuter = view.findViewById<RecyclerView>(R.id.rv_packable_outer)
-
+        val tvTempDifferenceNotice = view.findViewById<TextView>(R.id.tv_temp_difference_notice)
         val tvUmbrella = view.findViewById<TextView>(R.id.tv_umbrella_recommendation)
 
         val onClothingItemClicked: (com.yehyun.whatshouldiweartoday.data.database.ClothingItem) -> Unit = { item ->
@@ -58,13 +56,11 @@ class RecommendationFragment : Fragment(R.layout.fragment_recommendation) {
         val topsAdapter = RecommendationAdapter(onClothingItemClicked)
         val bottomsAdapter = RecommendationAdapter(onClothingItemClicked)
         val outersAdapter = RecommendationAdapter(onClothingItemClicked)
-        val packableOuterAdapter = RecommendationAdapter(onClothingItemClicked)
 
         rvBestCombo.adapter = bestComboAdapter
         rvTops.adapter = topsAdapter
         rvBottoms.adapter = bottomsAdapter
         rvOuters.adapter = outersAdapter
-        rvPackableOuter.adapter = packableOuterAdapter
 
         val weatherSummaryLiveData = if (isToday) homeViewModel.todayWeatherSummary else homeViewModel.tomorrowWeatherSummary
         val recommendationLiveData = if (isToday) homeViewModel.todayRecommendation else homeViewModel.tomorrowRecommendation
@@ -79,7 +75,6 @@ class RecommendationFragment : Fragment(R.layout.fragment_recommendation) {
         recommendationLiveData.observe(viewLifecycleOwner) { result ->
             val hasAnyRecommendation = result.recommendedTops.isNotEmpty() || result.recommendedBottoms.isNotEmpty() || result.recommendedOuters.isNotEmpty()
             tvNoRecommendation.isVisible = !hasAnyRecommendation
-
             tvTopsTitle.isVisible = hasAnyRecommendation
             tvBottomsTitle.isVisible = hasAnyRecommendation
             tvOutersTitle.isVisible = hasAnyRecommendation
@@ -101,9 +96,8 @@ class RecommendationFragment : Fragment(R.layout.fragment_recommendation) {
             tvNoBestCombo.isVisible = result.bestCombination.isEmpty()
             bestComboAdapter.submitList(result.bestCombination, result.packableOuter?.id)
 
-            tvPackableOuterTitle.isVisible = result.packableOuter != null
-            rvPackableOuter.isVisible = result.packableOuter != null
-            result.packableOuter?.let { packableOuterAdapter.submitList(listOf(it)) }
+            // [핵심 수정] 챙겨갈 아우터 존재 여부와 상관없이, 일교차가 크면 무조건 안내 문구가 보이도록 변경
+            tvTempDifferenceNotice.isVisible = result.isTempDifferenceSignificant
 
             tvUmbrella.isVisible = result.umbrellaRecommendation.isNotBlank()
             tvUmbrella.text = result.umbrellaRecommendation
@@ -115,6 +109,10 @@ class RecommendationFragment : Fragment(R.layout.fragment_recommendation) {
                 )
             }
         }
+    }
+
+    fun scrollToTop() {
+        scrollView.smoothScrollTo(0, 0)
     }
 
     companion object {

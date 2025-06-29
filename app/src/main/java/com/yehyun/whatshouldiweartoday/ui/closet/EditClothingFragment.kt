@@ -24,12 +24,21 @@ import com.google.android.material.switchmaterial.SwitchMaterial
 import com.google.android.material.textfield.TextInputEditText
 import com.yehyun.whatshouldiweartoday.R
 import com.yehyun.whatshouldiweartoday.data.database.ClothingItem
-import com.yehyun.whatshouldiweartoday.ui.OnTabReselectedListener
+import com.yehyun.whatshouldiweartoday.ui.OnTabReselectedListener // import 추가
 import java.io.File
 import java.util.Locale
 
+// [수정] OnTabReselectedListener 인터페이스 구현
 class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabReselectedListener {
+    // ... (기존 코드는 모두 동일)
+    // ...
 
+    // [추가] 탭 재선택 시 뒤로가기
+    override fun onTabReselected() {
+        findNavController().popBackStack()
+    }
+
+    // ... (기존 코드는 모두 동일)
     private val viewModel: EditClothingViewModel by viewModels()
     private val args: EditClothingFragmentArgs by navArgs()
 
@@ -81,8 +90,8 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
     private fun bindDataToViews(item: ClothingItem) {
         toolbar.title = "'${item.name}' 수정"
         editTextName.setText(item.name)
-        // [핵심 수정] 소수점 첫째 자리까지 온도를 표시
-        textViewTemperature.text = "적정 온도: ${String.format(Locale.US, "%.1f", item.suitableTemperature)}°C"
+
+        updateTemperatureVisibility(item.category, item.suitableTemperature)
 
         try {
             viewColorSwatch.setBackgroundColor(Color.parseColor(item.colorHex))
@@ -112,6 +121,17 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
         }
     }
 
+    private fun updateTemperatureVisibility(category: String, temperature: Double) {
+        if (category in listOf("상의", "하의", "아우터")) {
+            val minTemp = temperature - 3.0
+            val maxTemp = temperature + 3.0
+            textViewTemperature.text = "적정 온도: ${String.format(Locale.US, "%.1f", minTemp)}°C ~ ${String.format(Locale.US, "%.1f", maxTemp)}°C"
+            textViewTemperature.visibility = View.VISIBLE
+        } else {
+            textViewTemperature.visibility = View.GONE
+        }
+    }
+
     private fun setupListeners() {
         toolbar.setNavigationOnClickListener { handleBackButton() }
         buttonSave.setOnClickListener { saveChangesAndExit() }
@@ -124,7 +144,15 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
         }
         editTextName.addTextChangedListener(textWatcher)
 
-        chipGroupCategory.setOnCheckedChangeListener { _, _ ->
+        chipGroupCategory.setOnCheckedChangeListener { group, checkedId ->
+            val selectedChip = group.findViewById<Chip>(checkedId)
+            if (selectedChip != null) {
+                currentClothingItem?.let {
+                    updateTemperatureVisibility(selectedChip.text.toString(), it.suitableTemperature)
+                }
+            } else {
+                textViewTemperature.visibility = View.GONE
+            }
             checkForChanges()
         }
 
@@ -208,9 +236,5 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
             viewModel.updateClothingItem(updatedItem)
             findNavController().popBackStack()
         }
-    }
-
-    override fun onTabReselected() {
-        handleBackButton()
     }
 }
