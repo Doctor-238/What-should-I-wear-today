@@ -10,14 +10,15 @@
         android:name="com.yehyun.whatshouldiweartoday.ui.home.HomeFragment"
         android:label="@string/title_home"
         tools:layout="@layout/fragment_home" >
-        <!-- [수정] 홈 -> 스타일 저장 화면으로 가는 길 -->
         <action
             android:id="@+id/action_navigation_home_to_saveStyleFragment"
             app:destination="@id/saveStyleFragment" />
-        <!-- [수정] 홈 -> 옷 수정 화면으로 가는 길 -->
         <action
             android:id="@+id/action_navigation_home_to_editClothingFragment"
             app:destination="@id/editClothingFragment" />
+        <action
+            android:id="@+id/action_navigation_home_to_settingsFragment"
+            app:destination="@id/settingsFragment" />
     </fragment>
 
     <fragment
@@ -25,7 +26,6 @@
         android:name="com.yehyun.whatshouldiweartoday.ui.style.StyleFragment"
         android:label="@string/title_style"
         tools:layout="@layout/fragment_style" >
-        <!-- [추가] 스타일 목록 -> 스타일 수정 화면으로 가는 길 -->
         <action
             android:id="@+id/action_navigation_style_to_editStyleFragment"
             app:destination="@id/editStyleFragment" />
@@ -60,7 +60,6 @@
         android:label="AddClothingFragment"
         tools:layout="@layout/fragment_add_clothing" />
 
-    <!-- '스타일 저장' 화면을 등록합니다. -->
     <fragment
         android:id="@+id/saveStyleFragment"
         android:name="com.yehyun.whatshouldiweartoday.ui.style.SaveStyleFragment"
@@ -89,7 +88,12 @@
             app:destination="@id/editClothingFragment" />
     </fragment>
 
-    <!-- 어느 화면에서든 '스타일 저장' 화면으로 갈 수 있는 전역 액션 -->
+    <fragment
+        android:id="@+id/settingsFragment"
+        android:name="com.yehyun.whatshouldiweartoday.ui.settings.SettingsFragment"
+        android:label="fragment_settings"
+        tools:layout="@layout/fragment_settings" />
+
     <action
         android:id="@+id/action_global_saveStyleFragment"
         app:destination="@id/saveStyleFragment" />

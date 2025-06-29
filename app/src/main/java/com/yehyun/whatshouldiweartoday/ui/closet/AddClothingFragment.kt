@@ -29,6 +29,7 @@ import com.google.mlkit.vision.segmentation.selfie.SelfieSegmenterOptions
 import com.yehyun.whatshouldiweartoday.R
 import com.yehyun.whatshouldiweartoday.data.database.AppDatabase
 import com.yehyun.whatshouldiweartoday.data.database.ClothingItem
+import com.yehyun.whatshouldiweartoday.data.preference.SettingsManager
 import com.yehyun.whatshouldiweartoday.ui.OnTabReselectedListener
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -63,6 +64,7 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabResel
     private lateinit var switchRemoveBackground: SwitchMaterial
     private lateinit var viewColorSwatch: View
     private lateinit var textColorLabel: TextView
+    private lateinit var settingsManager: SettingsManager
 
     private var originalBitmap: Bitmap? = null
     private var processedBitmap: Bitmap? = null
@@ -84,6 +86,7 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabResel
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        settingsManager = SettingsManager(requireContext())
         initializeGenerativeModel()
         setupViews(view)
         setupListeners()
@@ -161,7 +164,6 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabResel
                 val resizedBitmap = resizeBitmap(bitmap)
                 val inputContent = content {
                     image(resizedBitmap)
-                    // [최종 수정] suitable_temperature 설명에 마이너스 값 관련 문구 추가
                     text("""
                         You are a Precise Climate & Fashion Analyst for Korean weather.
                         Your task is to analyze the clothing item in the image and provide a detailed analysis in a strict JSON format, without any additional text or explanations.
@@ -230,12 +232,17 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabResel
         imageViewPreview.setImageBitmap(originalBitmap)
         clothingAnalysisResult?.let {
             val categoryText = "분류:${it.category}"
+
             val temperatureText = if (it.category in listOf("상의", "하의", "아우터")) {
-                val baseTemp = it.suitable_temperature
-                val minTemp = baseTemp - 3.0
-                val maxTemp = baseTemp + 3.0
-                ", 적정 온도:${String.format("%.1f", minTemp)}°C ~ ${String.format("%.1f", maxTemp)}°C"
-            } else { "" }
+                // [수정] 아우터일 경우, 기준 온도를 3도 낮춤
+                val baseTemp = if (it.category == "아우터") it.suitable_temperature - 3.0 else it.suitable_temperature
+                val tolerance = settingsManager.getTemperatureTolerance()
+                val minTemp = baseTemp - tolerance
+                val maxTemp = baseTemp + tolerance
+                ", 적정 온도:%.1f°C ~ %.1f°C".format(minTemp, maxTemp)
+            } else {
+                ""
+            }
             textViewAiResult.text = categoryText + temperatureText
 
             try {
@@ -263,7 +270,12 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabResel
             return
         }
 
-        val finalTemperature = analysis.suitable_temperature
+        // [수정] 아우터일 경우, 저장되는 온도를 3도 낮춤
+        val finalTemperature = if (analysis.category == "아우터") {
+            analysis.suitable_temperature - 3.0
+        } else {
+            analysis.suitable_temperature
+        }
 
         lifecycleScope.launch(Dispatchers.IO) {
             val originalImagePath = saveBitmapToInternalStorage(bitmapToSave, "original_")

@@ -45,6 +45,10 @@ class HomeFragment : Fragment(), OnTabReselectedListener {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        binding.ivSettings.setOnClickListener {
+            findNavController().navigate(R.id.action_navigation_home_to_settingsFragment)
+        }
+
         setupViewPager()
         checkLocationPermission()
         binding.swipeRefreshLayout.setOnRefreshListener { checkLocationPermission() }
