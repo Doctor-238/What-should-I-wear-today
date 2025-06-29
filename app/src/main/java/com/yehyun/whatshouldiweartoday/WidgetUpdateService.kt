@@ -216,7 +216,7 @@ class WidgetUpdateService : Service() {
     }
 
     private fun updateTabColors(remoteViews: RemoteViews, isToday: Boolean) {
-        val primaryColor = Color.parseColor("#6200EE")
+        val primaryColor = Color.parseColor("#0EB4FC")
         val secondaryColor = Color.DKGRAY
         remoteViews.setTextColor(R.id.tv_widget_today, if (isToday) primaryColor else secondaryColor)
         remoteViews.setTextColor(R.id.tv_widget_tomorrow, if (isToday) secondaryColor else primaryColor)

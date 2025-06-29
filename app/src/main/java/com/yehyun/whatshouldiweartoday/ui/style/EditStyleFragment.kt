@@ -30,17 +30,12 @@ class EditStyleFragment : Fragment(R.layout.fragment_edit_style), OnTabReselecte
     private val viewModel: EditStyleViewModel by viewModels()
     private val args: EditStyleFragmentArgs by navArgs()
     private lateinit var tabLayout: TabLayout
-
     private var originalStyle: SavedStyle? = null
     private var initialItemIds: Set<Int>? = null
-
     private val currentSelectedItems = mutableListOf<ClothingItem>()
-
     private lateinit var onBackPressedCallback: OnBackPressedCallback
-
     private lateinit var adapterForAll: SaveStyleAdapter
     private lateinit var adapterForSelected: RecommendationAdapter
-
     private lateinit var buttonSave: Button
     private lateinit var tvSelectedItemLabel: TextView
     private lateinit var editTextName: TextInputEditText
@@ -55,7 +50,6 @@ class EditStyleFragment : Fragment(R.layout.fragment_edit_style), OnTabReselecte
         setupAdapters(view)
         observeViewModel()
         setupListeners(view)
-        // [오류 해결] 누락되었던 뒤로가기 핸들러 설정 함수 호출
         setupBackButtonHandler()
         setupTabs(view)
     }
@@ -73,13 +67,10 @@ class EditStyleFragment : Fragment(R.layout.fragment_edit_style), OnTabReselecte
             if (styleWithItems != null && initialItemIds == null) {
                 originalStyle = styleWithItems.style
                 initialItemIds = styleWithItems.items.map { it.id }.toSet()
-
                 currentSelectedItems.clear()
                 currentSelectedItems.addAll(styleWithItems.items)
-
                 toolbar.title = "'${originalStyle!!.styleName}' 수정"
                 editTextName.setText(originalStyle!!.styleName)
-
                 for (i in 0 until chipGroupSeason.childCount) {
                     val chip = chipGroupSeason.getChildAt(i) as Chip
                     if (chip.text == styleWithItems.style.season) {
@@ -87,11 +78,9 @@ class EditStyleFragment : Fragment(R.layout.fragment_edit_style), OnTabReselecte
                         break
                     }
                 }
-
                 updateAdaptersAndCheckChanges()
             }
         }
-
         viewModel.filteredClothes.observe(viewLifecycleOwner) { filteredClothes ->
             adapterForAll.submitList(filteredClothes)
             adapterForAll.setSelectedItems(currentSelectedItems.map { it.id }.toSet())
@@ -104,7 +93,6 @@ class EditStyleFragment : Fragment(R.layout.fragment_edit_style), OnTabReselecte
             updateAdaptersAndCheckChanges()
         }
         view.findViewById<RecyclerView>(R.id.rv_selected_items).adapter = adapterForSelected
-
         adapterForAll = SaveStyleAdapter(
             onItemClicked = { item, isSelected ->
                 if (isSelected) {
@@ -128,17 +116,14 @@ class EditStyleFragment : Fragment(R.layout.fragment_edit_style), OnTabReselecte
 
     private fun setupListeners(view: View) {
         val deleteButton = view.findViewById<Button>(R.id.button_delete_style)
-
         toolbar.setNavigationOnClickListener { handleBackButton() }
         buttonSave.setOnClickListener { saveChangesAndExit() }
         deleteButton.setOnClickListener { showDeleteConfirmDialog() }
-
         editTextName.addTextChangedListener(object: TextWatcher {
             override fun afterTextChanged(s: Editable?) { checkForChanges() }
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
         })
-
         chipGroupSeason.setOnCheckedChangeListener { _, _ -> checkForChanges() }
     }
 
@@ -152,7 +137,6 @@ class EditStyleFragment : Fragment(R.layout.fragment_edit_style), OnTabReselecte
                 .thenBy { it.suitableTemperature }
         )
         adapterForSelected.submitList(sortedItems)
-
         adapterForAll.setSelectedItems(currentSelectedItems.map { it.id }.toSet())
         tvSelectedItemLabel.text = "현재 스타일 (${currentSelectedItems.size}/10)"
         checkForChanges()
@@ -160,7 +144,6 @@ class EditStyleFragment : Fragment(R.layout.fragment_edit_style), OnTabReselecte
 
     private fun checkForChanges() {
         if (originalStyle == null || initialItemIds == null) return
-
         val initialName = originalStyle!!.styleName
         val currentName = editTextName.text.toString().trim()
         val currentIds = currentSelectedItems.map { it.id }.toSet()
@@ -169,13 +152,11 @@ class EditStyleFragment : Fragment(R.layout.fragment_edit_style), OnTabReselecte
         val currentSeason = if (selectedSeasonId != View.NO_ID) {
             chipGroupSeason.findViewById<Chip>(selectedSeasonId).text.toString()
         } else { "" }
-
         val hasChanges = initialName != currentName || initialItemIds != currentIds || initialSeason != currentSeason
         buttonSave.isEnabled = hasChanges && currentName.isNotEmpty() && selectedSeasonId != View.NO_ID
         onBackPressedCallback.isEnabled = hasChanges
     }
 
-    // [오류 해결] 누락되었던 함수 추가
     private fun setupBackButtonHandler() {
         onBackPressedCallback = object : OnBackPressedCallback(false) {
             override fun handleOnBackPressed() {
@@ -185,7 +166,6 @@ class EditStyleFragment : Fragment(R.layout.fragment_edit_style), OnTabReselecte
         requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, onBackPressedCallback)
     }
 
-    // [오류 해결] 누락되었던 함수 추가
     private fun handleBackButton() {
         if (buttonSave.isEnabled) {
             showSaveChangesDialog()
@@ -194,7 +174,6 @@ class EditStyleFragment : Fragment(R.layout.fragment_edit_style), OnTabReselecte
         }
     }
 
-    // [오류 해결] 누락되었던 함수 추가
     private fun showSaveChangesDialog() {
         AlertDialog.Builder(requireContext())
             .setMessage("변경사항을 저장하시겠습니까?")
@@ -229,14 +208,12 @@ class EditStyleFragment : Fragment(R.layout.fragment_edit_style), OnTabReselecte
             Toast.makeText(context, "스타일에 추가된 옷이 없습니다.", Toast.LENGTH_SHORT).show()
             return
         }
-
         val selectedSeasonId = chipGroupSeason.checkedChipId
         if (selectedSeasonId == View.NO_ID) {
             Toast.makeText(context, "계절을 선택해주세요.", Toast.LENGTH_SHORT).show()
             return
         }
         val selectedSeason = chipGroupSeason.findViewById<Chip>(selectedSeasonId).text.toString()
-
         originalStyle?.let { styleToUpdate ->
             val updatedStyle = styleToUpdate.copy(styleName = styleName, season = selectedSeason)
             viewModel.updateStyle(updatedStyle, currentSelectedItems.toList())

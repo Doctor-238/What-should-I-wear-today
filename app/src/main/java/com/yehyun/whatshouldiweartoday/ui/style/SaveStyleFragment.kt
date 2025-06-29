@@ -26,7 +26,7 @@ class SaveStyleFragment : Fragment(R.layout.fragment_save_style), OnTabReselecte
     private lateinit var adapter: SaveStyleAdapter
     private lateinit var tabLayout: TabLayout
     private lateinit var tvSelectionGuide: TextView
-    private lateinit var chipGroupSeason: ChipGroup // 계절 ChipGroup 변수
+    private lateinit var chipGroupSeason: ChipGroup
 
     private val selectedItems = mutableSetOf<ClothingItem>()
 
@@ -35,7 +35,6 @@ class SaveStyleFragment : Fragment(R.layout.fragment_save_style), OnTabReselecte
 
         tabLayout = view.findViewById(R.id.tab_layout_save_style_category)
         tvSelectionGuide = view.findViewById(R.id.tv_selection_guide)
-        // [오류 수정] chipGroupSeason을 올바르게 초기화합니다.
         chipGroupSeason = view.findViewById(R.id.chip_group_season_save)
 
         setupRecyclerView(view)
@@ -77,7 +76,6 @@ class SaveStyleFragment : Fragment(R.layout.fragment_save_style), OnTabReselecte
                 findNavController().navigate(action)
             }
         )
-
         val recyclerView = view.findViewById<RecyclerView>(R.id.rv_clothing_selection)
         recyclerView.adapter = adapter
     }
@@ -103,7 +101,6 @@ class SaveStyleFragment : Fragment(R.layout.fragment_save_style), OnTabReselecte
     private fun setupListeners(view: View) {
         view.findViewById<Button>(R.id.button_save_style_final).setOnClickListener {
             val styleName = view.findViewById<TextInputEditText>(R.id.editText_style_name).text.toString().trim()
-
             val selectedSeasonId = chipGroupSeason.checkedChipId
             if (selectedSeasonId == View.NO_ID) {
                 Toast.makeText(requireContext(), "계절을 선택해주세요.", Toast.LENGTH_SHORT).show()
@@ -124,11 +121,11 @@ class SaveStyleFragment : Fragment(R.layout.fragment_save_style), OnTabReselecte
             Toast.makeText(requireContext(), "'$styleName' 스타일이 저장되었습니다.", Toast.LENGTH_SHORT).show()
             findNavController().popBackStack()
         }
-
         view.findViewById<MaterialToolbar>(R.id.toolbar_save_style).setNavigationOnClickListener {
             findNavController().popBackStack()
         }
     }
+
     override fun onTabReselected() {
         findNavController().popBackStack()
     }

@@ -7,12 +7,14 @@ import androidx.room.PrimaryKey
 data class ClothingItem(
     @PrimaryKey(autoGenerate = true)
     val id: Int = 0,
-    val name: String,
+    // [오류 해결] val을 var로 변경하여 값을 수정할 수 있도록 허용
+    var name: String,
     val imageUri: String,
     val processedImageUri: String?,
+    // [오류 해결] val을 var로 변경
     var useProcessedImage: Boolean,
-    val category: String,
-    // [핵심 수정] 온도를 소수점까지 저장하기 위해 Double 타입으로 변경
+    // [오류 해결] val을 var로 변경
+    var category: String,
     val suitableTemperature: Double,
     val timestamp: Long = System.currentTimeMillis(),
     val colorHex: String

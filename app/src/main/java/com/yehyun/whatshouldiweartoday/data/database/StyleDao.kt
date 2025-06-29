@@ -1,12 +1,7 @@
 package com.yehyun.whatshouldiweartoday.data.database
 
 import androidx.lifecycle.LiveData
-import androidx.room.Dao
-import androidx.room.Delete
-import androidx.room.Insert
-import androidx.room.Query
-import androidx.room.Transaction
-import androidx.room.Update
+import androidx.room.*
 
 @Dao
 interface StyleDao {
@@ -59,7 +54,6 @@ interface StyleDao {
     @Delete
     suspend fun deleteStyle(style: SavedStyle)
 
-    // [수정 완료] 빠뜨렸던 @Query 어노테이션을 추가합니다.
     @Query("DELETE FROM style_item_cross_ref WHERE clothingId = :clothingId")
     suspend fun deleteCrossRefsByClothingId(clothingId: Int)
 
@@ -74,4 +68,17 @@ interface StyleDao {
     @Transaction
     @Query("SELECT * FROM saved_styles WHERE styleId = :styleId")
     fun getStyleById(styleId: Long): LiveData<StyleWithItems>
+
+    // [확인] 전체 초기화를 위한 함수들
+    @Query("DELETE FROM saved_styles")
+    suspend fun clearAll()
+
+    @Query("DELETE FROM style_item_cross_ref")
+    suspend fun clearAllCrossRefs()
+
+    @Transaction
+    suspend fun clearAllStylesAndRefs() {
+        clearAll()
+        clearAllCrossRefs()
+    }
 }

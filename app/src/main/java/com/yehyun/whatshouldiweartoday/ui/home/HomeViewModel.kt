@@ -10,6 +10,7 @@ import com.yehyun.whatshouldiweartoday.data.api.Forecast
 import com.yehyun.whatshouldiweartoday.data.api.WeatherApiService
 import com.yehyun.whatshouldiweartoday.data.database.AppDatabase
 import com.yehyun.whatshouldiweartoday.data.database.ClothingItem
+import com.yehyun.whatshouldiweartoday.data.preference.SettingsManager
 import com.yehyun.whatshouldiweartoday.data.repository.ClothingRepository
 import com.yehyun.whatshouldiweartoday.data.repository.WeatherRepository
 import kotlinx.coroutines.launch
@@ -56,10 +57,10 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     val isLoading: LiveData<Boolean> = _isLoading
     private val _isRecommendationScrolledToTop = MutableLiveData(true)
     val isRecommendationScrolledToTop: LiveData<Boolean> = _isRecommendationScrolledToTop
+    private val settingsManager = SettingsManager(application)
 
     companion object {
         private const val SIGNIFICANT_TEMP_DIFFERENCE = 12.0
-        private const val TEMPERATURE_TOLERANCE = 3.0
     }
 
     fun setScrollState(isAtTop: Boolean) {
@@ -133,23 +134,19 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     fun generateRecommendation(summary: DailyWeatherSummary, allClothes: List<ClothingItem>): RecommendationResult {
         val maxTempCriteria = (summary.maxTemp + summary.maxFeelsLike) / 2
         val minTempCriteria = (summary.minTemp + summary.minFeelsLike) / 2
+        val temperatureTolerance = settingsManager.getTemperatureTolerance()
+        val packableOuterTolerance = settingsManager.getPackableOuterTolerance()
+
 
         val recommendedClothes = allClothes.filter {
-            val itemMinTemp = it.suitableTemperature - TEMPERATURE_TOLERANCE
-            val itemMaxTemp = it.suitableTemperature + TEMPERATURE_TOLERANCE
-
-            // 1. 기본 조건: 오늘의 최고 기준 온도가 옷의 적정 온도 범위에 들어가는 경우
+            val itemMinTemp = it.suitableTemperature - temperatureTolerance
+            val itemMaxTemp = it.suitableTemperature + temperatureTolerance
             val isFitForMaxTemp = maxTempCriteria in itemMinTemp..itemMaxTemp
-
-            // 2. 더운 날 조건: 최고 기준 온도가 30도를 넘고, 옷의 적정 온도 범위 중 일부라도 30도 이상인 경우
             val isFitForHotDay = maxTempCriteria > 30 && itemMaxTemp >= 30
-
-            // 3. 추운 날 조건: 최저 기준 온도가 0도 미만이고, 옷의 적정 온도 범위 중 일부라도 0도 이하인 경우
             val isFitForFreezingDay = minTempCriteria < 0 && itemMinTemp <= 0
-
-            // 위 세 조건 중 하나라도 만족하면 추천 대상에 포함
             isFitForMaxTemp || isFitForHotDay || isFitForFreezingDay
         }
+
 
         val recommendedTops = recommendedClothes.filter { it.category == "상의" }
         val recommendedBottoms = recommendedClothes.filter { it.category == "하의" }
@@ -159,7 +156,8 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         val packableOuter = if (isTempDifferenceSignificant) {
             allClothes.filter { it.category == "아우터" }
                 .filter {
-                    val tempRangeForMin = (it.suitableTemperature - TEMPERATURE_TOLERANCE)..it.suitableTemperature
+                    // [수정] 설정에서 가져온 챙겨갈 아우터 범위 적용
+                    val tempRangeForMin = (it.suitableTemperature + packableOuterTolerance)..it.suitableTemperature
                     tempRangeForMin.contains(minTempCriteria)
                 }
                 .minByOrNull { abs(it.suitableTemperature - minTempCriteria) }
