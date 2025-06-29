@@ -94,7 +94,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    private suspend fun processAndRecommend(weatherResponse: com.yehyun.whatshouldiweartoday.data.api.WeatherResponse) {
+    suspend fun processAndRecommend(weatherResponse: com.yehyun.whatshouldiweartoday.data.api.WeatherResponse) {
         val today = LocalDate.now()
         val tomorrow = today.plusDays(1)
         val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
@@ -130,7 +130,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         return DailyWeatherSummary("", maxTemp, minTemp, maxFeelsLike, minFeelsLike, weatherCondition, pop)
     }
 
-    private fun generateRecommendation(summary: DailyWeatherSummary, allClothes: List<ClothingItem>): RecommendationResult {
+    fun generateRecommendation(summary: DailyWeatherSummary, allClothes: List<ClothingItem>): RecommendationResult {
         val maxTempCriteria = (summary.maxTemp + summary.maxFeelsLike) / 2
         val minTempCriteria = (summary.minTemp + summary.minFeelsLike) / 2
 
