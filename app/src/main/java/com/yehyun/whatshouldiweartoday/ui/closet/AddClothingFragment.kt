@@ -297,7 +297,7 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing) {
         val maskHeight = mask.height
         for (y in 0 until maskHeight) {
             for (x in 0 until maskWidth) {
-                if (maskBuffer.float > 0.1f) {
+                if (maskBuffer.float > 0.001f) {
                     maskedBitmap.setPixel(x, y, original.getPixel(x, y))
                 }
             }
