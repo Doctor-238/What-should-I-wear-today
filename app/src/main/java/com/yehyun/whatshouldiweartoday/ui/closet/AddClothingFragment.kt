@@ -121,7 +121,7 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing) {
             responseMimeType = "application/json"
         }.build()
         generativeModel = GenerativeModel(
-            modelName = "gemini-1.5-flash-latest",
+            modelName = "gemini-2.5-flash",
             apiKey = apiKey,
             generationConfig = config
         )
@@ -235,8 +235,9 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing) {
     private fun handleAiSuccess(didSegmentationSucceed: Boolean) {
         imageViewPreview.setImageBitmap(originalBitmap)
         clothingAnalysisResult?.let {
-            // [수정] UI 텍스트를 원래대로 되돌립니다.
-            textViewAiResult.text = "분류:${it.category}, 적정 온도:${String.format("%.1f", it.suitable_temperature)}°C"
+            // [핵심 수정] UI에 표시할 때도 +4.0을 더해서 보여줍니다.
+            val finalTemperature = it.suitable_temperature + 3.0
+            textViewAiResult.text = "분류:${it.category}, 적정 온도:${String.format("%.1f", finalTemperature)}°C"
             try {
                 viewColorSwatch.setBackgroundColor(Color.parseColor(it.color_hex))
                 viewColorSwatch.visibility = View.VISIBLE
@@ -264,7 +265,7 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing) {
             return
         }
 
-        val finalTemperature = analysis.suitable_temperature
+        val finalTemperature = analysis.suitable_temperature + 3.0
 
         lifecycleScope.launch(Dispatchers.IO) {
             val originalImagePath = saveBitmapToInternalStorage(bitmapToSave, "original_")
