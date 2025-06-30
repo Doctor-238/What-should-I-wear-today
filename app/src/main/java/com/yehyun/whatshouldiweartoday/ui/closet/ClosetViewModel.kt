@@ -1,3 +1,5 @@
+// app/src/main/java/com/yehyun/whatshouldiweartoday/ui/closet/ClosetViewModel.kt
+
 package com.yehyun.whatshouldiweartoday.ui.closet
 
 import android.app.Application
@@ -37,11 +39,20 @@ class ClosetViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
-    // [추가] 설정 변경 후 UI를 강제로 새로고침하기 위한 함수
     fun refreshData() {
         updateClothesSource()
     }
 
     fun setSearchQuery(query: String) { if (_searchQuery.value != query) _searchQuery.value = query }
     fun setSortType(sortType: String) { if (_sortType.value != sortType) _sortType.value = sortType }
+
+    /**
+     * [추가] ViewModel의 상태(검색어, 정렬 순서)를 초기화하는 함수.
+     * 이 함수가 호출되면 LiveData가 새로운 기본값으로 업데이트되고,
+     * 이를 관찰하는 clothes LiveData도 자동으로 갱신됩니다.
+     */
+    fun resetState() {
+        _searchQuery.value = ""
+        _sortType.value = "최신순"
+    }
 }

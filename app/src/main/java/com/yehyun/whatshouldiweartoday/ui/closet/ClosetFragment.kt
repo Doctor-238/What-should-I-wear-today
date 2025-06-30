@@ -44,8 +44,8 @@ class ClosetFragment : Fragment(), OnTabReselectedListener {
 
     override fun onResume() {
         super.onResume()
-        // [핵심 수정] 설정 화면에서 돌아왔을 때, ViewModel의 데이터를 강제로 새로고침하여
-        // 모든 옷 목록이 최신 설정 값으로 다시 그려지도록 합니다.
+        // 설정 화면에서 돌아왔을 때, ViewModel의 데이터를 강제로 새로고침하여
+        // 모든 옷 목록이 최신 설정 값(체질 등)으로 다시 그려지도록 합니다.
         viewModel.refreshData()
     }
 

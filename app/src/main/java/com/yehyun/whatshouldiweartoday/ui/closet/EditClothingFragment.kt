@@ -1,3 +1,5 @@
+// app/src/main/java/com/yehyun/whatshouldiweartoday/ui/closet/EditClothingFragment.kt
+
 package com.yehyun.whatshouldiweartoday.ui.closet
 
 import android.graphics.Color
@@ -13,7 +15,7 @@ import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
-import androidx.fragment.app.viewModels
+import androidx.fragment.app.activityViewModels
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import com.bumptech.glide.Glide
@@ -31,10 +33,9 @@ import java.util.Locale
 
 class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabReselectedListener {
 
-    private val viewModel: EditClothingViewModel by viewModels()
+    private val viewModel: EditClothingViewModel by activityViewModels()
     private val args: EditClothingFragmentArgs by navArgs()
 
-    private var currentClothingItem: ClothingItem? = null
     private lateinit var onBackPressedCallback: OnBackPressedCallback
 
     private lateinit var imageViewPreview: ImageView
@@ -53,16 +54,10 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
         super.onViewCreated(view, savedInstanceState)
         settingsManager = SettingsManager(requireContext())
         setupViews(view)
+        viewModel.loadClothingItem(args.clothingItemId)
         observeViewModel()
         setupBackButtonHandler()
-    }
-
-    override fun onResume() {
-        super.onResume()
-        // 설정 화면에서 돌아왔을 때, 현재 옷 데이터가 있다면 최신 설정 값으로 UI를 새로고침합니다.
-        currentClothingItem?.let {
-            bindDataToViews(it)
-        }
+        setupListeners(view)
     }
 
     private fun setupViews(view: View) {
@@ -76,28 +71,39 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
         toolbar = view.findViewById(R.id.toolbar_edit)
         viewColorSwatch = view.findViewById(R.id.view_color_swatch_edit)
         textColorLabel = view.findViewById(R.id.textView_color_label_edit)
-        buttonSave.isEnabled = false
     }
 
     private fun observeViewModel() {
-        viewModel.getClothingItem(args.clothingItemId).observe(viewLifecycleOwner) { item ->
-            if (item != null) {
-                // 데이터가 처음 로드될 때만 리스너를 설정합니다.
-                if (currentClothingItem == null) {
-                    currentClothingItem = item
-                    bindDataToViews(item)
-                    setupListeners()
-                } else {
-                    currentClothingItem = item
-                }
+        viewModel.currentClothingItem.observe(viewLifecycleOwner) { item ->
+            item?.let { bindDataToViews(it) }
+        }
+
+        viewModel.isChanged.observe(viewLifecycleOwner) { hasChanges ->
+            buttonSave.isEnabled = hasChanges
+            onBackPressedCallback.isEnabled = hasChanges
+        }
+
+        viewModel.isSaveComplete.observe(viewLifecycleOwner) { isComplete ->
+            if(isComplete) {
+                findNavController().popBackStack()
+                viewModel.resetCompletionState()
+            }
+        }
+
+        viewModel.isDeleteComplete.observe(viewLifecycleOwner) { isComplete ->
+            if(isComplete) {
+                Toast.makeText(context, "삭제되었습니다.", Toast.LENGTH_SHORT).show()
+                findNavController().popBackStack()
+                viewModel.resetCompletionState()
             }
         }
     }
 
     private fun bindDataToViews(item: ClothingItem) {
         toolbar.title = "'${item.name}' 수정"
-        editTextName.setText(item.name)
-
+        if (editTextName.text.toString() != item.name) {
+            editTextName.setText(item.name)
+        }
         updateTemperatureDisplay(item)
 
         try {
@@ -117,20 +123,20 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
             }
         }
 
-        if (item.processedImageUri != null) {
-            switchRemoveBackground.visibility = View.VISIBLE
-            switchRemoveBackground.isChecked = item.useProcessedImage
-        } else {
-            switchRemoveBackground.visibility = View.GONE
-        }
-        updateImagePreview()
+        switchRemoveBackground.visibility = if (item.processedImageUri != null) View.VISIBLE else View.GONE
+        switchRemoveBackground.isChecked = item.useProcessedImage
+        updateImagePreview(item)
     }
 
     private fun updateTemperatureDisplay(item: ClothingItem) {
         if (item.category in listOf("상의", "하의", "아우터")) {
+            // [수정] 체질, 온도 범위 설정을 모두 가져와서 최종 온도 범위를 계산
             val tolerance = settingsManager.getTemperatureTolerance()
-            val minTemp = item.suitableTemperature - tolerance
-            val maxTemp = item.suitableTemperature + tolerance
+            val constitutionAdjustment = settingsManager.getConstitutionAdjustment()
+            val adjustedTemp = item.suitableTemperature + constitutionAdjustment
+
+            val minTemp = adjustedTemp - tolerance
+            val maxTemp = adjustedTemp + tolerance
             textViewTemperature.text = "적정 온도: %.1f°C ~ %.1f°C".format(minTemp, maxTemp)
             textViewTemperature.visibility = View.VISIBLE
         } else {
@@ -138,62 +144,37 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
         }
     }
 
-    private fun updateImagePreview() {
-        currentClothingItem?.let { item ->
-            val imageUriString = if (item.useProcessedImage && item.processedImageUri != null) {
-                item.processedImageUri
-            } else {
-                item.imageUri
-            }
-            Glide.with(this).load(Uri.fromFile(File(imageUriString))).into(imageViewPreview)
+    private fun updateImagePreview(item: ClothingItem) {
+        val imageUriString = if (item.useProcessedImage && item.processedImageUri != null) {
+            item.processedImageUri
+        } else {
+            item.imageUri
         }
+        Glide.with(this).load(Uri.fromFile(File(imageUriString))).into(imageViewPreview)
     }
 
-    private fun setupListeners() {
+    private fun setupListeners(view: View) {
         toolbar.setNavigationOnClickListener { handleBackButton() }
-        buttonSave.setOnClickListener { saveChangesAndExit() }
+        buttonSave.setOnClickListener { viewModel.saveChanges() }
         buttonDelete.setOnClickListener { showDeleteConfirmDialog() }
 
-        val textWatcher = object : TextWatcher {
+        editTextName.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) { checkForChanges() }
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                viewModel.updateName(s.toString())
+            }
             override fun afterTextChanged(s: Editable?) {}
-        }
-        editTextName.addTextChangedListener(textWatcher)
+        })
 
         chipGroupCategory.setOnCheckedChangeListener { _, checkedId ->
-            currentClothingItem?.let {
-                val selectedChip = view?.findViewById<Chip>(checkedId)
-                if (selectedChip != null) {
-                    it.category = selectedChip.text.toString()
-                }
-                updateTemperatureDisplay(it)
+            view.findViewById<Chip>(checkedId)?.let {
+                viewModel.updateCategory(it.text.toString())
             }
-            checkForChanges()
         }
 
         switchRemoveBackground.setOnCheckedChangeListener { _, isChecked ->
-            currentClothingItem?.useProcessedImage = isChecked
-            updateImagePreview()
-            checkForChanges()
+            viewModel.updateUseProcessedImage(isChecked)
         }
-    }
-
-    private fun checkForChanges() {
-        if (currentClothingItem == null) return
-
-        val nameChanged = editTextName.text.toString() != currentClothingItem!!.name
-        val selectedChip = view?.findViewById<Chip>(chipGroupCategory.checkedChipId)
-        val categoryChanged = if (selectedChip != null) {
-            selectedChip.text.toString() != currentClothingItem!!.category
-        } else {
-            true
-        }
-        val switchChanged = switchRemoveBackground.isChecked != currentClothingItem!!.useProcessedImage
-
-        val hasChanges = nameChanged || categoryChanged || switchChanged
-        buttonSave.isEnabled = hasChanges
-        onBackPressedCallback.isEnabled = hasChanges
     }
 
     private fun setupBackButtonHandler() {
@@ -209,6 +190,7 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
         if (buttonSave.isEnabled) {
             showSaveChangesDialog()
         } else {
+            viewModel.resetAllState()
             findNavController().popBackStack()
         }
     }
@@ -216,50 +198,31 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
     private fun showSaveChangesDialog() {
         AlertDialog.Builder(requireContext())
             .setMessage("변경사항을 저장하시겠습니까?")
-            .setPositiveButton("예") { _, _ -> saveChangesAndExit() }
-            .setNegativeButton("아니오") { _, _ -> findNavController().popBackStack() }
-            .setCancelable(false)
+            .setPositiveButton("예") { _, _ -> viewModel.saveChanges() }
+            .setNegativeButton("아니오") { _, _ ->
+                viewModel.resetAllState()
+                findNavController().popBackStack()
+            }
+            .setCancelable(true)
             .show()
     }
 
     private fun showDeleteConfirmDialog() {
         AlertDialog.Builder(requireContext())
             .setTitle("삭제 확인")
-            .setMessage("'${currentClothingItem?.name}' 을(를) 정말 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.")
-            .setPositiveButton("예") { _, _ ->
-                currentClothingItem?.let { viewModel.deleteClothingItem(it) }
-                Toast.makeText(context, "삭제되었습니다.", Toast.LENGTH_SHORT).show()
-                findNavController().popBackStack()
-            }
+            .setMessage("'${viewModel.currentClothingItem.value?.name}' 을(를) 정말 삭제하시겠습니까?")
+            .setPositiveButton("예") { _, _ -> viewModel.deleteClothingItem() }
             .setNegativeButton("아니오", null)
             .show()
     }
 
-    private fun saveChangesAndExit() {
-        val updatedName = editTextName.text.toString().trim()
-        val selectedChipId = chipGroupCategory.checkedChipId
-        if (updatedName.isEmpty()) {
-            Toast.makeText(context, "옷 이름을 입력해주세요.", Toast.LENGTH_SHORT).show()
-            return
-        }
-        if (selectedChipId == View.NO_ID) {
-            Toast.makeText(context, "옷 종류를 선택해주세요.", Toast.LENGTH_SHORT).show()
-            return
-        }
-        val updatedCategory = view?.findViewById<Chip>(selectedChipId)?.text.toString()
-
-        currentClothingItem?.let {
-            val updatedItem = it.copy(
-                name = updatedName,
-                category = updatedCategory,
-                useProcessedImage = switchRemoveBackground.isChecked
-            )
-            viewModel.updateClothingItem(updatedItem)
-            findNavController().popBackStack()
-        }
-    }
-
     override fun onTabReselected() {
         handleBackButton()
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        // 메모리 누수 방지를 위해 콜백 비활성화
+        onBackPressedCallback.isEnabled = false
     }
 }
