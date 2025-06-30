@@ -83,46 +83,83 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
 
         initializeGenerativeModel(apiKey)
 
+        // [수정] 재시도 로직이 포함된 함수를 호출합니다.
+        analyzeImageWithRetry(bitmap)
+    }
+
+    // [추가] AI 분석 및 재시도 로직을 처리하는 함수
+    private fun analyzeImageWithRetry(bitmap: Bitmap, maxRetries: Int = 2) {
         viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val resizedBitmap = resizeBitmap(bitmap)
-                val inputContent = content {
-                    image(resizedBitmap)
-                    text("""
-                        You are a Precise Climate & Fashion Analyst for Korean weather.
-                        Your task is to analyze the clothing item in the image and provide a detailed analysis in a strict JSON format, without any additional text or explanations.
+            var attempt = 0
+            var successfulAnalysis: ClothingAnalysis? = null
 
-                        Your JSON response MUST contain ONLY the following keys: "is_wearable", "category", "suitable_temperature", and "color_hex".
+            while (attempt < maxRetries) {
+                try {
+                    val resizedBitmap = resizeBitmap(bitmap)
+                    val inputContent = content {
+                        image(resizedBitmap)
+                        text("""
+                            You are a Precise Climate & Fashion Analyst for Korean weather.
+                            Your task is to analyze the clothing item in the image and provide a detailed analysis in a strict JSON format, without any additional text or explanations.
 
-                        - "is_wearable": (boolean) True if the item is wearable clothing.
-                        - "category": (string) One of '상의', '하의', '아우터', '신발', '가방', '모자', '기타'.
-                        - "color_hex": (string) The dominant color of the item as a hex string.
-                        - "suitable_temperature": (double) This is the most important. Estimate the MAXIMUM comfortable temperature for this item. The value can be negative for winter clothing. You MUST provide a specific, non-round number with one decimal place (e.g., 23.5, 8.0, -2.5). A generic integer like 15.0 is a bad response. Base your judgment on the visual evidence of material, thickness, and design.
-                    """.trimIndent())
-                }
+                            Your JSON response MUST contain ONLY the following keys: "is_wearable", "category", "suitable_temperature", and "color_hex".
 
-                val response = generativeModel!!.generateContent(inputContent)
-                val analysisResult = Json { ignoreUnknownKeys = true }.decodeFromString<ClothingAnalysis>(response.text!!)
+                            - "is_wearable": (boolean) True if the item is wearable clothing.
+                            - "category": (string) One of '상의', '하의', '아우터', '신발', '가방', '모자', '기타'.
+                            - "color_hex": (string) The dominant color of the item as a hex string.
+                            - "suitable_temperature": (double) This is the most important. Estimate the MAXIMUM comfortable temperature for this item. The value can be negative for winter clothing. You MUST provide a specific, non-round number with one decimal place (e.g., 23.5, 8.0, -2.5). A generic integer like 15.0 is a bad response. Base your judgment on the visual evidence of material, thickness, and design.
+                        """.trimIndent())
+                    }
 
-                withContext(Dispatchers.Main) {
-                    if (!analysisResult.is_wearable) {
-                        _errorMessage.value = "올바른 사진을 입력해주세요"
-                        _uiState.value = UiState.IDLE
+                    val response = generativeModel!!.generateContent(inputContent)
+                    val analysisResult = Json { ignoreUnknownKeys = true }.decodeFromString<ClothingAnalysis>(response.text!!)
+
+                    // 색상 코드가 유효한지 검사
+                    if (isValidHexCode(analysisResult.color_hex)) {
+                        successfulAnalysis = analysisResult
+                        break // 성공했으므로 루프 탈출
                     } else {
-                        _clothingAnalysisResult.value = analysisResult
-                        processAnalysisResult(analysisResult)
-                        segmentImage(bitmap)
+                        // 유효하지 않으면 마지막 시도일 경우를 대비해 저장
+                        successfulAnalysis = analysisResult
+                    }
+
+                } catch (e: Exception) {
+                    Log.e("AI_ERROR", "Attempt ${attempt + 1} failed", e)
+                    if (attempt == maxRetries - 1) { // 마지막 시도도 실패하면 에러 메시지 표시
+                        withContext(Dispatchers.Main) {
+                            _errorMessage.value = "분석 실패: ${e.message}"
+                            _uiState.value = UiState.IDLE
+                        }
+                        return@launch
                     }
                 }
-            } catch (e: Exception) {
-                withContext(Dispatchers.Main) {
-                    Log.e("AI_ERROR", "Error during AI analysis", e)
-                    _errorMessage.value = "분석 실패: ${e.message}"
+                attempt++
+            }
+
+            // 최종 분석 결과를 UI에 반영
+            withContext(Dispatchers.Main) {
+                if (successfulAnalysis != null && successfulAnalysis.is_wearable) {
+                    _clothingAnalysisResult.value = successfulAnalysis
+                    processAnalysisResult(successfulAnalysis)
+                    segmentImage(bitmap)
+                } else {
+                    _errorMessage.value = "올바른 사진을 입력해주세요"
                     _uiState.value = UiState.IDLE
                 }
             }
         }
     }
+
+    // [추가] 헥사 코드가 유효한지 확인하는 간단한 함수
+    private fun isValidHexCode(hexCode: String): Boolean {
+        return try {
+            Color.parseColor(hexCode)
+            true
+        } catch (e: IllegalArgumentException) {
+            false
+        }
+    }
+
 
     private fun segmentImage(originalBitmap: Bitmap) {
         val segmenter = Segmentation.getClient(SelfieSegmenterOptions.Builder().setDetectorMode(SelfieSegmenterOptions.SINGLE_IMAGE_MODE).build())
@@ -159,10 +196,11 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
             updateAnalysisResultText(result.category, null, null)
         }
 
-        try {
+        // [수정] 유효성 검사를 한 번 더 수행하여 안전하게 처리
+        if (isValidHexCode(result.color_hex)) {
             setViewColor(Color.parseColor(result.color_hex))
-        } catch (e: IllegalArgumentException) {
-            setViewColor(null)
+        } else {
+            setViewColor(null) // 유효하지 않으면 색상 null 처리
         }
     }
 

@@ -63,7 +63,9 @@ class SettingsManager(context: Context) {
     }
 
     fun resetToDefaults() {
-        prefs.edit().clear().apply()
+        // [수정] 비동기(apply) 방식에서 동기(commit) 방식으로 변경하여
+        // 설정이 확실히 삭제된 후 다음 작업이 진행되도록 보장합니다.
+        prefs.edit().clear().commit()
     }
 
     companion object {
