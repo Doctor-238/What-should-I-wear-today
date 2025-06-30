@@ -29,7 +29,6 @@ import com.yehyun.whatshouldiweartoday.data.database.ClothingItem
 import com.yehyun.whatshouldiweartoday.data.preference.SettingsManager
 import com.yehyun.whatshouldiweartoday.ui.OnTabReselectedListener
 import java.io.File
-import java.util.Locale
 
 class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabReselectedListener {
 
@@ -55,9 +54,9 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
         settingsManager = SettingsManager(requireContext())
         setupViews(view)
         viewModel.loadClothingItem(args.clothingItemId)
-        observeViewModel()
         setupBackButtonHandler()
         setupListeners(view)
+        observeViewModel()
     }
 
     private fun setupViews(view: View) {
@@ -74,8 +73,16 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
     }
 
     private fun observeViewModel() {
-        viewModel.currentClothingItem.observe(viewLifecycleOwner) { item ->
-            item?.let { bindDataToViews(it) }
+        // [수정] DB에서 아이템을 성공적으로 불러오면, 편집 상태를 초기화합니다.
+        viewModel.clothingItemFromDb.observe(viewLifecycleOwner) { dbItem ->
+            dbItem?.let {
+                viewModel.setInitialState(it)
+            }
+        }
+
+        // UI는 currentClothingItem을 관찰하여 변경사항을 실시간으로 보여줍니다.
+        viewModel.currentClothingItem.observe(viewLifecycleOwner) { editingItem ->
+            editingItem?.let { bindDataToViews(it) }
         }
 
         viewModel.isChanged.observe(viewLifecycleOwner) { hasChanges ->
@@ -86,7 +93,7 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
         viewModel.isSaveComplete.observe(viewLifecycleOwner) { isComplete ->
             if(isComplete) {
                 findNavController().popBackStack()
-                viewModel.resetCompletionState()
+                viewModel.resetAllState()
             }
         }
 
@@ -94,7 +101,7 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
             if(isComplete) {
                 Toast.makeText(context, "삭제되었습니다.", Toast.LENGTH_SHORT).show()
                 findNavController().popBackStack()
-                viewModel.resetCompletionState()
+                viewModel.resetAllState()
             }
         }
     }
@@ -130,7 +137,6 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
 
     private fun updateTemperatureDisplay(item: ClothingItem) {
         if (item.category in listOf("상의", "하의", "아우터")) {
-            // [수정] 체질, 온도 범위 설정을 모두 가져와서 최종 온도 범위를 계산
             val tolerance = settingsManager.getTemperatureTolerance()
             val constitutionAdjustment = settingsManager.getConstitutionAdjustment()
             val adjustedTemp = item.suitableTemperature + constitutionAdjustment
@@ -160,10 +166,10 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
 
         editTextName.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: Editable?) {
                 viewModel.updateName(s.toString())
             }
-            override fun afterTextChanged(s: Editable?) {}
         })
 
         chipGroupCategory.setOnCheckedChangeListener { _, checkedId ->
@@ -187,7 +193,7 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
     }
 
     private fun handleBackButton() {
-        if (buttonSave.isEnabled) {
+        if (onBackPressedCallback.isEnabled) {
             showSaveChangesDialog()
         } else {
             viewModel.resetAllState()
@@ -222,7 +228,6 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
 
     override fun onDestroyView() {
         super.onDestroyView()
-        // 메모리 누수 방지를 위해 콜백 비활성화
-        onBackPressedCallback.isEnabled = false
+        onBackPressedCallback.remove()
     }
 }
