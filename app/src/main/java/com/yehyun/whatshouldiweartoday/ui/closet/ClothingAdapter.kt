@@ -39,13 +39,16 @@ class ClothingAdapter(
         fun bind(item: ClothingItem, clickAction: (ClothingItem) -> Unit) {
             nameTextView.text = item.name
 
-            // bind가 호출될 때마다 최신 설정 값을 가져와서 온도 범위를 계산합니다.
             val settingsManager = SettingsManager(itemView.context)
+            // [추가] 체질 보정 값 가져오기
+            val constitutionAdjustment = settingsManager.getConstitutionAdjustment()
 
             if (item.category in listOf("상의", "하의", "아우터")) {
                 val temperatureTolerance = settingsManager.getTemperatureTolerance()
-                val minTemp = item.suitableTemperature - temperatureTolerance
-                val maxTemp = item.suitableTemperature + temperatureTolerance
+                // [수정] 보정 값을 적용한 최종 적정 온도 계산
+                val adjustedTemp = item.suitableTemperature + constitutionAdjustment
+                val minTemp = adjustedTemp - temperatureTolerance
+                val maxTemp = adjustedTemp + temperatureTolerance
                 tempTextView.text = "%.1f°C ~ %.1f°C".format(minTemp, maxTemp)
                 tempTextView.visibility = View.VISIBLE
             } else {

@@ -1,3 +1,5 @@
+// app/src/main/java/com/yehyun/whatshouldiweartoday/ui/style/StyleViewModel.kt
+
 package com.yehyun.whatshouldiweartoday.ui.style
 
 import android.app.Application
@@ -47,5 +49,13 @@ class StyleViewModel(application: Application) : AndroidViewModel(application) {
     }
     fun setSortType(sortType: String) {
         if (_sortType.value != sortType) _sortType.value = sortType
+    }
+
+    /**
+     * [추가] ViewModel의 상태(검색어, 정렬 순서)를 초기화하는 함수.
+     */
+    fun resetState() {
+        _searchQuery.value = ""
+        _sortType.value = "최신순"
     }
 }

@@ -1,3 +1,5 @@
+// app/src/main/java/com/yehyun/whatshouldiweartoday/ui/closet/AddClothingFragment.kt
+
 package com.yehyun.whatshouldiweartoday.ui.closet
 
 import android.graphics.Bitmap
@@ -12,36 +14,20 @@ import android.widget.ImageView
 import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.lifecycleScope
+import androidx.fragment.app.activityViewModels
 import androidx.navigation.fragment.findNavController
-import com.google.ai.client.generativeai.GenerativeModel
-import com.google.ai.client.generativeai.type.GenerationConfig
-import com.google.ai.client.generativeai.type.content
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.switchmaterial.SwitchMaterial
 import com.google.android.material.textfield.TextInputEditText
-import com.google.mlkit.vision.common.InputImage
-import com.google.mlkit.vision.segmentation.Segmentation
-import com.google.mlkit.vision.segmentation.SegmentationMask
-import com.google.mlkit.vision.segmentation.selfie.SelfieSegmenterOptions
 import com.yehyun.whatshouldiweartoday.R
-import com.yehyun.whatshouldiweartoday.data.database.AppDatabase
-import com.yehyun.whatshouldiweartoday.data.database.ClothingItem
 import com.yehyun.whatshouldiweartoday.data.preference.SettingsManager
 import com.yehyun.whatshouldiweartoday.ui.OnTabReselectedListener
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
-import java.io.File
-import java.io.FileOutputStream
-import java.io.IOException
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
+
 
 @Serializable
 data class ClothingAnalysis(
@@ -53,9 +39,10 @@ data class ClothingAnalysis(
 
 class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabReselectedListener {
 
-    private enum class UiState { IDLE, ANALYZING, ANALYZED }
+    private val viewModel: AddClothingViewModel by activityViewModels()
 
     private lateinit var imageViewPreview: ImageView
+    private lateinit var imageViewPlaceholder: ImageView
     private lateinit var editTextName: TextInputEditText
     private lateinit var buttonSave: Button
     private lateinit var toolbar: MaterialToolbar
@@ -66,34 +53,36 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabResel
     private lateinit var textColorLabel: TextView
     private lateinit var settingsManager: SettingsManager
 
-    private var originalBitmap: Bitmap? = null
-    private var processedBitmap: Bitmap? = null
-    private var clothingAnalysisResult: ClothingAnalysis? = null
-
-    private lateinit var generativeModel: GenerativeModel
+    private lateinit var onBackPressedCallback: OnBackPressedCallback
 
     private val pickImageLauncher = registerForActivityResult(
         ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         uri?.let {
             val bitmap = MediaStore.Images.Media.getBitmap(requireActivity().contentResolver, it)
-            originalBitmap = bitmap
-            updateUiState(UiState.ANALYZING)
-            imageViewPreview.setImageBitmap(bitmap)
-            startAiAnalysis(bitmap)
+            viewModel.onImageSelected(bitmap, getString(R.string.gemini_api_key))
         }
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         settingsManager = SettingsManager(requireContext())
-        initializeGenerativeModel()
         setupViews(view)
         setupListeners()
+        setupBackButtonHandler()
+        observeViewModel()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        viewModel.clothingAnalysisResult.value?.let { result ->
+            viewModel.processAnalysisResult(result)
+        }
     }
 
     private fun setupViews(view: View) {
         imageViewPreview = view.findViewById(R.id.imageView_clothing_preview)
+        imageViewPlaceholder = view.findViewById(R.id.imageView_placeholder)
         editTextName = view.findViewById(R.id.editText_clothing_name)
         buttonSave = view.findViewById(R.id.button_save)
         toolbar = view.findViewById(R.id.toolbar)
@@ -104,236 +93,154 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabResel
         textColorLabel = view.findViewById(R.id.textView_color_label_add)
     }
 
+    private fun observeViewModel() {
+        viewModel.uiState.observe(viewLifecycleOwner) { state ->
+            updateUiForState(state)
+        }
+
+        viewModel.originalBitmap.observe(viewLifecycleOwner) { bitmap ->
+            if (bitmap != null) {
+                updateImagePreview()
+            } else {
+                imageViewPreview.setImageDrawable(null)
+                imageViewPlaceholder.visibility = View.VISIBLE
+            }
+        }
+
+        viewModel.useProcessedImage.observe(viewLifecycleOwner) {
+            updateImagePreview()
+        }
+
+        viewModel.errorMessage.observe(viewLifecycleOwner) { message ->
+            if(!message.isNullOrEmpty()){
+                Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                viewModel.clearErrorMessage()
+            }
+        }
+
+        viewModel.analysisResultText.observe(viewLifecycleOwner) { text ->
+            textViewAiResult.text = text
+        }
+
+        viewModel.viewColor.observe(viewLifecycleOwner) { color ->
+            if(color != null) {
+                viewColorSwatch.setBackgroundColor(color)
+            }
+        }
+
+        viewModel.isSaveCompleted.observe(viewLifecycleOwner) { isCompleted ->
+            if (isCompleted) {
+                Toast.makeText(requireContext(), "'${viewModel.clothingName.value}'이(가) 옷장에 추가!", Toast.LENGTH_SHORT).show()
+                findNavController().popBackStack()
+                viewModel.resetSaveState()
+            }
+        }
+
+        viewModel.clothingName.observe(viewLifecycleOwner) { name ->
+            if (editTextName.text.toString() != name) {
+                editTextName.setText(name)
+            }
+        }
+
+        viewModel.hasChanges.observe(viewLifecycleOwner) { hasChanges ->
+            onBackPressedCallback.isEnabled = hasChanges
+        }
+    }
+
+    private fun updateUiForState(state: AddClothingViewModel.UiState) {
+        val isAnalyzing = state == AddClothingViewModel.UiState.ANALYZING
+        val isAnalyzed = state == AddClothingViewModel.UiState.ANALYZED
+
+        progressBar.visibility = if (isAnalyzing) View.VISIBLE else View.GONE
+        imageViewPlaceholder.visibility = if (viewModel.originalBitmap.value == null) View.VISIBLE else View.GONE
+        buttonSave.isEnabled = isAnalyzed
+        imageViewPreview.isClickable = !isAnalyzing
+
+        textViewAiResult.visibility = if (isAnalyzed) View.VISIBLE else View.GONE
+        viewColorSwatch.visibility = if (isAnalyzed && viewModel.viewColor.value != null) View.VISIBLE else View.GONE
+        textColorLabel.visibility = if (isAnalyzed && viewModel.viewColor.value != null) View.VISIBLE else View.GONE
+
+        if (isAnalyzed) {
+            val segmentationSuccess = viewModel.segmentationSucceeded.value ?: false
+            switchRemoveBackground.visibility = if (segmentationSuccess) View.VISIBLE else View.GONE
+        } else {
+            switchRemoveBackground.visibility = View.GONE
+        }
+    }
+
     private fun setupListeners() {
-        toolbar.setNavigationOnClickListener { findNavController().popBackStack() }
-        imageViewPreview.setOnClickListener { openGallery() }
+        toolbar.setNavigationOnClickListener { handleBackButton() }
+        imageViewPreview.setOnClickListener { if(!progressBar.isShown) openGallery() }
+        imageViewPlaceholder.setOnClickListener { if(!progressBar.isShown) openGallery() }
         buttonSave.setOnClickListener { saveClothingItem() }
 
         switchRemoveBackground.setOnCheckedChangeListener { _, isChecked ->
-            if (isChecked) {
-                imageViewPreview.setImageBitmap(processedBitmap)
-            } else {
-                imageViewPreview.setImageBitmap(originalBitmap)
-            }
+            viewModel.setUseProcessedImage(isChecked)
         }
+
+        editTextName.addTextChangedListener(object : android.text.TextWatcher {
+            override fun afterTextChanged(s: android.text.Editable?) {
+                viewModel.setClothingName(s.toString())
+            }
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+        })
+    }
+    private fun updateImagePreview() {
+        val useProcessed = viewModel.useProcessedImage.value ?: false
+        val bitmapToShow = if (useProcessed) viewModel.processedBitmap.value else viewModel.originalBitmap.value
+        imageViewPreview.setImageBitmap(bitmapToShow)
     }
 
     private fun openGallery() {
         pickImageLauncher.launch("image/*")
     }
 
-    private fun initializeGenerativeModel() {
-        val apiKey = getString(R.string.gemini_api_key)
-        val config = GenerationConfig.Builder().apply {
-            responseMimeType = "application/json"
-        }.build()
-        generativeModel = GenerativeModel(
-            modelName = "gemini-2.5-flash",
-            apiKey = apiKey,
-            generationConfig = config
-        )
-    }
-
-    private fun updateUiState(state: UiState, didSegmentationSucceed: Boolean = false) {
-        progressBar.visibility = if (state == UiState.ANALYZING) View.VISIBLE else View.GONE
-        val isAnalyzed = state == UiState.ANALYZED
-        textViewAiResult.visibility = if (isAnalyzed) View.VISIBLE else View.GONE
-        viewColorSwatch.visibility = if (isAnalyzed && clothingAnalysisResult != null) View.VISIBLE else View.GONE
-        textColorLabel.visibility = if (isAnalyzed && clothingAnalysisResult != null) View.VISIBLE else View.GONE
-        buttonSave.isEnabled = isAnalyzed
-        imageViewPreview.isClickable = state == UiState.IDLE
-
-        if (isAnalyzed) {
-            if (didSegmentationSucceed) {
-                switchRemoveBackground.visibility = View.VISIBLE
-                switchRemoveBackground.isChecked = false
-            } else {
-                switchRemoveBackground.visibility = View.GONE
-                if (originalBitmap != null) {
-                    Toast.makeText(requireContext(), "배경 제거 실패. 원본 이미지를 사용합니다.", Toast.LENGTH_SHORT).show()
-                }
-            }
-        } else {
-            switchRemoveBackground.visibility = View.GONE
-        }
-    }
-
-    private fun startAiAnalysis(bitmap: Bitmap) {
-        lifecycleScope.launch(Dispatchers.IO) {
-            try {
-                val resizedBitmap = resizeBitmap(bitmap)
-                val inputContent = content {
-                    image(resizedBitmap)
-                    text("""
-                        You are a Precise Climate & Fashion Analyst for Korean weather.
-                        Your task is to analyze the clothing item in the image and provide a detailed analysis in a strict JSON format, without any additional text or explanations.
-
-                        Your JSON response MUST contain ONLY the following keys: "is_wearable", "category", "suitable_temperature", and "color_hex".
-
-                        - "is_wearable": (boolean) True if the item is wearable clothing.
-                        - "category": (string) One of '상의', '하의', '아우터', '신발', '가방', '모자', '기타'.
-                        - "color_hex": (string) The dominant color of the item as a hex string.
-                        - "suitable_temperature": (double) This is the most important. Estimate the MAXIMUM comfortable temperature for this item. The value can be negative for winter clothing. You MUST provide a specific, non-round number with one decimal place (e.g., 23.5, 8.0, -2.5). A generic integer like 15.0 is a bad response. Base your judgment on the visual evidence of material, thickness, and design.
-                    """.trimIndent())
-                }
-
-                val response = generativeModel.generateContent(inputContent)
-                val analysisResult = Json { ignoreUnknownKeys = true }.decodeFromString<ClothingAnalysis>(response.text!!)
-
-                withContext(Dispatchers.Main) {
-                    if (!analysisResult.is_wearable) {
-                        handleAiFailure("올바른 사진을 입력해주세요")
-                    } else {
-                        clothingAnalysisResult = analysisResult
-                        segmentWithMask(bitmap)
-                    }
-                }
-            } catch (e: Exception) {
-                withContext(Dispatchers.Main) {
-                    Log.e("AI_ERROR", "Error during AI analysis", e)
-                    handleAiFailure("분석 실패: ${e.message}")
-                }
-            }
-        }
-    }
-
-    private fun segmentWithMask(originalBitmap: Bitmap) {
-        val segmenter = Segmentation.getClient(SelfieSegmenterOptions.Builder().setDetectorMode(SelfieSegmenterOptions.SINGLE_IMAGE_MODE).build())
-        segmenter.process(InputImage.fromBitmap(originalBitmap, 0))
-            .addOnSuccessListener { mask ->
-                processedBitmap = createBitmapWithMask(originalBitmap, mask)
-                handleAiSuccess(didSegmentationSucceed = true)
-            }
-            .addOnFailureListener {
-                processedBitmap = originalBitmap
-                handleAiSuccess(didSegmentationSucceed = false)
-            }
-    }
-
-    private fun resizeBitmap(bitmap: Bitmap, maxDimension: Int = 512): Bitmap {
-        val originalWidth = bitmap.width
-        val originalHeight = bitmap.height
-        var resizedWidth = originalWidth
-        var resizedHeight = originalHeight
-
-        if (originalHeight > maxDimension || originalWidth > maxDimension) {
-            if (originalWidth > originalHeight) {
-                resizedWidth = maxDimension
-                resizedHeight = (resizedWidth * originalHeight) / originalWidth
-            } else {
-                resizedHeight = maxDimension
-                resizedWidth = (resizedHeight * originalWidth) / originalHeight
-            }
-        }
-        return Bitmap.createScaledBitmap(bitmap, resizedWidth, resizedHeight, false)
-    }
-
-    private fun handleAiSuccess(didSegmentationSucceed: Boolean) {
-        imageViewPreview.setImageBitmap(originalBitmap)
-        clothingAnalysisResult?.let {
-            val categoryText = "분류:${it.category}"
-
-            val temperatureText = if (it.category in listOf("상의", "하의", "아우터")) {
-                // [수정] 아우터일 경우, 기준 온도를 3도 낮춤
-                val baseTemp = if (it.category == "아우터") it.suitable_temperature - 3.0 else it.suitable_temperature
-                val tolerance = settingsManager.getTemperatureTolerance()
-                val minTemp = baseTemp - tolerance
-                val maxTemp = baseTemp + tolerance
-                ", 적정 온도:%.1f°C ~ %.1f°C".format(minTemp, maxTemp)
-            } else {
-                ""
-            }
-            textViewAiResult.text = categoryText + temperatureText
-
-            try {
-                viewColorSwatch.setBackgroundColor(Color.parseColor(it.color_hex))
-            } catch (e: IllegalArgumentException) {
-                viewColorSwatch.visibility = View.GONE
-                textColorLabel.visibility = View.GONE
-            }
-        }
-        updateUiState(UiState.ANALYZED, didSegmentationSucceed)
-    }
-
-    private fun handleAiFailure(message: String) {
-        updateUiState(UiState.IDLE)
-        Toast.makeText(requireContext(), message, Toast.LENGTH_LONG).show()
-    }
-
     private fun saveClothingItem() {
-        val bitmapToSave = originalBitmap
         val name = editTextName.text.toString().trim()
-        val analysis = clothingAnalysisResult
-
-        if (name.isEmpty() || bitmapToSave == null || analysis == null) {
-            Toast.makeText(requireContext(), "모든 정보를 입력해주세요.", Toast.LENGTH_SHORT).show()
+        if (name.isEmpty()) {
+            Toast.makeText(requireContext(), "옷 이름을 입력해주세요.", Toast.LENGTH_SHORT).show()
             return
         }
+        viewModel.saveClothingItem(requireContext().filesDir, name)
+    }
 
-        // [수정] 아우터일 경우, 저장되는 온도를 3도 낮춤
-        val finalTemperature = if (analysis.category == "아우터") {
-            analysis.suitable_temperature - 3.0
+    private fun setupBackButtonHandler() {
+        onBackPressedCallback = object : OnBackPressedCallback(false) {
+            override fun handleOnBackPressed() {
+                showCancelDialog()
+            }
+        }
+        requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, onBackPressedCallback)
+    }
+
+    private fun handleBackButton() {
+        if (onBackPressedCallback.isEnabled) {
+            showCancelDialog()
         } else {
-            analysis.suitable_temperature
+            findNavController().popBackStack()
         }
+    }
 
-        lifecycleScope.launch(Dispatchers.IO) {
-            val originalImagePath = saveBitmapToInternalStorage(bitmapToSave, "original_")
-            val processedImagePath = processedBitmap?.let { saveBitmapToInternalStorage(it, "processed_") }
-
-            if (originalImagePath != null) {
-                val newClothingItem = ClothingItem(
-                    name = name,
-                    imageUri = originalImagePath,
-                    processedImageUri = processedImagePath,
-                    useProcessedImage = switchRemoveBackground.isChecked,
-                    category = analysis.category,
-                    suitableTemperature = finalTemperature,
-                    colorHex = analysis.color_hex
-                )
-                AppDatabase.getDatabase(requireContext()).clothingDao().insert(newClothingItem)
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(requireContext(), "'$name'이(가) 옷장에 추가!", Toast.LENGTH_SHORT).show()
-                    findNavController().popBackStack()
-                }
+    private fun showCancelDialog() {
+        AlertDialog.Builder(requireContext())
+            .setMessage("작업을 취소하시겠습니까? 변경사항이 저장되지 않습니다.")
+            .setPositiveButton("예") { _, _ ->
+                viewModel.resetAllState()
+                findNavController().popBackStack()
             }
-        }
+            .setNegativeButton("아니오", null)
+            .show()
     }
 
-    private fun createBitmapWithMask(original: Bitmap, mask: SegmentationMask): Bitmap {
-        val maskedBitmap = Bitmap.createBitmap(original.width, original.height, Bitmap.Config.ARGB_8888)
-        val maskBuffer = mask.buffer
-        val maskWidth = mask.width
-        val maskHeight = mask.height
-        for (y in 0 until maskHeight) {
-            for (x in 0 until maskWidth) {
-                if (maskBuffer.float > 0.001f) {
-                    maskedBitmap.setPixel(x, y, original.getPixel(x, y))
-                }
-            }
-        }
-        maskBuffer.rewind()
-        return maskedBitmap
-    }
-
-    private fun saveBitmapToInternalStorage(bitmap: Bitmap, prefix: String): String? {
-        val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
-        val fileName = "$prefix$timeStamp.png"
-        val directory = requireContext().filesDir
-        try {
-            val file = File(directory, fileName)
-            val stream = FileOutputStream(file)
-            bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)
-            stream.flush()
-            stream.close()
-            return file.absolutePath
-        } catch (e: IOException) {
-            e.printStackTrace()
-            return null
-        }
-    }
 
     override fun onTabReselected() {
-        findNavController().popBackStack()
+        handleBackButton()
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        onBackPressedCallback.remove()
+        editTextName.removeTextChangedListener(null)
     }
 }

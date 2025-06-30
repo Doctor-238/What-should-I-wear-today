@@ -1,3 +1,5 @@
+// app/src/main/java/com/yehyun/whatshouldiweartoday/ui/settings/SettingsFragment.kt
+
 package com.yehyun.whatshouldiweartoday.ui.settings
 
 import android.content.Intent
@@ -13,12 +15,14 @@ import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
+import com.yehyun.whatshouldiweartoday.MainActivity
 import com.yehyun.whatshouldiweartoday.data.database.AppDatabase
 import com.yehyun.whatshouldiweartoday.data.preference.SettingsManager
 import com.yehyun.whatshouldiweartoday.databinding.FragmentSettingsBinding
+import com.yehyun.whatshouldiweartoday.ui.OnTabReselectedListener
 import kotlinx.coroutines.launch
 
-class SettingsFragment : Fragment() {
+class SettingsFragment : Fragment(), OnTabReselectedListener {
 
     private var _binding: FragmentSettingsBinding? = null
     private val binding get() = _binding!!
@@ -38,44 +42,12 @@ class SettingsFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         setupToolbar()
         setupSpinner()
+        setupSliders()
         setupListeners()
     }
 
-    private fun setupToolbar() {
-        binding.toolbarSettings.setNavigationOnClickListener {
-            findNavController().popBackStack()
-        }
-    }
-
-    private fun setupSpinner() {
-        val rangeOptions = listOf(SettingsManager.TEMP_RANGE_NARROW, SettingsManager.TEMP_RANGE_NORMAL, SettingsManager.TEMP_RANGE_WIDE)
-        val adapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, rangeOptions)
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        binding.spinnerTempRange.adapter = adapter
-
-        // 현재 설정 값으로 스피너 초기 선택 설정
-        val currentRange = settingsManager.temperatureRange
-        binding.spinnerTempRange.setSelection(rangeOptions.indexOf(currentRange))
-
-        binding.spinnerTempRange.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
-                settingsManager.temperatureRange = rangeOptions[position]
-            }
-            override fun onNothingSelected(parent: AdapterView<*>?) {}
-        }
-    }
-
-    private fun setupListeners() {
-        // 깃허브 링크 클릭
-        binding.tvGithubLink.setOnClickListener {
-            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(binding.tvGithubLink.text.toString()))
-            startActivity(intent)
-        }
-
-        // 전체 초기화 버튼 클릭
-        binding.buttonResetAll.setOnClickListener {
-            showResetConfirmDialog()
-        }
+    override fun onTabReselected() {
+        findNavController().popBackStack()
     }
 
     private fun showResetConfirmDialog() {
@@ -91,14 +63,97 @@ class SettingsFragment : Fragment() {
 
     private fun resetAllData() {
         lifecycleScope.launch {
-            // DB 데이터 삭제
+            // 1. 디스크에 저장된 데이터 (DB, 설정값)를 모두 삭제합니다.
             AppDatabase.getDatabase(requireContext()).clearAllData()
-            // 설정 값 초기화
             settingsManager.resetToDefaults()
 
-            Toast.makeText(requireContext(), "모든 데이터가 초기화되었습니다.", Toast.LENGTH_SHORT).show()
-            // 스피너도 기본값으로 리셋
-            setupSpinner()
+            Toast.makeText(requireContext(), "모든 데이터가 초기화되었습니다. 앱을 다시 시작합니다.", Toast.LENGTH_LONG).show()
+
+            // 2. 앱을 재시작하는 Intent를 만듭니다.
+            val packageManager = requireContext().packageManager
+            val intent = packageManager.getLaunchIntentForPackage(requireContext().packageName)
+            val componentName = intent!!.component
+            val mainIntent = Intent.makeRestartActivityTask(componentName)
+
+            // 3. 앱을 재시작합니다.
+            requireContext().startActivity(mainIntent)
+            Runtime.getRuntime().exit(0)
+        }
+    }
+
+    // ... 나머지 코드는 동일 ...
+    private fun setupToolbar() {
+        binding.toolbarSettings.setNavigationOnClickListener {
+            findNavController().popBackStack()
+        }
+    }
+
+    private fun setupSpinner() {
+        val rangeOptions = listOf(SettingsManager.TEMP_RANGE_NARROW, SettingsManager.TEMP_RANGE_NORMAL, SettingsManager.TEMP_RANGE_WIDE)
+        val adapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, rangeOptions)
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        binding.spinnerTempRange.adapter = adapter
+
+        val currentRange = settingsManager.temperatureRange
+        binding.spinnerTempRange.setSelection(rangeOptions.indexOf(currentRange))
+    }
+
+    private fun setupSliders() {
+        binding.sliderConstitution.value = settingsManager.constitutionLevel.toFloat()
+        updateConstitutionLabel(settingsManager.constitutionLevel)
+
+        binding.sliderSensitivity.value = settingsManager.sensitivityLevel.toFloat()
+        updateSensitivityLabel(settingsManager.sensitivityLevel)
+    }
+
+    private fun setupListeners() {
+        binding.spinnerTempRange.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                val rangeOptions = listOf(SettingsManager.TEMP_RANGE_NARROW, SettingsManager.TEMP_RANGE_NORMAL, SettingsManager.TEMP_RANGE_WIDE)
+                settingsManager.temperatureRange = rangeOptions[position]
+            }
+            override fun onNothingSelected(parent: AdapterView<*>?) {}
+        }
+
+        binding.sliderConstitution.addOnChangeListener { _, value, _ ->
+            val level = value.toInt()
+            settingsManager.constitutionLevel = level
+            updateConstitutionLabel(level)
+        }
+
+        binding.sliderSensitivity.addOnChangeListener { _, value, _ ->
+            val level = value.toInt()
+            settingsManager.sensitivityLevel = level
+            updateSensitivityLabel(level)
+        }
+
+        binding.tvGithubLink.setOnClickListener {
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(binding.tvGithubLink.text.toString()))
+            startActivity(intent)
+        }
+
+        binding.buttonResetAll.setOnClickListener {
+            showResetConfirmDialog()
+        }
+    }
+
+    private fun updateConstitutionLabel(level: Int) {
+        binding.tvConstitutionValue.text = when (level) {
+            1 -> "더위 많이 탐"
+            2 -> "더위 조금 탐"
+            4 -> "추위 조금 탐"
+            5 -> "추위 많이 탐"
+            else -> "보통"
+        }
+    }
+
+    private fun updateSensitivityLabel(level: Int) {
+        binding.tvSensitivityValue.text = when (level) {
+            1 -> "둔감"
+            2 -> "조금 둔감"
+            4 -> "조금 민감"
+            5 -> "민감"
+            else -> "보통"
         }
     }
 

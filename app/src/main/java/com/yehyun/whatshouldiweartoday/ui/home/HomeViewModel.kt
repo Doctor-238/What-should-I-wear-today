@@ -136,11 +136,14 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         val minTempCriteria = (summary.minTemp + summary.minFeelsLike) / 2
         val temperatureTolerance = settingsManager.getTemperatureTolerance()
         val packableOuterTolerance = settingsManager.getPackableOuterTolerance()
-
+        // [추가] 체질 보정 값 가져오기
+        val constitutionAdjustment = settingsManager.getConstitutionAdjustment()
 
         val recommendedClothes = allClothes.filter {
-            val itemMinTemp = it.suitableTemperature - temperatureTolerance
-            val itemMaxTemp = it.suitableTemperature + temperatureTolerance
+            // [수정] 보정 값을 적용한 최종 적정 온도 계산
+            val adjustedTemp = it.suitableTemperature + constitutionAdjustment
+            val itemMinTemp = adjustedTemp - temperatureTolerance
+            val itemMaxTemp = adjustedTemp + temperatureTolerance
             val isFitForMaxTemp = maxTempCriteria in itemMinTemp..itemMaxTemp
             val isFitForHotDay = maxTempCriteria > 30 && itemMaxTemp >= 30
             val isFitForFreezingDay = minTempCriteria < 0 && itemMinTemp <= 0

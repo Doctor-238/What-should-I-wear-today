@@ -1,119 +1,261 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    tools:context=".ui.settings.SettingsFragment">
+    android:layout_height="match_parent">
 
-    <com.google.android.material.appbar.MaterialToolbar
-        android:id="@+id/toolbar_settings"
-        android:layout_width="0dp"
-        android:layout_height="?attr/actionBarSize"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:navigationIcon="@drawable/ic_arrow_back"
-        app:title="설정"
-        app:titleCentered="true" />
-
-    <TextView
-        android:id="@+id/tv_temp_range_label"
-        android:layout_width="wrap_content"
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginStart="16dp"
-        android:layout_marginTop="24dp"
-        android:text="적정온도 범위"
-        android:textSize="18sp"
-        android:textStyle="bold"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/toolbar_settings" />
+        tools:context=".ui.settings.SettingsFragment">
 
-    <Spinner
-        android:id="@+id/spinner_temp_range"
-        android:layout_width="wrap_content"
-        android:layout_height="0dp"
-        android:layout_marginEnd="16dp"
-        android:background="@drawable/bg_dotted_border"
-        android:paddingHorizontal="16dp"
-        app:layout_constraintBottom_toBottomOf="@id/tv_temp_range_label"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="@id/tv_temp_range_label" />
+        <com.google.android.material.appbar.MaterialToolbar
+            android:id="@+id/toolbar_settings"
+            android:layout_width="0dp"
+            android:layout_height="?attr/actionBarSize"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:navigationIcon="@drawable/ic_arrow_back"
+            app:title="설정"
+            app:titleCentered="true" />
 
-    <View
-        android:id="@+id/divider"
-        android:layout_width="0dp"
-        android:layout_height="1dp"
-        android:layout_marginHorizontal="16dp"
-        android:layout_marginTop="24dp"
-        android:background="?android:attr/listDivider"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/tv_temp_range_label" /> <TextView
-    android:id="@+id/tv_credits_label"
-    android:layout_width="wrap_content"
-    android:layout_height="wrap_content"
-    android:layout_marginTop="24dp"
-    android:text="제작자"
-    android:textSize="16sp"
-    app:layout_constraintStart_toStartOf="@id/divider"
-    app:layout_constraintTop_toBottomOf="@id/divider" />
+        <TextView
+            android:id="@+id/tv_temp_range_label"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:layout_marginTop="24dp"
+            android:layout_marginEnd="16dp"
+            android:text="적정온도 범위"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            app:layout_constraintEnd_toStartOf="@id/spinner_temp_range"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/toolbar_settings" />
+        <Spinner
+            android:id="@+id/spinner_temp_range"
+            android:layout_width="wrap_content"
+            android:layout_height="0dp"
+            android:layout_marginEnd="16dp"
+            android:background="@drawable/bg_dotted_border"
+            android:paddingHorizontal="16dp"
+            app:layout_constraintBottom_toBottomOf="@id/tv_temp_range_label"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="@id/tv_temp_range_label" />
+        <View
+            android:id="@+id/divider_1"
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_marginHorizontal="16dp"
+            android:layout_marginTop="24dp"
+            android:background="?android:attr/listDivider"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/tv_temp_range_label" />
 
-    <TextView
-        android:id="@+id/tv_credits_value"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="2171297 유예현\n2171429 이지윈"
-        android:textAlignment="textEnd"
-        app:layout_constraintBaseline_toBaselineOf="@id/tv_credits_label"
-        app:layout_constraintEnd_toEndOf="@id/divider" />
+        <TextView
+            android:id="@+id/tv_constitution_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:text="체질"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            app:layout_constraintStart_toStartOf="@id/divider_1"
+            app:layout_constraintTop_toBottomOf="@id/divider_1" />
+        <TextView
+            android:id="@+id/tv_constitution_value"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textStyle="bold"
+            app:layout_constraintEnd_toEndOf="@id/divider_1"
+            app:layout_constraintTop_toTopOf="@id/tv_constitution_label"
+            tools:text="보통" />
+        <com.google.android.material.slider.Slider
+            android:id="@+id/slider_constitution"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:stepSize="1.0"
+            android:value="3.0"
+            android:valueFrom="1.0"
+            android:valueTo="5.0"
+            app:layout_constraintEnd_toEndOf="@id/divider_1"
+            app:layout_constraintStart_toStartOf="@id/divider_1"
+            app:layout_constraintTop_toBottomOf="@id/tv_constitution_label" />
+        <TextView
+            android:id="@+id/tv_constitution_min_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="더위 많이 탐"
+            android:textSize="12sp"
+            app:layout_constraintStart_toStartOf="@id/slider_constitution"
+            app:layout_constraintTop_toBottomOf="@id/slider_constitution" />
+        <TextView
+            android:id="@+id/tv_constitution_max_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="추위 많이 탐"
+            android:textSize="12sp"
+            app:layout_constraintEnd_toEndOf="@id/slider_constitution"
+            app:layout_constraintTop_toBottomOf="@id/slider_constitution" />
+        <View
+            android:id="@+id/divider_2"
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_marginHorizontal="16dp"
+            android:layout_marginTop="16dp"
+            android:background="?android:attr/listDivider"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/tv_constitution_max_label" />
 
-    <TextView
-        android:id="@+id/tv_github_label"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:text="깃허브 주소"
-        android:textSize="16sp"
-        app:layout_constraintStart_toStartOf="@id/divider"
-        app:layout_constraintTop_toBottomOf="@id/tv_credits_value" />
 
-    <TextView
-        android:id="@+id/tv_github_link"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="16dp"
-        android:clickable="true"
-        android:focusable="true"
-        android:text="https://github.com/Doctor-238/What-should-I-wear-today"
-        android:textAlignment="textEnd"
-        android:textColor="?attr/colorPrimary"
-        app:layout_constraintBaseline_toBaselineOf="@id/tv_github_label"
-        app:layout_constraintEnd_toEndOf="@id/divider"
-        app:layout_constraintStart_toEndOf="@id/tv_github_label" />
+        <TextView
+            android:id="@+id/tv_sensitivity_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:text="배경제거 민감도"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            app:layout_constraintStart_toStartOf="@id/divider_2"
+            app:layout_constraintTop_toBottomOf="@id/divider_2" />
+        <TextView
+            android:id="@+id/tv_sensitivity_value"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textStyle="bold"
+            app:layout_constraintEnd_toEndOf="@id/divider_2"
+            app:layout_constraintTop_toTopOf="@id/tv_sensitivity_label"
+            tools:text="보통" />
+        <com.google.android.material.slider.Slider
+            android:id="@+id/slider_sensitivity"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:stepSize="1.0"
+            android:value="3.0"
+            android:valueFrom="1.0"
+            android:valueTo="5.0"
+            app:layout_constraintEnd_toEndOf="@id/divider_2"
+            app:layout_constraintStart_toStartOf="@id/divider_2"
+            app:layout_constraintTop_toBottomOf="@id/tv_sensitivity_label" />
+        <TextView
+            android:id="@+id/tv_sensitivity_min_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="둔감"
+            android:textSize="12sp"
+            app:layout_constraintStart_toStartOf="@id/slider_sensitivity"
+            app:layout_constraintTop_toBottomOf="@id/slider_sensitivity" />
+        <TextView
+            android:id="@+id/tv_sensitivity_max_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="민감"
+            android:textSize="12sp"
+            app:layout_constraintEnd_toEndOf="@id/slider_sensitivity"
+            app:layout_constraintTop_toBottomOf="@id/slider_sensitivity" />
+        <TextView
+            android:id="@+id/tv_sensitivity_note"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="※ 민감도 변경은 새롭게 추가하는 옷부터 적용됩니다."
+            android:textSize="12sp"
+            app:layout_constraintEnd_toEndOf="@id/divider_2"
+            app:layout_constraintStart_toStartOf="@id/divider_2"
+            app:layout_constraintTop_toBottomOf="@id/tv_sensitivity_max_label" />
 
-    <View
-        android:id="@+id/divider2"
-        android:layout_width="0dp"
-        android:layout_height="1dp"
-        android:layout_marginHorizontal="16dp"
-        android:layout_marginTop="24dp"
-        android:background="?android:attr/listDivider"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/tv_github_link" />
+        <TextView
+            android:id="@+id/tv_recommendation_note"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="※ 적정온도 범위/체질 변경시 추천범위도 변경됩니다."
+            android:textSize="12sp"
+            app:layout_constraintEnd_toEndOf="@id/divider_2"
+            app:layout_constraintStart_toStartOf="@id/divider_2"
+            app:layout_constraintTop_toBottomOf="@id/tv_sensitivity_note" />
 
-    <Button
-        android:id="@+id/button_reset_all"
-        style="@style/Widget.Material3.Button.TextButton"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="16dp"
-        android:text="전체 초기화"
-        android:textColor="?attr/colorError"
-        android:textSize="18sp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent" />
+        <View
+            android:id="@+id/divider_3"
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_marginHorizontal="16dp"
+            android:layout_marginTop="24dp"
+            android:background="?android:attr/listDivider"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/tv_recommendation_note" />
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+
+        <TextView
+            android:id="@+id/tv_credits_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:text="제작자"
+            android:textSize="16sp"
+            app:layout_constraintStart_toStartOf="@id/divider_3"
+            app:layout_constraintTop_toBottomOf="@id/divider_3" />
+        <TextView
+            android:id="@+id/tv_credits_value"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="2171297 유예현\n2171429 이지윈"
+            android:textAlignment="textEnd"
+            app:layout_constraintBaseline_toBaselineOf="@id/tv_credits_label"
+            app:layout_constraintEnd_toEndOf="@id/divider_3" />
+        <TextView
+            android:id="@+id/tv_github_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="깃허브 주소"
+            android:textSize="16sp"
+            app:layout_constraintStart_toStartOf="@id/divider_3"
+            app:layout_constraintTop_toBottomOf="@id/tv_credits_value" />
+        <TextView
+            android:id="@+id/tv_github_link"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:text="https://github.com/Doctor-238/What-should-I-wear-today"
+            android:textAlignment="textEnd"
+            android:textColor="?attr/colorPrimary"
+            app:layout_constraintBaseline_toBaselineOf="@id/tv_github_label"
+            app:layout_constraintEnd_toEndOf="@id/divider_3"
+            app:layout_constraintStart_toEndOf="@id/tv_github_label" />
+        <View
+            android:id="@+id/divider_4"
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_marginHorizontal="16dp"
+            android:layout_marginTop="24dp"
+            android:background="?android:attr/listDivider"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/tv_github_link" />
+
+        <Button
+            android:id="@+id/button_reset_all"
+            style="@style/Widget.Material3.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="32dp"
+            android:layout_marginBottom="32dp"
+            android:text="전체 초기화"
+            android:textColor="?attr/colorError"
+            android:textSize="18sp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/divider_4" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+</androidx.core.widget.NestedScrollView>

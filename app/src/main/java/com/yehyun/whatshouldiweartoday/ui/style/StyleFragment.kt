@@ -16,7 +16,6 @@ import com.yehyun.whatshouldiweartoday.R
 import com.yehyun.whatshouldiweartoday.databinding.FragmentStyleBinding
 import com.yehyun.whatshouldiweartoday.ui.OnTabReselectedListener
 
-// [오류 수정] Fragment(R.layout.fragment_style) 생성자 제거
 class StyleFragment : Fragment(), OnTabReselectedListener {
 
     private var _binding: FragmentStyleBinding? = null
@@ -24,7 +23,6 @@ class StyleFragment : Fragment(), OnTabReselectedListener {
 
     private val viewModel: StyleViewModel by viewModels()
 
-    // [오류 수정] 누락되었던 onCreateView 함수 추가
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?

@@ -63,6 +63,12 @@ class HomeFragment : Fragment(), OnTabReselectedListener {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        // 설정 화면에서 돌아왔을 때, 날씨 및 추천 데이터를 새로고침
+        checkLocationPermission()
+    }
+
     private fun setupViewPager() {
         binding.viewPagerHome.adapter = HomeViewPagerAdapter(this)
         binding.viewPagerHome.isUserInputEnabled = false
