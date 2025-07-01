@@ -32,6 +32,7 @@ import java.io.File
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import kotlin.math.abs
+import com.yehyun.whatshouldiweartoday.data.preference.SettingsManager
 
 class WidgetUpdateWorker(appContext: Context, workerParams: WorkerParameters) :
     CoroutineWorker(appContext, workerParams) {
@@ -167,48 +168,67 @@ class WidgetUpdateWorker(appContext: Context, workerParams: WorkerParameters) :
         remoteViews.setOnClickPendingIntent(R.id.iv_widget_refresh, refreshPendingIntent)
     }
 
-    // ... processAndRecommend, generateRecommendationForWidget, updateWidgetImages 함수는 그대로 유지 ...
     private fun processAndRecommend(weatherResponse: WeatherResponse, allClothes: List<ClothingItem>, isToday: Boolean): Pair<DailyWeatherSummary, RecommendationResult>? {
         val targetDate = if (isToday) LocalDate.now() else LocalDate.now().plusDays(1)
         val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
         val forecastsByDate = weatherResponse.list.groupBy { LocalDate.parse(it.dt_txt, formatter) }
         val targetForecasts = forecastsByDate[targetDate] ?: return null
         val summary = DailyWeatherSummary(date = "", maxTemp = targetForecasts.maxOf { it.main.temp_max }, minTemp = targetForecasts.minOf { it.main.temp_min }, maxFeelsLike = targetForecasts.maxOf { it.main.feels_like }, minFeelsLike = targetForecasts.minOf { it.main.feels_like }, weatherCondition = targetForecasts.firstOrNull()?.weather?.firstOrNull()?.description ?: "", precipitationProbability = (targetForecasts.maxOfOrNull { it.pop }?.times(100))?.toInt() ?: 0)
-        val recommendation = generateRecommendationForWidget(summary, allClothes)
+        val recommendation = generateRecommendationForWidget(applicationContext, summary, allClothes)
         return Pair(summary, recommendation)
     }
-    private fun generateRecommendationForWidget(summary: DailyWeatherSummary, allClothes: List<ClothingItem>): RecommendationResult {
+
+    private fun generateRecommendationForWidget(context: Context, summary: DailyWeatherSummary, allClothes: List<ClothingItem>): RecommendationResult {
+        // 설정 값을 가져오기 위해 SettingsManager를 생성합니다.
+        val settingsManager = SettingsManager(context)
+
         val maxTempCriteria = (summary.maxTemp + summary.maxFeelsLike) / 2
         val minTempCriteria = (summary.minTemp + summary.minFeelsLike) / 2
-        val temperatureTolerance = 3.0
+
+        // 설정 값을 불러옵니다.
+        val temperatureTolerance = settingsManager.getTemperatureTolerance()
+        val packableOuterTolerance = settingsManager.getPackableOuterTolerance()
+        val constitutionAdjustment = settingsManager.getConstitutionAdjustment()
+
         val significantTempDifference = 12.0
+
         val recommendedClothes = allClothes.filter {
-            val itemMinTemp = it.suitableTemperature - temperatureTolerance
-            val itemMaxTemp = it.suitableTemperature + temperatureTolerance
+            // 체질 설정을 반영합니다.
+            val adjustedTemp = it.suitableTemperature + constitutionAdjustment
+            val itemMinTemp = adjustedTemp - temperatureTolerance
+            val itemMaxTemp = adjustedTemp + temperatureTolerance
+
             val isFitForMaxTemp = maxTempCriteria in itemMinTemp..itemMaxTemp
             val isFitForHotDay = maxTempCriteria > 30 && itemMaxTemp >= 30
             val isFitForFreezingDay = minTempCriteria < 0 && itemMinTemp <= 0
             isFitForMaxTemp || isFitForHotDay || isFitForFreezingDay
         }
+
         val recommendedTops = recommendedClothes.filter { it.category == "상의" }
         val recommendedBottoms = recommendedClothes.filter { it.category == "하의" }
         val recommendedOuters = recommendedClothes.filter { it.category == "아우터" }
+
         val isTempDifferenceSignificant = (maxTempCriteria - minTempCriteria) >= significantTempDifference
+
         val packableOuter = if (isTempDifferenceSignificant) {
             allClothes.filter { it.category == "아우터" }.filter {
-                val tempRangeForMin = (it.suitableTemperature - temperatureTolerance)..it.suitableTemperature
+                // 챙겨갈 아우터 로직에도 설정 값을 반영합니다.
+                val tempRangeForMin = (it.suitableTemperature + packableOuterTolerance)..it.suitableTemperature
                 tempRangeForMin.contains(minTempCriteria)
             }.minByOrNull { abs(it.suitableTemperature - minTempCriteria) }
         } else {
             null
         }
+
         val bestTop = recommendedTops.minByOrNull { abs(it.suitableTemperature - maxTempCriteria) }
         val bestBottom = recommendedBottoms.minByOrNull { abs(it.suitableTemperature - maxTempCriteria) }
         val bestOuter = recommendedOuters.minByOrNull { abs(it.suitableTemperature - maxTempCriteria) }
         val bestCombination = listOfNotNull(bestTop, bestBottom, bestOuter)
+
         val umbrellaRecommendation = ""
         return RecommendationResult(recommendedTops, recommendedBottoms, recommendedOuters, bestCombination, packableOuter, umbrellaRecommendation, isTempDifferenceSignificant)
     }
+
     private fun updateWidgetImages(remoteViews: RemoteViews, items: List<ClothingItem>) {
         val imageViews = listOf(R.id.iv_widget_item1, R.id.iv_widget_item2, R.id.iv_widget_item3)
         imageViews.forEach { viewId -> remoteViews.setViewVisibility(viewId, View.GONE) }
