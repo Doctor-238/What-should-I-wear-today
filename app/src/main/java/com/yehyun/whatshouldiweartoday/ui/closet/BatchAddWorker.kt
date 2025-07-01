@@ -143,7 +143,7 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
             }
 
             val originalPath = saveBitmapToInternalStorage(bitmap, "original_")
-            val processedPath = processedBitmap?.let { saveBitmapToInternalStorage(it, "processed_") }
+            val processedPath = processedBitmap?.let { savePngToInternalStorage(it, "processed_") }
 
             if (originalPath != null) {
                 val finalTemp = if (analysisResult.category == "아우터") analysisResult.suitable_temperature - 3.0 else analysisResult.suitable_temperature
@@ -245,6 +245,21 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
     }
 
     private fun saveBitmapToInternalStorage(bitmap: Bitmap, prefix: String): String? {
+        val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+        val fileName = "$prefix$timeStamp.jpg"
+        return try {
+            val file = File(context.filesDir, fileName)
+            FileOutputStream(file).use { stream ->
+                bitmap.compress(Bitmap.CompressFormat.JPEG, 90, stream)
+            }
+            file.absolutePath
+        } catch (e: IOException) {
+            e.printStackTrace()
+            null
+        }
+    }
+
+    private fun savePngToInternalStorage(bitmap: Bitmap, prefix: String): String? {
         val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
         val fileName = "$prefix$timeStamp.png"
         return try {

@@ -266,7 +266,7 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val originalImagePath = saveBitmapToInternalStorage(bitmapToSave, "original_", filesDir)
-                val processedImagePath = processedBitmap.value?.let { saveBitmapToInternalStorage(it, "processed_", filesDir) }
+                val processedImagePath = processedBitmap.value?.let { savePngToInternalStorage(it, "processed_", filesDir) }
 
                 if (originalImagePath != null) {
                     val newClothingItem = ClothingItem(
@@ -332,6 +332,21 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
 
     private fun saveBitmapToInternalStorage(bitmap: Bitmap, prefix: String, directory: File): String? {
         val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+        val fileName = "$prefix$timeStamp.jpg"
+        return try {
+            val file = File(directory, fileName)
+            FileOutputStream(file).use { stream ->
+                bitmap.compress(Bitmap.CompressFormat.JPEG, 90, stream)
+            }
+            file.absolutePath
+        } catch (e: IOException) {
+            e.printStackTrace()
+            null
+        }
+    }
+
+    private fun savePngToInternalStorage(bitmap: Bitmap, prefix: String, directory: File): String? {
+        val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
         val fileName = "$prefix$timeStamp.png"
         return try {
             val file = File(directory, fileName)
@@ -344,6 +359,7 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
             null
         }
     }
+
     fun clearErrorMessage() {
         _errorMessage.value = null
     }
