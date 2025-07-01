@@ -59,6 +59,8 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     val isRecommendationScrolledToTop: LiveData<Boolean> = _isRecommendationScrolledToTop
     private val settingsManager = SettingsManager(application)
 
+    val locationPermissionGranted = MutableLiveData<Boolean?>(null)
+
     // [추가] 탭 전환 이벤트를 위한 LiveData
     private val _switchToTab = MutableLiveData<Int?>()
     val switchToTab: LiveData<Int?> = _switchToTab
@@ -190,9 +192,6 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         _switchToTab.value = tabIndex
     }
 
-    /**
-     * [추가] 탭 전환 이벤트 처리가 완료된 후 호출하여, 중복 실행을 방지하는 함수
-     */
     fun onTabSwitchHandled() {
         _switchToTab.value = null
     }

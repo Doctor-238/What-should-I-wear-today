@@ -1,14 +1,23 @@
 package com.yehyun.whatshouldiweartoday.ui.closet
 
+import android.Manifest
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.Spinner
+import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.SearchView
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
@@ -29,6 +38,25 @@ class ClosetFragment : Fragment(), OnTabReselectedListener {
     private val binding get() = _binding!!
 
     private val viewModel: ClosetViewModel by viewModels()
+
+    // [수정] 권한 거부 시의 동작을 더 상세하게 변경
+    private val requestPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted: Boolean ->
+        if (isGranted) {
+            pickMultipleImagesLauncher.launch("image/*")
+        } else {
+            // 권한 요청이 거부된 직후, '다시 묻지 않음'을 선택했는지 확인합니다.
+            // shouldShowRequestPermissionRationale이 false라면 영구 거부된 상태입니다.
+            if (!shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS)) {
+                // 설정으로 이동할지 묻는 대화상자를 띄웁니다.
+                showGoToSettingsDialog()
+            } else {
+                // '다시 묻지 않음'을 선택하지 않은 일반 거부일 경우, 토스트 메시지를 보여줍니다.
+                Toast.makeText(requireContext(), "알림 권한이 거부되어 기능을 실행할 수 없습니다.", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
 
     private val pickMultipleImagesLauncher = registerForActivityResult(
         ActivityResultContracts.GetMultipleContents()
@@ -57,19 +85,58 @@ class ClosetFragment : Fragment(), OnTabReselectedListener {
         binding.fabAddClothing.setOnClickListener {
             findNavController().navigate(R.id.action_navigation_closet_to_addClothingFragment)
         }
+
         binding.fabBatchAdd.setOnClickListener {
-            pickMultipleImagesLauncher.launch("image/*")
+            checkNotificationPermission()
         }
 
         observeViewModel()
     }
+
+    // [추가] 설정 화면으로 이동을 안내하는 대화상자 함수
+    private fun showGoToSettingsDialog() {
+        AlertDialog.Builder(requireContext())
+            .setTitle("알림 권한이 필요합니다")
+            .setMessage("진행률을 표시하려면 알림 권한이 반드시 필요합니다. '예'를 눌러 설정 화면으로 이동한 후, '알림' 권한을 허용해주세요.")
+            .setPositiveButton("예") { _, _ ->
+                // [수정] 앱의 '알림 설정' 화면으로 바로 이동하도록 수정
+                val intent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    // Android 8.0 (Oreo) 이상
+                    Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                        putExtra(Settings.EXTRA_APP_PACKAGE, requireContext().packageName)
+                    }
+                } else {
+                    // Android 8.0 미만
+                    Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                        data = Uri.fromParts("package", requireContext().packageName, null)
+                    }
+                }
+                startActivity(intent)
+            }
+            .setNegativeButton("아니오") { _, _ ->
+                Toast.makeText(requireContext(), "알림 권한이 거부되어 기능을 실행할 수 없습니다.", Toast.LENGTH_SHORT).show()
+            }
+            .show()
+    }
+
+    private fun checkNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) {
+                pickMultipleImagesLauncher.launch("image/*")
+            } else {
+                requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        } else {
+            pickMultipleImagesLauncher.launch("image/*")
+        }
+    }
+
 
     private fun observeViewModel() {
         viewModel.batchAddWorkInfo.observe(viewLifecycleOwner) { workInfos ->
             val workInfo = workInfos.firstOrNull()
 
             if (workInfo == null || workInfo.state.isFinished) {
-                // 완료 후 딜레이를 주어 UI가 자연스럽게 복구되도록 함
                 lifecycleScope.launch {
                     delay(500)
                     binding.fabBatchAdd.hideProgress()
@@ -82,12 +149,9 @@ class ClosetFragment : Fragment(), OnTabReselectedListener {
             val total = progress.getInt(BatchAddWorker.PROGRESS_TOTAL, 1)
             val percentage = if (total > 0) (current * 100 / total) else 0
 
-            // 커스텀 버튼에 진행률을 전달하여 그리도록 함
             binding.fabBatchAdd.showProgress(percentage)
         }
     }
-
-    // --- 이하 코드는 기존과 동일 ---
 
     private fun startBatchAddWorker(uriStrings: Array<String>) {
         val workRequest = OneTimeWorkRequestBuilder<BatchAddWorker>()
