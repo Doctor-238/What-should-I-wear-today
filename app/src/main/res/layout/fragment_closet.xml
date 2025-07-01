@@ -65,7 +65,7 @@
             android:layout_marginBottom="16dp"
             android:src="@drawable/infinite"
             app:fabSize="normal"
-            tools:ignore="ContentDescription" />
+            app:backgroundTint="#eaddff"  tools:ignore="ContentDescription" />
 
         <com.google.android.material.floatingactionbutton.FloatingActionButton
             android:id="@+id/fab_add_clothing"
