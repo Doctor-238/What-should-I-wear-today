@@ -1,3 +1,5 @@
+// app/src/main/java/com/yehyun/whatshouldiweartoday/ui/settings/SettingsFragment.kt
+
 package com.yehyun.whatshouldiweartoday.ui.settings
 
 import android.content.Intent
@@ -11,14 +13,11 @@ import android.widget.ArrayAdapter
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.lifecycleScope
+import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
-import androidx.work.WorkManager
-import com.yehyun.whatshouldiweartoday.data.database.AppDatabase
 import com.yehyun.whatshouldiweartoday.data.preference.SettingsManager
 import com.yehyun.whatshouldiweartoday.databinding.FragmentSettingsBinding
 import com.yehyun.whatshouldiweartoday.ui.OnTabReselectedListener
-import kotlinx.coroutines.launch
 
 class SettingsFragment : Fragment(), OnTabReselectedListener {
 
@@ -26,6 +25,7 @@ class SettingsFragment : Fragment(), OnTabReselectedListener {
     private val binding get() = _binding!!
 
     private lateinit var settingsManager: SettingsManager
+    private val viewModel: SettingsViewModel by viewModels() // ViewModel 추가
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -42,12 +42,30 @@ class SettingsFragment : Fragment(), OnTabReselectedListener {
         setupSpinner()
         setupSliders()
         setupListeners()
+        observeViewModel() // ViewModel 관찰 시작
     }
 
-    /**
-     * [추가] 인터페이스의 필수 함수 구현.
-     * 설정 화면에서 하단 탭을 다시 누르면 뒤로 이동합니다.
-     */
+    private fun observeViewModel() {
+        viewModel.isProcessing.observe(viewLifecycleOwner) { isProcessing ->
+            binding.buttonResetAll.isEnabled = !isProcessing
+            binding.buttonResetAll.text = if (isProcessing) "초기화 중..." else "전체 초기화"
+        }
+
+        viewModel.resetComplete.observe(viewLifecycleOwner) { isComplete ->
+            if (isComplete) {
+                Toast.makeText(requireContext(), "모든 데이터가 초기화되었습니다. 앱을 다시 시작합니다.", Toast.LENGTH_LONG).show()
+
+                val packageManager = requireContext().packageManager
+                val intent = packageManager.getLaunchIntentForPackage(requireContext().packageName)
+                val componentName = intent!!.component
+                val mainIntent = Intent.makeRestartActivityTask(componentName)
+
+                requireContext().startActivity(mainIntent)
+                Runtime.getRuntime().exit(0)
+            }
+        }
+    }
+
     override fun onTabReselected() {
         findNavController().popBackStack()
     }
@@ -57,30 +75,10 @@ class SettingsFragment : Fragment(), OnTabReselectedListener {
             .setTitle("전체 초기화")
             .setMessage("저장된 모든 옷, 스타일, 설정이 삭제됩니다. 정말 진행하시겠습니까?")
             .setPositiveButton("예") { _, _ ->
-                resetAllData()
+                viewModel.resetAllData() // ViewModel에 초기화 요청
             }
             .setNegativeButton("아니오", null)
             .show()
-    }
-
-    private fun resetAllData() {
-        lifecycleScope.launch {
-            // 진행 중인 일괄 추가 작업 취소
-            WorkManager.getInstance(requireContext()).cancelUniqueWork("batch_add")
-
-            AppDatabase.getDatabase(requireContext()).clearAllData()
-            settingsManager.resetToDefaults()
-
-            Toast.makeText(requireContext(), "모든 데이터가 초기화되었습니다. 앱을 다시 시작합니다.", Toast.LENGTH_LONG).show()
-
-            val packageManager = requireContext().packageManager
-            val intent = packageManager.getLaunchIntentForPackage(requireContext().packageName)
-            val componentName = intent!!.component
-            val mainIntent = Intent.makeRestartActivityTask(componentName)
-
-            requireContext().startActivity(mainIntent)
-            Runtime.getRuntime().exit(0)
-        }
     }
 
     private fun setupToolbar() {

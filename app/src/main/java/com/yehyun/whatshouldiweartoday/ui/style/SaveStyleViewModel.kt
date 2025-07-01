@@ -30,6 +30,9 @@ class SaveStyleViewModel(application: Application) : AndroidViewModel(applicatio
     private val _isSaveComplete = MutableLiveData(false)
     val isSaveComplete: LiveData<Boolean> = _isSaveComplete
 
+    private val _isLoading = MutableLiveData(false)
+    val isLoading: LiveData<Boolean> = _isLoading
+
     val hasChanges = MutableLiveData(false)
     private var initialItemIds: Set<Int>? = null
     private var initialName: String? = null
@@ -65,8 +68,8 @@ class SaveStyleViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun toggleItemSelected(item: ClothingItem) {
         val currentSet = selectedItems.value ?: mutableSetOf()
-        if (currentSet.contains(item)) {
-            currentSet.remove(item)
+        if (currentSet.any { it.id == item.id }) {
+            currentSet.removeAll { it.id == item.id }
         } else {
             if (currentSet.size < 10) {
                 currentSet.add(item)
@@ -114,6 +117,8 @@ class SaveStyleViewModel(application: Application) : AndroidViewModel(applicatio
 
 
     fun saveStyle() {
+        if (_isLoading.value == true) return
+
         val name = styleName.value
         val season = selectedSeason.value
         val items = selectedItems.value
@@ -122,10 +127,15 @@ class SaveStyleViewModel(application: Application) : AndroidViewModel(applicatio
             return
         }
 
+        _isLoading.value = true
         viewModelScope.launch {
-            val newStyle = SavedStyle(styleName = name, season = season)
-            styleRepository.insertStyleWithItems(newStyle, items.toList())
-            _isSaveComplete.postValue(true)
+            try {
+                val newStyle = SavedStyle(styleName = name, season = season)
+                styleRepository.insertStyleWithItems(newStyle, items.toList())
+                _isSaveComplete.postValue(true)
+            } finally {
+                _isLoading.postValue(false)
+            }
         }
     }
 
@@ -138,5 +148,6 @@ class SaveStyleViewModel(application: Application) : AndroidViewModel(applicatio
         initialItemIds = null
         initialName = null
         initialSeason = null
+        _isLoading.value = false
     }
 }

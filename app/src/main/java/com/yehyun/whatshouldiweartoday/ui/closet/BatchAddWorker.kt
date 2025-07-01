@@ -1,3 +1,5 @@
+// app/src/main/java/com/yehyun/whatshouldiweartoday/ui/closet/BatchAddWorker.kt
+
 package com.yehyun.whatshouldiweartoday.ui.closet
 
 import android.app.NotificationChannel
@@ -68,27 +70,32 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
         val apiKey = inputData.getString(KEY_API) ?: return@withContext Result.failure()
         val totalItems = uriStrings.size
 
-        val generationConfig = GenerationConfig.Builder().apply { responseMimeType = "application/json" }.build()
-        val generativeModel = GenerativeModel("gemini-2.5-flash", apiKey, generationConfig)
+        try {
+            val generationConfig = GenerationConfig.Builder().apply { responseMimeType = "application/json" }.build()
+            val generativeModel = GenerativeModel("gemini-2.5-flash", apiKey, generationConfig)
 
-        for (i in uriStrings.indices) {
-            val uri = Uri.parse(uriStrings[i])
-            try {
-                // [수정] 이미지를 불러올 때 회전 정보를 포함하여 올바른 방향으로 가져오도록 수정
-                val bitmap = getCorrectlyOrientedBitmap(uri)
-                if (bitmap != null) {
-                    analyzeAndSave(bitmap, generativeModel)
+            for (i in uriStrings.indices) {
+                try {
+                    val uri = Uri.parse(uriStrings[i])
+                    val bitmap = getCorrectlyOrientedBitmap(uri)
+                    if (bitmap != null) {
+                        analyzeAndSave(bitmap, generativeModel)
+                    }
+                } catch (e: Exception) {
+                    Log.e("BatchAddWorker", "Failed to process image URI: ${uriStrings[i]}", e)
+                    // 개별 이미지 실패 시 다음 이미지로 계속 진행
                 }
-            } catch (e: Exception) {
-                Log.e("BatchAddWorker", "Failed to process image URI: $uri", e)
+                val progressData = workDataOf(PROGRESS_CURRENT to i + 1, PROGRESS_TOTAL to totalItems)
+                setProgress(progressData)
+                updateNotification(i + 1, totalItems)
             }
-            val progressData = workDataOf(PROGRESS_CURRENT to i + 1, PROGRESS_TOTAL to totalItems)
-            setProgress(progressData)
-            updateNotification(i + 1, totalItems)
+            return@withContext Result.success()
+        } catch (e: Exception) {
+            Log.e("BatchAddWorker", "Major failure in doWork", e)
+            return@withContext Result.failure()
+        } finally {
+            notificationManager.cancel(NOTIFICATION_ID)
         }
-
-        notificationManager.cancel(NOTIFICATION_ID)
-        return@withContext Result.success()
     }
 
     private fun getCorrectlyOrientedBitmap(uri: Uri): Bitmap? {
@@ -123,38 +130,34 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
     }
 
     private suspend fun analyzeAndSave(bitmap: Bitmap, model: GenerativeModel) {
-        try {
-            val analysisResult = analyzeImageWithRetry(bitmap, model)
+        val analysisResult = analyzeImageWithRetry(bitmap, model)
 
-            if (analysisResult?.is_wearable == true && analysisResult.category != null && analysisResult.suitable_temperature != null && analysisResult.color_hex != null) {
-                val processedBitmap = try {
-                    val segmenter = Segmentation.getClient(SelfieSegmenterOptions.Builder().setDetectorMode(SelfieSegmenterOptions.SINGLE_IMAGE_MODE).build())
-                    val mask = segmenter.process(InputImage.fromBitmap(bitmap, 0)).await()
-                    createBitmapWithMask(bitmap, mask)
-                } catch (e: Exception) {
-                    Log.e("BatchAddWorker", "Segmentation failed.", e)
-                    null
-                }
-
-                val originalPath = saveBitmapToInternalStorage(bitmap, "original_")
-                val processedPath = processedBitmap?.let { saveBitmapToInternalStorage(it, "processed_") }
-
-                if (originalPath != null) {
-                    val finalTemp = if (analysisResult.category == "아우터") analysisResult.suitable_temperature - 3.0 else analysisResult.suitable_temperature
-                    val newItem = ClothingItem(
-                        name = analysisResult.category,
-                        imageUri = originalPath,
-                        processedImageUri = processedPath,
-                        useProcessedImage = false,
-                        category = analysisResult.category,
-                        suitableTemperature = finalTemp,
-                        colorHex = analysisResult.color_hex
-                    )
-                    clothingDao.insert(newItem)
-                }
+        if (analysisResult?.is_wearable == true && analysisResult.category != null && analysisResult.suitable_temperature != null && analysisResult.color_hex != null) {
+            val processedBitmap = try {
+                val segmenter = Segmentation.getClient(SelfieSegmenterOptions.Builder().setDetectorMode(SelfieSegmenterOptions.SINGLE_IMAGE_MODE).build())
+                val mask = segmenter.process(InputImage.fromBitmap(bitmap, 0)).await()
+                createBitmapWithMask(bitmap, mask)
+            } catch (e: Exception) {
+                Log.e("BatchAddWorker", "Segmentation failed.", e)
+                null
             }
-        } catch (e: Exception) {
-            Log.e("BatchAddWorker", "Analysis or save failed for an image", e)
+
+            val originalPath = saveBitmapToInternalStorage(bitmap, "original_")
+            val processedPath = processedBitmap?.let { saveBitmapToInternalStorage(it, "processed_") }
+
+            if (originalPath != null) {
+                val finalTemp = if (analysisResult.category == "아우터") analysisResult.suitable_temperature - 3.0 else analysisResult.suitable_temperature
+                val newItem = ClothingItem(
+                    name = analysisResult.category,
+                    imageUri = originalPath,
+                    processedImageUri = processedPath,
+                    useProcessedImage = false,
+                    category = analysisResult.category,
+                    suitableTemperature = finalTemp,
+                    colorHex = analysisResult.color_hex
+                )
+                clothingDao.insert(newItem)
+            }
         }
     }
 
@@ -182,12 +185,7 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
                 val response = model.generateContent(inputContent)
                 val analysisResult = Json { ignoreUnknownKeys = true }.decodeFromString<ClothingAnalysis>(response.text!!)
 
-                if (!analysisResult.is_wearable) {
-                    successfulAnalysis = analysisResult
-                    break
-                }
-
-                if (isValidHexCode(analysisResult.color_hex)) {
+                if (!analysisResult.is_wearable || isValidHexCode(analysisResult.color_hex)) {
                     successfulAnalysis = analysisResult
                     break
                 } else {
@@ -195,9 +193,7 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
                 }
             } catch (e: Exception) {
                 Log.e("AI_ERROR_WORKER", "Attempt ${attempt + 1} failed", e)
-                if (attempt == maxRetries - 1) {
-                    return null
-                }
+                if (attempt == maxRetries - 1) return null
             }
             attempt++
         }

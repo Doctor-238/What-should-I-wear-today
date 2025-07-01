@@ -7,10 +7,12 @@ import android.text.Editable
 import android.text.TextWatcher
 import android.view.View
 import android.widget.Button
+import android.widget.FrameLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.navigation.fragment.findNavController
@@ -36,6 +38,7 @@ class SaveStyleFragment : Fragment(R.layout.fragment_save_style), OnTabReselecte
     private lateinit var editTextName: TextInputEditText
     private lateinit var buttonSave: Button
     private lateinit var onBackPressedCallback: OnBackPressedCallback
+    private lateinit var loadingOverlay: FrameLayout // 로딩 오버레이 추가
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -45,6 +48,7 @@ class SaveStyleFragment : Fragment(R.layout.fragment_save_style), OnTabReselecte
         chipGroupSeason = view.findViewById(R.id.chip_group_season_save)
         editTextName = view.findViewById(R.id.editText_style_name)
         buttonSave = view.findViewById(R.id.button_save_style_final)
+        loadingOverlay = view.findViewById(R.id.loading_overlay) // 로딩 오버레이 초기화
 
         setupRecyclerView(view)
         setupListeners(view)
@@ -118,6 +122,12 @@ class SaveStyleFragment : Fragment(R.layout.fragment_save_style), OnTabReselecte
 
         viewModel.hasChanges.observe(viewLifecycleOwner) {
             onBackPressedCallback.isEnabled = it
+        }
+
+        // 로딩 상태 관찰
+        viewModel.isLoading.observe(viewLifecycleOwner) { isLoading ->
+            loadingOverlay.isVisible = isLoading
+            buttonSave.isEnabled = !isLoading // 로딩 중에는 버튼 비활성화
         }
     }
 

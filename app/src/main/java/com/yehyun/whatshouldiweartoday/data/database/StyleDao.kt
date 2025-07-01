@@ -1,3 +1,5 @@
+// app/src/main/java/com/yehyun/whatshouldiweartoday/data/database/StyleDao.kt
+
 package com.yehyun.whatshouldiweartoday.data.database
 
 import androidx.lifecycle.LiveData
@@ -67,9 +69,13 @@ interface StyleDao {
     }
     @Transaction
     @Query("SELECT * FROM saved_styles WHERE styleId = :styleId")
-    fun getStyleById(styleId: Long): LiveData<StyleWithItems>
+    fun getStyleById(styleId: Long): LiveData<StyleWithItems?>
 
-    // [확인] 전체 초기화를 위한 함수들
+    // [추가] suspend 함수 버전의 getStyleById
+    @Transaction
+    @Query("SELECT * FROM saved_styles WHERE styleId = :styleId")
+    suspend fun getStyleByIdSuspend(styleId: Long): StyleWithItems?
+
     @Query("DELETE FROM saved_styles")
     suspend fun clearAll()
 

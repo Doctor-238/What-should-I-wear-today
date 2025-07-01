@@ -1,3 +1,5 @@
+// app/src/main/java/com/yehyun/whatshouldiweartoday/ui/home/RecommendationAdapter.kt
+
 package com.yehyun.whatshouldiweartoday.ui.home
 
 import android.net.Uri
@@ -12,9 +14,10 @@ import com.yehyun.whatshouldiweartoday.R
 import com.yehyun.whatshouldiweartoday.data.database.ClothingItem
 import java.io.File
 
-// [핵심 수정 1] onItemClicked를 선택적 파라미터로 변경
+// [핵심 수정] onItemLongClicked 람다 파라미터 추가
 class RecommendationAdapter(
-    private val onItemClicked: ((ClothingItem) -> Unit)? = null
+    private val onItemClicked: ((ClothingItem) -> Unit)? = null,
+    private val onItemLongClicked: ((ClothingItem) -> Unit)? = null // 롱클릭 리스너 추가
 ) : RecyclerView.Adapter<RecommendationAdapter.RecommendationViewHolder>() {
 
     private var items: List<ClothingItem> = listOf()
@@ -33,10 +36,20 @@ class RecommendationAdapter(
 
     override fun onBindViewHolder(holder: RecommendationViewHolder, position: Int) {
         val currentItem = items[position]
-        // [핵심 수정 2] onItemClicked가 null이 아닐 때만 클릭 리스너를 설정
+
+        // 일반 클릭 리스너 설정
         onItemClicked?.let { listener ->
             holder.itemView.setOnClickListener { listener(currentItem) }
         }
+
+        // [추가] 롱클릭 리스너 설정
+        onItemLongClicked?.let { listener ->
+            holder.itemView.setOnLongClickListener {
+                listener(currentItem)
+                true // 이벤트 소비
+            }
+        }
+
         holder.bind(currentItem, currentItem.id == packableOuterId)
     }
 

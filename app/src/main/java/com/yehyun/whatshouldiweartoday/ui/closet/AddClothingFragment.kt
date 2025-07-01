@@ -11,6 +11,7 @@ import android.provider.MediaStore
 import android.util.Log
 import android.view.View
 import android.widget.Button
+import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.ProgressBar
 import android.widget.TextView
@@ -18,6 +19,7 @@ import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.navigation.fragment.findNavController
@@ -52,6 +54,7 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabResel
     private lateinit var toolbar: MaterialToolbar
     private lateinit var textViewAiResult: TextView
     private lateinit var progressBar: ProgressBar
+    private lateinit var savingOverlay: FrameLayout // 저장 오버레이 추가
     private lateinit var switchRemoveBackground: SwitchMaterial
     private lateinit var viewColorSwatch: View
     private lateinit var textColorLabel: TextView
@@ -63,7 +66,6 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabResel
         ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         uri?.let {
-            // [수정] 이미지를 불러올 때 회전 정보를 포함하여 올바른 방향으로 가져오도록 수정
             val bitmap = getCorrectlyOrientedBitmap(it)
             if (bitmap != null) {
                 viewModel.onImageSelected(bitmap, getString(R.string.gemini_api_key))
@@ -129,6 +131,7 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabResel
         toolbar = view.findViewById(R.id.toolbar)
         textViewAiResult = view.findViewById(R.id.textView_ai_result)
         progressBar = view.findViewById(R.id.progressBar)
+        savingOverlay = view.findViewById(R.id.saving_overlay) // 오버레이 초기화
         switchRemoveBackground = view.findViewById(R.id.switch_remove_background)
         viewColorSwatch = view.findViewById(R.id.view_color_swatch)
         textColorLabel = view.findViewById(R.id.textView_color_label_add)
@@ -185,6 +188,14 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabResel
 
         viewModel.hasChanges.observe(viewLifecycleOwner) { hasChanges ->
             onBackPressedCallback.isEnabled = hasChanges
+        }
+
+        // [추가] 저장 상태 관찰
+        viewModel.isSaving.observe(viewLifecycleOwner) { isSaving ->
+            savingOverlay.isVisible = isSaving
+            if (viewModel.uiState.value == AddClothingViewModel.UiState.ANALYZED) {
+                buttonSave.isEnabled = !isSaving
+            }
         }
     }
 

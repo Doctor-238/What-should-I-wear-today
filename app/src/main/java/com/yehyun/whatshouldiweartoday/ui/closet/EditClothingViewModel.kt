@@ -16,7 +16,6 @@ import kotlinx.coroutines.launch
 
 class EditClothingViewModel(application: Application) : AndroidViewModel(application) {
 
-    // [수정] init 블록 대신, 선언과 동시에 초기화합니다.
     private val repository: ClothingRepository
     private val styleDao: StyleDao
 
@@ -30,19 +29,20 @@ class EditClothingViewModel(application: Application) : AndroidViewModel(applica
     private val _isChanged = MutableLiveData<Boolean>(false)
     val isChanged: LiveData<Boolean> = _isChanged
 
+    private val _isProcessing = MutableLiveData(false)
+    val isProcessing: LiveData<Boolean> = _isProcessing
+
     private val _isSaveComplete = MutableLiveData<Boolean>(false)
     val isSaveComplete: LiveData<Boolean> = _isSaveComplete
 
     private val _isDeleteComplete = MutableLiveData<Boolean>(false)
     val isDeleteComplete: LiveData<Boolean> = _isDeleteComplete
 
-    // [수정] init 블록에서 초기화 로직을 수행합니다.
     init {
         val db = AppDatabase.getDatabase(application)
         repository = ClothingRepository(db.clothingDao())
         styleDao = db.styleDao()
 
-        // repository가 초기화된 후에 clothingItemFromDb를 초기화합니다.
         clothingItemFromDb = _itemId.switchMap { id ->
             repository.getItemById(id)
         }
@@ -95,20 +95,32 @@ class EditClothingViewModel(application: Application) : AndroidViewModel(applica
     }
 
     fun saveChanges() {
+        if (_isProcessing.value == true) return
         _currentClothingItem.value?.let {
+            _isProcessing.value = true
             viewModelScope.launch {
-                repository.update(it)
-                _isSaveComplete.value = true
+                try {
+                    repository.update(it)
+                    _isSaveComplete.value = true
+                } finally {
+                    _isProcessing.value = false
+                }
             }
         }
     }
 
     fun deleteClothingItem() {
+        if (_isProcessing.value == true) return
         _currentClothingItem.value?.let { itemToDelete ->
+            _isProcessing.value = true
             viewModelScope.launch {
-                repository.delete(itemToDelete)
-                styleDao.deleteOrphanedStyles()
-                _isDeleteComplete.value = true
+                try {
+                    repository.delete(itemToDelete)
+                    styleDao.deleteOrphanedStyles()
+                    _isDeleteComplete.value = true
+                } finally {
+                    _isProcessing.value = false
+                }
             }
         }
     }
@@ -122,6 +134,7 @@ class EditClothingViewModel(application: Application) : AndroidViewModel(applica
         originalClothingItem = null
         _currentClothingItem.value = null
         _isChanged.value = false
+        _isProcessing.value = false
         resetCompletionState()
     }
 }

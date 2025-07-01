@@ -1,7 +1,8 @@
+// app/src/main/java/com/yehyun/whatshouldiweartoday/ui/style/EditStyleFragment.kt
+
 package com.yehyun.whatshouldiweartoday.ui.style
 
 import android.os.Bundle
-import android.text.Editable
 import android.text.TextWatcher
 import android.view.View
 import android.widget.Button
@@ -9,6 +10,7 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
+import androidx.core.widget.addTextChangedListener
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
@@ -21,7 +23,6 @@ import com.google.android.material.tabs.TabLayout
 import com.google.android.material.textfield.TextInputEditText
 import com.yehyun.whatshouldiweartoday.R
 import com.yehyun.whatshouldiweartoday.data.database.ClothingItem
-import com.yehyun.whatshouldiweartoday.data.database.SavedStyle
 import com.yehyun.whatshouldiweartoday.ui.OnTabReselectedListener
 import com.yehyun.whatshouldiweartoday.ui.home.RecommendationAdapter
 
@@ -30,17 +31,17 @@ class EditStyleFragment : Fragment(R.layout.fragment_edit_style), OnTabReselecte
     private val viewModel: EditStyleViewModel by viewModels()
     private val args: EditStyleFragmentArgs by navArgs()
     private lateinit var tabLayout: TabLayout
-    private var originalStyle: SavedStyle? = null
-    private var initialItemIds: Set<Int>? = null
-    private val currentSelectedItems = mutableListOf<ClothingItem>()
+
     private lateinit var onBackPressedCallback: OnBackPressedCallback
     private lateinit var adapterForAll: SaveStyleAdapter
     private lateinit var adapterForSelected: RecommendationAdapter
     private lateinit var buttonSave: Button
+    private lateinit var buttonDelete: Button
     private lateinit var tvSelectedItemLabel: TextView
     private lateinit var editTextName: TextInputEditText
     private lateinit var toolbar: MaterialToolbar
     private lateinit var chipGroupSeason: ChipGroup
+    private var nameTextWatcher: TextWatcher? = null
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -52,59 +53,109 @@ class EditStyleFragment : Fragment(R.layout.fragment_edit_style), OnTabReselecte
         setupListeners(view)
         setupBackButtonHandler()
         setupTabs(view)
+
+        viewModel.loadStyleIfNeeded(args.styleId)
     }
 
     private fun setupViews(view: View) {
         buttonSave = view.findViewById(R.id.button_save_style_edit)
+        buttonDelete = view.findViewById(R.id.button_delete_style)
         tvSelectedItemLabel = view.findViewById(R.id.tv_selected_items_label)
         editTextName = view.findViewById(R.id.editText_edit_style_name)
-        buttonSave.isEnabled = false
         tabLayout = view.findViewById(R.id.tab_layout_edit_style_category)
     }
 
     private fun observeViewModel() {
-        viewModel.getStyleWithItems(args.styleId).observe(viewLifecycleOwner) { styleWithItems ->
-            if (styleWithItems != null && initialItemIds == null) {
-                originalStyle = styleWithItems.style
-                initialItemIds = styleWithItems.items.map { it.id }.toSet()
-                currentSelectedItems.clear()
-                currentSelectedItems.addAll(styleWithItems.items)
-                toolbar.title = "'${originalStyle!!.styleName}' 수정"
-                editTextName.setText(originalStyle!!.styleName)
-                for (i in 0 until chipGroupSeason.childCount) {
-                    val chip = chipGroupSeason.getChildAt(i) as Chip
-                    if (chip.text == styleWithItems.style.season) {
-                        chip.isChecked = true
-                        break
-                    }
-                }
-                updateAdaptersAndCheckChanges()
+        viewModel.toolbarTitle.observe(viewLifecycleOwner) { title ->
+            toolbar.title = title
+        }
+
+        viewModel.currentStyleName.observe(viewLifecycleOwner) { name ->
+            if (editTextName.text.toString() != name) {
+                editTextName.setText(name)
             }
         }
+
+        viewModel.currentSeason.observe(viewLifecycleOwner) { season ->
+            for (i in 0 until chipGroupSeason.childCount) {
+                val chip = chipGroupSeason.getChildAt(i) as Chip
+                if (chip.text == season) {
+                    chip.isChecked = true
+                    break
+                }
+            }
+        }
+
+        viewModel.selectedItems.observe(viewLifecycleOwner) { items ->
+            val categoryOrder = mapOf(
+                "상의" to 1, "하의" to 2, "아우터" to 3, "신발" to 4,
+                "가방" to 5, "모자" to 6, "기타" to 7
+            )
+            val sortedItems = items.sortedWith(
+                compareBy<ClothingItem> { categoryOrder[it.category] ?: 8 }
+                    .thenBy { it.suitableTemperature }
+            )
+            adapterForSelected.submitList(sortedItems)
+            adapterForAll.setSelectedItems(items.map { it.id }.toSet())
+            tvSelectedItemLabel.text = "현재 스타일 (${items.size}/10)"
+        }
+
         viewModel.filteredClothes.observe(viewLifecycleOwner) { filteredClothes ->
             adapterForAll.submitList(filteredClothes)
-            adapterForAll.setSelectedItems(currentSelectedItems.map { it.id }.toSet())
+            viewModel.selectedItems.value?.let {
+                adapterForAll.setSelectedItems(it.map { item -> item.id }.toSet())
+            }
+        }
+
+        viewModel.saveButtonEnabled.observe(viewLifecycleOwner) { isEnabled ->
+            buttonSave.isEnabled = isEnabled
+        }
+
+        viewModel.backPressedCallbackEnabled.observe(viewLifecycleOwner) { isEnabled ->
+            onBackPressedCallback.isEnabled = isEnabled
+        }
+
+        viewModel.isProcessing.observe(viewLifecycleOwner) { isProcessing ->
+            buttonSave.isEnabled = !isProcessing && viewModel.saveButtonEnabled.value == true
+            buttonDelete.isEnabled = !isProcessing
+            // [오류 수정] isProcessing 상태에 따라 아이콘을 설정하거나 null로 지웁니다.
+            if (isProcessing) {
+                toolbar.navigationIcon = null
+            } else {
+                toolbar.setNavigationIcon(R.drawable.ic_arrow_back)
+            }
+        }
+
+        viewModel.isUpdateComplete.observe(viewLifecycleOwner) { isComplete ->
+            if (isComplete) {
+                Toast.makeText(context, "저장되었습니다.", Toast.LENGTH_SHORT).show()
+                findNavController().popBackStack()
+            }
+        }
+
+        viewModel.isDeleteComplete.observe(viewLifecycleOwner) { isComplete ->
+            if (isComplete) {
+                Toast.makeText(context, "'${viewModel.getOriginalStyleName()}' 스타일이 삭제되었습니다.", Toast.LENGTH_SHORT).show()
+                findNavController().popBackStack()
+            }
         }
     }
 
     private fun setupAdapters(view: View) {
-        adapterForSelected = RecommendationAdapter { item ->
-            currentSelectedItems.remove(item)
-            updateAdaptersAndCheckChanges()
-        }
+        adapterForSelected = RecommendationAdapter(
+            onItemClicked = { item ->
+                viewModel.removeSelectedItem(item)
+            },
+            onItemLongClicked = { item ->
+                val action = EditStyleFragmentDirections.actionEditStyleFragmentToEditClothingFragment(item.id)
+                findNavController().navigate(action)
+            }
+        )
         view.findViewById<RecyclerView>(R.id.rv_selected_items).adapter = adapterForSelected
+
         adapterForAll = SaveStyleAdapter(
-            onItemClicked = { item, isSelected ->
-                if (isSelected) {
-                    currentSelectedItems.remove(item)
-                } else {
-                    if (currentSelectedItems.size < 10) {
-                        currentSelectedItems.add(item)
-                    } else {
-                        Toast.makeText(context, "최대 10개까지 선택할 수 있습니다.", Toast.LENGTH_SHORT).show()
-                    }
-                }
-                updateAdaptersAndCheckChanges()
+            onItemClicked = { item, _ ->
+                viewModel.toggleItemSelection(item)
             },
             onItemLongClicked = { item ->
                 val action = EditStyleFragmentDirections.actionEditStyleFragmentToEditClothingFragment(item.id)
@@ -115,46 +166,20 @@ class EditStyleFragment : Fragment(R.layout.fragment_edit_style), OnTabReselecte
     }
 
     private fun setupListeners(view: View) {
-        val deleteButton = view.findViewById<Button>(R.id.button_delete_style)
         toolbar.setNavigationOnClickListener { handleBackButton() }
         buttonSave.setOnClickListener { saveChangesAndExit() }
-        deleteButton.setOnClickListener { showDeleteConfirmDialog() }
-        editTextName.addTextChangedListener(object: TextWatcher {
-            override fun afterTextChanged(s: Editable?) { checkForChanges() }
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
-        })
-        chipGroupSeason.setOnCheckedChangeListener { _, _ -> checkForChanges() }
-    }
+        buttonDelete.setOnClickListener { showDeleteConfirmDialog() }
 
-    private fun updateAdaptersAndCheckChanges() {
-        val categoryOrder = mapOf(
-            "상의" to 1, "하의" to 2, "아우터" to 3, "신발" to 4,
-            "가방" to 5, "모자" to 6, "기타" to 7
-        )
-        val sortedItems = currentSelectedItems.sortedWith(
-            compareBy<ClothingItem> { categoryOrder[it.category] ?: 8 }
-                .thenBy { it.suitableTemperature }
-        )
-        adapterForSelected.submitList(sortedItems)
-        adapterForAll.setSelectedItems(currentSelectedItems.map { it.id }.toSet())
-        tvSelectedItemLabel.text = "현재 스타일 (${currentSelectedItems.size}/10)"
-        checkForChanges()
-    }
+        nameTextWatcher = editTextName.addTextChangedListener { editable ->
+            viewModel.onNameChanged(editable.toString())
+        }
 
-    private fun checkForChanges() {
-        if (originalStyle == null || initialItemIds == null) return
-        val initialName = originalStyle!!.styleName
-        val currentName = editTextName.text.toString().trim()
-        val currentIds = currentSelectedItems.map { it.id }.toSet()
-        val initialSeason = originalStyle!!.season
-        val selectedSeasonId = chipGroupSeason.checkedChipId
-        val currentSeason = if (selectedSeasonId != View.NO_ID) {
-            chipGroupSeason.findViewById<Chip>(selectedSeasonId).text.toString()
-        } else { "" }
-        val hasChanges = initialName != currentName || initialItemIds != currentIds || initialSeason != currentSeason
-        buttonSave.isEnabled = hasChanges && currentName.isNotEmpty() && selectedSeasonId != View.NO_ID
-        onBackPressedCallback.isEnabled = hasChanges
+        chipGroupSeason.setOnCheckedChangeListener { group, checkedId ->
+            val chip = group.findViewById<Chip>(checkedId)
+            if (chip != null && chip.isChecked) {
+                viewModel.onSeasonChanged(chip.text.toString())
+            }
+        }
     }
 
     private fun setupBackButtonHandler() {
@@ -167,6 +192,8 @@ class EditStyleFragment : Fragment(R.layout.fragment_edit_style), OnTabReselecte
     }
 
     private fun handleBackButton() {
+        if(viewModel.isProcessing.value == true) return
+
         if (buttonSave.isEnabled) {
             showSaveChangesDialog()
         } else {
@@ -184,18 +211,14 @@ class EditStyleFragment : Fragment(R.layout.fragment_edit_style), OnTabReselecte
     }
 
     private fun showDeleteConfirmDialog() {
-        originalStyle?.let { styleToDelete ->
-            AlertDialog.Builder(requireContext())
-                .setTitle("삭제 확인")
-                .setMessage("'${styleToDelete.styleName}' 스타일을 정말 삭제하시겠습니까?")
-                .setPositiveButton("예") { _, _ ->
-                    viewModel.deleteStyle(styleToDelete)
-                    Toast.makeText(context, "'${styleToDelete.styleName}' 스타일이 삭제되었습니다.", Toast.LENGTH_SHORT).show()
-                    findNavController().popBackStack()
-                }
-                .setNegativeButton("아니오", null)
-                .show()
-        }
+        AlertDialog.Builder(requireContext())
+            .setTitle("삭제 확인")
+            .setMessage("'${viewModel.currentStyleName.value}' 스타일을 정말 삭제하시겠습니까?")
+            .setPositiveButton("예") { _, _ ->
+                viewModel.deleteStyle()
+            }
+            .setNegativeButton("아니오", null)
+            .show()
     }
 
     private fun saveChangesAndExit() {
@@ -204,7 +227,7 @@ class EditStyleFragment : Fragment(R.layout.fragment_edit_style), OnTabReselecte
             Toast.makeText(context, "스타일 이름을 입력해주세요.", Toast.LENGTH_SHORT).show()
             return
         }
-        if (currentSelectedItems.isEmpty()) {
+        if (viewModel.selectedItems.value.isNullOrEmpty()) {
             Toast.makeText(context, "스타일에 추가된 옷이 없습니다.", Toast.LENGTH_SHORT).show()
             return
         }
@@ -213,13 +236,7 @@ class EditStyleFragment : Fragment(R.layout.fragment_edit_style), OnTabReselecte
             Toast.makeText(context, "계절을 선택해주세요.", Toast.LENGTH_SHORT).show()
             return
         }
-        val selectedSeason = chipGroupSeason.findViewById<Chip>(selectedSeasonId).text.toString()
-        originalStyle?.let { styleToUpdate ->
-            val updatedStyle = styleToUpdate.copy(styleName = styleName, season = selectedSeason)
-            viewModel.updateStyle(updatedStyle, currentSelectedItems.toList())
-            Toast.makeText(context, "저장되었습니다.", Toast.LENGTH_SHORT).show()
-            findNavController().popBackStack()
-        }
+        viewModel.updateStyle()
     }
 
     private fun setupTabs(view: View) {
@@ -232,6 +249,11 @@ class EditStyleFragment : Fragment(R.layout.fragment_edit_style), OnTabReselecte
             override fun onTabUnselected(tab: TabLayout.Tab?) {}
             override fun onTabReselected(tab: TabLayout.Tab?) {}
         })
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        editTextName.removeTextChangedListener(nameTextWatcher)
     }
 
     override fun onTabReselected() {
