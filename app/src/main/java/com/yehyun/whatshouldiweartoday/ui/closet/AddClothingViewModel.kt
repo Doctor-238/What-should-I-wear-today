@@ -83,11 +83,9 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
 
         initializeGenerativeModel(apiKey)
 
-        // [수정] 재시도 로직이 포함된 함수를 호출합니다.
         analyzeImageWithRetry(bitmap)
     }
 
-    // [추가] AI 분석 및 재시도 로직을 처리하는 함수
     private fun analyzeImageWithRetry(bitmap: Bitmap, maxRetries: Int = 2) {
         viewModelScope.launch(Dispatchers.IO) {
             var attempt = 0
@@ -114,12 +112,18 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
                     val response = generativeModel!!.generateContent(inputContent)
                     val analysisResult = Json { ignoreUnknownKeys = true }.decodeFromString<ClothingAnalysis>(response.text!!)
 
-                    // 색상 코드가 유효한지 검사
+                    // [핵심 수정] is_wearable이 false이면 재시도를 즉시 중단합니다.
+                    if (!analysisResult.is_wearable) {
+                        successfulAnalysis = analysisResult
+                        break // 재시도 루프 탈출
+                    }
+
+                    // is_wearable이 true일 때만 색상 코드를 검사합니다.
                     if (isValidHexCode(analysisResult.color_hex)) {
                         successfulAnalysis = analysisResult
                         break // 성공했으므로 루프 탈출
                     } else {
-                        // 유효하지 않으면 마지막 시도일 경우를 대비해 저장
+                        // 색상 코드는 유효하지 않지만, 다음 시도를 위해 현재 결과를 임시 저장합니다.
                         successfulAnalysis = analysisResult
                     }
 
@@ -150,7 +154,6 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
         }
     }
 
-    // [추가] 헥사 코드가 유효한지 확인하는 간단한 함수
     private fun isValidHexCode(hexCode: String): Boolean {
         return try {
             Color.parseColor(hexCode)
@@ -196,11 +199,10 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
             updateAnalysisResultText(result.category, null, null)
         }
 
-        // [수정] 유효성 검사를 한 번 더 수행하여 안전하게 처리
         if (isValidHexCode(result.color_hex)) {
             setViewColor(Color.parseColor(result.color_hex))
         } else {
-            setViewColor(null) // 유효하지 않으면 색상 null 처리
+            setViewColor(null)
         }
     }
 
