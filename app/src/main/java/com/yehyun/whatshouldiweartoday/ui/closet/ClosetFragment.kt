@@ -6,9 +6,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
-import android.widget.ProgressBar
 import android.widget.Spinner
-import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.widget.SearchView
 import androidx.fragment.app.Fragment
@@ -18,7 +16,6 @@ import androidx.navigation.fragment.findNavController
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.workDataOf
-import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.android.material.tabs.TabLayoutMediator
 import com.yehyun.whatshouldiweartoday.R
 import com.yehyun.whatshouldiweartoday.databinding.FragmentClosetBinding
@@ -32,10 +29,6 @@ class ClosetFragment : Fragment(), OnTabReselectedListener {
     private val binding get() = _binding!!
 
     private val viewModel: ClosetViewModel by viewModels()
-
-    private lateinit var fabBatchAdd: FloatingActionButton
-    private lateinit var fabProgressBar: ProgressBar
-    private lateinit var fabProgressText: TextView
 
     private val pickMultipleImagesLauncher = registerForActivityResult(
         ActivityResultContracts.GetMultipleContents()
@@ -57,10 +50,6 @@ class ClosetFragment : Fragment(), OnTabReselectedListener {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        fabBatchAdd = view.findViewById(R.id.fab_batch_add)
-        fabProgressBar = view.findViewById(R.id.fab_progress_bar)
-        fabProgressText = view.findViewById(R.id.fab_progress_text)
-
         setupViewPager()
         setupSearch()
         setupSortSpinner()
@@ -68,7 +57,7 @@ class ClosetFragment : Fragment(), OnTabReselectedListener {
         binding.fabAddClothing.setOnClickListener {
             findNavController().navigate(R.id.action_navigation_closet_to_addClothingFragment)
         }
-        fabBatchAdd.setOnClickListener {
+        binding.fabBatchAdd.setOnClickListener {
             pickMultipleImagesLauncher.launch("image/*")
         }
 
@@ -79,41 +68,26 @@ class ClosetFragment : Fragment(), OnTabReselectedListener {
         viewModel.batchAddWorkInfo.observe(viewLifecycleOwner) { workInfos ->
             val workInfo = workInfos.firstOrNull()
 
-            // 작업이 없거나 끝났을 때
             if (workInfo == null || workInfo.state.isFinished) {
-                if (fabProgressBar.visibility == View.VISIBLE) {
-                    lifecycleScope.launch {
-                        delay(500)
-                        setFabProgressUi(false)
-                    }
+                // 완료 후 딜레이를 주어 UI가 자연스럽게 복구되도록 함
+                lifecycleScope.launch {
+                    delay(500)
+                    binding.fabBatchAdd.hideProgress()
                 }
                 return@observe
             }
 
-            // 작업이 진행 중일 때
-            setFabProgressUi(true)
             val progress = workInfo.progress
             val current = progress.getInt(BatchAddWorker.PROGRESS_CURRENT, 0)
             val total = progress.getInt(BatchAddWorker.PROGRESS_TOTAL, 1)
             val percentage = if (total > 0) (current * 100 / total) else 0
-            fabProgressBar.progress = percentage
-            fabProgressText.text = "$percentage%"
+
+            // 커스텀 버튼에 진행률을 전달하여 그리도록 함
+            binding.fabBatchAdd.showProgress(percentage)
         }
     }
 
-    private fun setFabProgressUi(isProcessing: Boolean) {
-        if (isProcessing) {
-            fabBatchAdd.setImageResource(0) // 아이콘 숨기기
-            fabBatchAdd.isEnabled = false
-            fabProgressBar.visibility = View.VISIBLE
-            fabProgressText.visibility = View.VISIBLE
-        } else {
-            fabBatchAdd.setImageResource(R.drawable.ic_infinity) // 아이콘 보이기
-            fabBatchAdd.isEnabled = true
-            fabProgressBar.visibility = View.GONE
-            fabProgressText.visibility = View.GONE
-        }
-    }
+    // --- 이하 코드는 기존과 동일 ---
 
     private fun startBatchAddWorker(uriStrings: Array<String>) {
         val workRequest = OneTimeWorkRequestBuilder<BatchAddWorker>()
@@ -122,10 +96,8 @@ class ClosetFragment : Fragment(), OnTabReselectedListener {
                 BatchAddWorker.KEY_API to getString(R.string.gemini_api_key)
             ))
             .build()
-
         viewModel.workManager.enqueueUniqueWork("batch_add", ExistingWorkPolicy.REPLACE, workRequest)
     }
-
 
     override fun onResume() {
         super.onResume()
