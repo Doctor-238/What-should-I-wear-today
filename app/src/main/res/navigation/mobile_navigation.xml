@@ -10,6 +10,12 @@
         android:name="com.yehyun.whatshouldiweartoday.ui.home.HomeFragment"
         android:label="@string/title_home"
         tools:layout="@layout/fragment_home" >
+
+        <argument
+            android:name="target_tab"
+            app:argType="integer"
+            android:defaultValue="0" />
+
         <action
             android:id="@+id/action_navigation_home_to_saveStyleFragment"
             app:destination="@id/saveStyleFragment" />
