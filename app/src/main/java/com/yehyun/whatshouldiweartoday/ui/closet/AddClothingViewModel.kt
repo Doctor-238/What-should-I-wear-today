@@ -1,5 +1,3 @@
-// app/src/main/java/com/yehyun/whatshouldiweartoday/ui/closet/AddClothingViewModel.kt
-
 package com.yehyun.whatshouldiweartoday.ui.closet
 
 import android.app.Application
@@ -102,34 +100,30 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
 
                             Your JSON response MUST contain ONLY the following keys: "is_wearable", "category", "suitable_temperature", and "color_hex".
 
-                            - "is_wearable": (boolean) True if the item is wearable clothing.
-                            - "category": (string) One of '상의', '하의', '아우터', '신발', '가방', '모자', '기타'.
-                            - "color_hex": (string) The dominant color of the item as a hex string.
-                            - "suitable_temperature": (double) This is the most important. Estimate the MAXIMUM comfortable temperature for this item. The value can be negative for winter clothing. You MUST provide a specific, non-round number with one decimal place (e.g., 23.5, 8.0, -2.5). A generic integer like 15.0 is a bad response. Base your judgment on the visual evidence of material, thickness, and design.
+                            - "is_wearable": (boolean) If the image contains a single primary clothing item (or a single person's outfit), this is True. If the image contains multiple people or multiple separate clothing items laid out, this MUST be False.
+                            - "category": (string) If wearable, one of '상의', '하의', '아우터', '신발', '가방', '모자', '기타'.
+                            - "color_hex": (string) If wearable, the dominant color of the item as a hex string.
+                            - "suitable_temperature": (double) If wearable, this is the most important. Estimate the MAXIMUM comfortable temperature for this item. The value can be negative for winter clothing. You MUST provide a specific, non-round number with one decimal place (e.g., 23.5, 8.0, -2.5). A generic integer like 15.0 is a bad response. Base your judgment on the visual evidence of material, thickness, and design.
                         """.trimIndent())
                     }
 
                     val response = generativeModel!!.generateContent(inputContent)
                     val analysisResult = Json { ignoreUnknownKeys = true }.decodeFromString<ClothingAnalysis>(response.text!!)
 
-                    // [핵심 수정] is_wearable이 false이면 재시도를 즉시 중단합니다.
                     if (!analysisResult.is_wearable) {
                         successfulAnalysis = analysisResult
-                        break // 재시도 루프 탈출
+                        break
                     }
 
-                    // is_wearable이 true일 때만 색상 코드를 검사합니다.
                     if (isValidHexCode(analysisResult.color_hex)) {
                         successfulAnalysis = analysisResult
-                        break // 성공했으므로 루프 탈출
+                        break
                     } else {
-                        // 색상 코드는 유효하지 않지만, 다음 시도를 위해 현재 결과를 임시 저장합니다.
                         successfulAnalysis = analysisResult
                     }
-
                 } catch (e: Exception) {
                     Log.e("AI_ERROR", "Attempt ${attempt + 1} failed", e)
-                    if (attempt == maxRetries - 1) { // 마지막 시도도 실패하면 에러 메시지 표시
+                    if (attempt == maxRetries - 1) {
                         withContext(Dispatchers.Main) {
                             _errorMessage.value = "분석 실패: ${e.message}"
                             _uiState.value = UiState.IDLE
@@ -140,21 +134,21 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
                 attempt++
             }
 
-            // 최종 분석 결과를 UI에 반영
             withContext(Dispatchers.Main) {
                 if (successfulAnalysis != null && successfulAnalysis.is_wearable) {
                     _clothingAnalysisResult.value = successfulAnalysis
                     processAnalysisResult(successfulAnalysis)
                     segmentImage(bitmap)
                 } else {
-                    _errorMessage.value = "올바른 사진을 입력해주세요"
+                    _errorMessage.value = "올바른 사진을 입력해주세요."
                     _uiState.value = UiState.IDLE
                 }
             }
         }
     }
 
-    private fun isValidHexCode(hexCode: String): Boolean {
+    private fun isValidHexCode(hexCode: String?): Boolean {
+        if (hexCode.isNullOrBlank()) return false
         return try {
             Color.parseColor(hexCode)
             true
@@ -185,8 +179,11 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
     }
 
     fun processAnalysisResult(result: ClothingAnalysis) {
-        if (result.category in listOf("상의", "하의", "아우터")) {
-            val baseTemp = if (result.category == "아우터") result.suitable_temperature - 3.0 else result.suitable_temperature
+        val category = result.category ?: "기타"
+        val temp = result.suitable_temperature
+
+        if (category in listOf("상의", "하의", "아우터") && temp != null) {
+            val baseTemp = if (category == "아우터") temp - 3.0 else temp
             val tolerance = settingsManager.getTemperatureTolerance()
             val constitutionAdjustment = settingsManager.getConstitutionAdjustment()
             val adjustedTemp = baseTemp + constitutionAdjustment
@@ -194,13 +191,13 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
             val minTemp = adjustedTemp - tolerance
             val maxTemp = adjustedTemp + tolerance
 
-            updateAnalysisResultText(result.category, minTemp, maxTemp)
+            updateAnalysisResultText(category, minTemp, maxTemp)
         } else {
-            updateAnalysisResultText(result.category, null, null)
+            updateAnalysisResultText(category, null, null)
         }
 
         if (isValidHexCode(result.color_hex)) {
-            setViewColor(Color.parseColor(result.color_hex))
+            setViewColor(Color.parseColor(result.color_hex!!))
         } else {
             setViewColor(null)
         }
@@ -246,8 +243,8 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
         val bitmapToSave = originalBitmap.value
         val analysis = clothingAnalysisResult.value
 
-        if (bitmapToSave == null || analysis == null) {
-            _errorMessage.value = "모든 정보를 입력해주세요."
+        if (bitmapToSave == null || analysis == null || !analysis.is_wearable || analysis.category == null || analysis.suitable_temperature == null || analysis.color_hex == null) {
+            _errorMessage.value = "AI가 분석한 정보가 부족하여 저장할 수 없습니다."
             return
         }
 

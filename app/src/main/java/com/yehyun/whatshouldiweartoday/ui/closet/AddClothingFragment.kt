@@ -3,6 +3,7 @@
 package com.yehyun.whatshouldiweartoday.ui.closet
 
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.net.Uri
 import android.os.Bundle
@@ -27,14 +28,17 @@ import com.yehyun.whatshouldiweartoday.R
 import com.yehyun.whatshouldiweartoday.data.preference.SettingsManager
 import com.yehyun.whatshouldiweartoday.ui.OnTabReselectedListener
 import kotlinx.serialization.Serializable
+import android.graphics.Matrix
+import androidx.exifinterface.media.ExifInterface
+import java.io.InputStream
 
 
 @Serializable
 data class ClothingAnalysis(
     val is_wearable: Boolean,
-    val category: String,
-    val suitable_temperature: Double,
-    val color_hex: String
+    val category: String? = null,
+    val suitable_temperature: Double? = null,
+    val color_hex: String? = null
 )
 
 class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabReselectedListener {
@@ -59,8 +63,45 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabResel
         ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         uri?.let {
-            val bitmap = MediaStore.Images.Media.getBitmap(requireActivity().contentResolver, it)
-            viewModel.onImageSelected(bitmap, getString(R.string.gemini_api_key))
+            // [수정] 이미지를 불러올 때 회전 정보를 포함하여 올바른 방향으로 가져오도록 수정
+            val bitmap = getCorrectlyOrientedBitmap(it)
+            if (bitmap != null) {
+                viewModel.onImageSelected(bitmap, getString(R.string.gemini_api_key))
+            } else {
+                Toast.makeText(requireContext(), "이미지를 불러오는 데 실패했습니다.", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private fun getCorrectlyOrientedBitmap(uri: Uri): Bitmap? {
+        var inputStream: InputStream? = null
+        return try {
+            inputStream = requireContext().contentResolver.openInputStream(uri)
+            if (inputStream == null) return null
+
+            val originalBitmap = BitmapFactory.decodeStream(inputStream)
+            inputStream.close() // 첫 번째 스트림 닫기
+
+            // 회전 정보를 얻기 위해 스트림을 다시 열어야 함
+            inputStream = requireContext().contentResolver.openInputStream(uri)
+            if (inputStream == null) return originalBitmap
+
+            val exifInterface = ExifInterface(inputStream)
+            val orientation = exifInterface.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)
+
+            val matrix = Matrix()
+            when (orientation) {
+                ExifInterface.ORIENTATION_ROTATE_90 -> matrix.postRotate(90f)
+                ExifInterface.ORIENTATION_ROTATE_180 -> matrix.postRotate(180f)
+                ExifInterface.ORIENTATION_ROTATE_270 -> matrix.postRotate(270f)
+            }
+
+            Bitmap.createBitmap(originalBitmap, 0, 0, originalBitmap.width, originalBitmap.height, matrix, true)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        } finally {
+            inputStream?.close()
         }
     }
 

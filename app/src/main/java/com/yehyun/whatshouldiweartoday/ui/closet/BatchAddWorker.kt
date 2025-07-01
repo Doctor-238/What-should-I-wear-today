@@ -4,6 +4,7 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.net.Uri
 import android.os.Build
@@ -31,6 +32,9 @@ import java.io.FileOutputStream
 import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.*
+import android.graphics.Matrix
+import androidx.exifinterface.media.ExifInterface
+import java.io.InputStream
 
 class BatchAddWorker(private val context: Context, workerParams: WorkerParameters) : CoroutineWorker(context, workerParams) {
 
@@ -70,8 +74,11 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
         for (i in uriStrings.indices) {
             val uri = Uri.parse(uriStrings[i])
             try {
-                val bitmap = MediaStore.Images.Media.getBitmap(context.contentResolver, uri)
-                analyzeAndSave(bitmap, generativeModel)
+                // [수정] 이미지를 불러올 때 회전 정보를 포함하여 올바른 방향으로 가져오도록 수정
+                val bitmap = getCorrectlyOrientedBitmap(uri)
+                if (bitmap != null) {
+                    analyzeAndSave(bitmap, generativeModel)
+                }
             } catch (e: Exception) {
                 Log.e("BatchAddWorker", "Failed to process image URI: $uri", e)
             }
@@ -84,11 +91,42 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
         return@withContext Result.success()
     }
 
+    private fun getCorrectlyOrientedBitmap(uri: Uri): Bitmap? {
+        var inputStream: InputStream? = null
+        return try {
+            inputStream = context.contentResolver.openInputStream(uri)
+            if (inputStream == null) return null
+
+            val originalBitmap = BitmapFactory.decodeStream(inputStream)
+            inputStream.close()
+
+            inputStream = context.contentResolver.openInputStream(uri)
+            if (inputStream == null) return originalBitmap
+
+            val exifInterface = ExifInterface(inputStream)
+            val orientation = exifInterface.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)
+
+            val matrix = Matrix()
+            when (orientation) {
+                ExifInterface.ORIENTATION_ROTATE_90 -> matrix.postRotate(90f)
+                ExifInterface.ORIENTATION_ROTATE_180 -> matrix.postRotate(180f)
+                ExifInterface.ORIENTATION_ROTATE_270 -> matrix.postRotate(270f)
+            }
+
+            Bitmap.createBitmap(originalBitmap, 0, 0, originalBitmap.width, originalBitmap.height, matrix, true)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        } finally {
+            inputStream?.close()
+        }
+    }
+
     private suspend fun analyzeAndSave(bitmap: Bitmap, model: GenerativeModel) {
         try {
             val analysisResult = analyzeImageWithRetry(bitmap, model)
 
-            if (analysisResult?.is_wearable == true) {
+            if (analysisResult?.is_wearable == true && analysisResult.category != null && analysisResult.suitable_temperature != null && analysisResult.color_hex != null) {
                 val processedBitmap = try {
                     val segmenter = Segmentation.getClient(SelfieSegmenterOptions.Builder().setDetectorMode(SelfieSegmenterOptions.SINGLE_IMAGE_MODE).build())
                     val mask = segmenter.process(InputImage.fromBitmap(bitmap, 0)).await()
@@ -130,27 +168,25 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
                 val inputContent = content {
                     image(resizedBitmap)
                     text("""
-                            You are a Precise Climate & Fashion Analyst for Korean weather.
-                            Your task is to analyze the clothing item in the image and provide a detailed analysis in a strict JSON format, without any additional text or explanations.
+                        You are a Precise Climate & Fashion Analyst for Korean weather.
+                        Your task is to analyze the clothing item in the image and provide a detailed analysis in a strict JSON format, without any additional text or explanations.
 
-                            Your JSON response MUST contain ONLY the following keys: "is_wearable", "category", "suitable_temperature", and "color_hex".
+                        Your JSON response MUST contain ONLY the following keys: "is_wearable", "category", "suitable_temperature", and "color_hex".
 
-                            - "is_wearable": (boolean) True if the item is wearable clothing.
-                            - "category": (string) One of '상의', '하의', '아우터', '신발', '가방', '모자', '기타'.
-                            - "color_hex": (string) The dominant color of the item as a hex string.
-                            - "suitable_temperature": (double) This is the most important. Estimate the MAXIMUM comfortable temperature for this item. The value can be negative for winter clothing. You MUST provide a specific, non-round number with one decimal place (e.g., 23.5, 8.0, -2.5). A generic integer like 15.0 is a bad response. Base your judgment on the visual evidence of material, thickness, and design.
-                        """.trimIndent())
+                        - "is_wearable": (boolean) If the image contains a single primary clothing item (or a single person's outfit), this is True. If the image contains multiple people or multiple separate clothing items laid out, this MUST be False.
+                        - "category": (string) If wearable, one of '상의', '하의', '아우터', '신발', '가방', '모자', '기타'.
+                        - "color_hex": (string) If wearable, the dominant color of the item as a hex string.
+                        - "suitable_temperature": (double) If wearable, this is the most important. Estimate the MAXIMUM comfortable temperature for this item. The value can be negative for winter clothing. You MUST provide a specific, non-round number with one decimal place (e.g., 23.5, 8.0, -2.5). A generic integer like 15.0 is a bad response. Base your judgment on the visual evidence of material, thickness, and design.
+                    """.trimIndent())
                 }
                 val response = model.generateContent(inputContent)
                 val analysisResult = Json { ignoreUnknownKeys = true }.decodeFromString<ClothingAnalysis>(response.text!!)
 
-                // [핵심 수정] is_wearable이 false이면 재시도를 즉시 중단합니다.
                 if (!analysisResult.is_wearable) {
                     successfulAnalysis = analysisResult
                     break
                 }
 
-                // is_wearable이 true일 때만 색상 코드를 검사합니다.
                 if (isValidHexCode(analysisResult.color_hex)) {
                     successfulAnalysis = analysisResult
                     break
@@ -160,7 +196,7 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
             } catch (e: Exception) {
                 Log.e("AI_ERROR_WORKER", "Attempt ${attempt + 1} failed", e)
                 if (attempt == maxRetries - 1) {
-                    return null // 최종 실패 시 null 반환
+                    return null
                 }
             }
             attempt++
@@ -168,7 +204,8 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
         return successfulAnalysis
     }
 
-    private fun isValidHexCode(hexCode: String): Boolean {
+    private fun isValidHexCode(hexCode: String?): Boolean {
+        if (hexCode.isNullOrBlank()) return false
         return try {
             Color.parseColor(hexCode)
             true
