@@ -1,5 +1,3 @@
-// app/src/main/java/com/yehyun/whatshouldiweartoday/ui/settings/SettingsFragment.kt
-
 package com.yehyun.whatshouldiweartoday.ui.settings
 
 import android.content.Intent
@@ -15,7 +13,7 @@ import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
-import com.yehyun.whatshouldiweartoday.MainActivity
+import androidx.work.WorkManager
 import com.yehyun.whatshouldiweartoday.data.database.AppDatabase
 import com.yehyun.whatshouldiweartoday.data.preference.SettingsManager
 import com.yehyun.whatshouldiweartoday.databinding.FragmentSettingsBinding
@@ -46,6 +44,10 @@ class SettingsFragment : Fragment(), OnTabReselectedListener {
         setupListeners()
     }
 
+    /**
+     * [추가] 인터페이스의 필수 함수 구현.
+     * 설정 화면에서 하단 탭을 다시 누르면 뒤로 이동합니다.
+     */
     override fun onTabReselected() {
         findNavController().popBackStack()
     }
@@ -63,25 +65,24 @@ class SettingsFragment : Fragment(), OnTabReselectedListener {
 
     private fun resetAllData() {
         lifecycleScope.launch {
-            // 1. 디스크에 저장된 데이터 (DB, 설정값)를 모두 삭제합니다.
+            // 진행 중인 일괄 추가 작업 취소
+            WorkManager.getInstance(requireContext()).cancelUniqueWork("batch_add")
+
             AppDatabase.getDatabase(requireContext()).clearAllData()
             settingsManager.resetToDefaults()
 
             Toast.makeText(requireContext(), "모든 데이터가 초기화되었습니다. 앱을 다시 시작합니다.", Toast.LENGTH_LONG).show()
 
-            // 2. 앱을 재시작하는 Intent를 만듭니다.
             val packageManager = requireContext().packageManager
             val intent = packageManager.getLaunchIntentForPackage(requireContext().packageName)
             val componentName = intent!!.component
             val mainIntent = Intent.makeRestartActivityTask(componentName)
 
-            // 3. 앱을 재시작합니다.
             requireContext().startActivity(mainIntent)
             Runtime.getRuntime().exit(0)
         }
     }
 
-    // ... 나머지 코드는 동일 ...
     private fun setupToolbar() {
         binding.toolbarSettings.setNavigationOnClickListener {
             findNavController().popBackStack()

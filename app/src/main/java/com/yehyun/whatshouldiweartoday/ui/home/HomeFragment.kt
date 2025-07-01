@@ -12,6 +12,7 @@ import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.navigation.fragment.findNavController
+import androidx.navigation.fragment.navArgs
 import com.google.android.gms.location.LocationServices
 import com.google.android.material.tabs.TabLayoutMediator
 import com.yehyun.whatshouldiweartoday.R
@@ -24,6 +25,7 @@ class HomeFragment : Fragment(), OnTabReselectedListener {
     private val binding get() = _binding!!
 
     private val homeViewModel: HomeViewModel by activityViewModels()
+    private val args: HomeFragmentArgs by navArgs() // [추가] 네비게이션 인자 받기
 
     private val locationPermissionRequest = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -52,6 +54,17 @@ class HomeFragment : Fragment(), OnTabReselectedListener {
         setupViewPager()
         checkLocationPermission()
         binding.swipeRefreshLayout.setOnRefreshListener { checkLocationPermission() }
+
+        // [추가] 위젯에서 전달받은 탭 인덱스가 있다면 ViewModel에 전달
+        if (args.targetTab != 0) {
+            homeViewModel.requestTabSwitch(args.targetTab)
+        }
+
+        observeViewModel()
+    }
+
+    // [추가] ViewModel 관찰 로직을 별도 함수로 분리
+    private fun observeViewModel() {
         homeViewModel.error.observe(viewLifecycleOwner) {
             Toast.makeText(requireContext(), it, Toast.LENGTH_LONG).show()
         }
@@ -61,11 +74,18 @@ class HomeFragment : Fragment(), OnTabReselectedListener {
         homeViewModel.isRecommendationScrolledToTop.observe(viewLifecycleOwner) {
             binding.swipeRefreshLayout.isEnabled = it
         }
+
+        homeViewModel.switchToTab.observe(viewLifecycleOwner) { tabIndex ->
+            tabIndex?.let {
+                binding.viewPagerHome.currentItem = it
+                homeViewModel.onTabSwitchHandled()
+            }
+        }
     }
+
 
     override fun onResume() {
         super.onResume()
-        // 설정 화면에서 돌아왔을 때, 날씨 및 추천 데이터를 새로고침
         checkLocationPermission()
     }
 
@@ -79,25 +99,19 @@ class HomeFragment : Fragment(), OnTabReselectedListener {
 
     override fun onTabReselected() {
         val navController = findNavController()
-        // 홈 탭의 시작점(HomeFragment)이 아닌 다른 화면(예: 옷 수정)에 있을 경우
         if (navController.currentDestination?.id != R.id.navigation_home) {
-            // 홈 탭의 시작점으로 돌아갑니다 (뒤로가기).
             navController.popBackStack(R.id.navigation_home, false)
             return
         }
 
-        // 이미 홈 화면일 경우,
-        // '내일' 탭을 보고 있었다면 '오늘' 탭으로 이동
         if (binding.viewPagerHome.currentItem != 0) {
             binding.viewPagerHome.currentItem = 0
         } else {
-            // 이미 '오늘' 탭이라면, 스크롤을 맨 위로
             val currentFragment = childFragmentManager.findFragmentByTag("f0")
             (currentFragment as? RecommendationFragment)?.scrollToTop()
         }
     }
 
-    // ... (나머지 코드는 이전과 동일)
     private fun checkLocationPermission() {
         when {
             ContextCompat.checkSelfPermission(
@@ -121,7 +135,7 @@ class HomeFragment : Fragment(), OnTabReselectedListener {
         fusedLocationClient.lastLocation
             .addOnSuccessListener { location ->
                 if (location != null) {
-                    val apiKey = getString(com.yehyun.whatshouldiweartoday.R.string.openweathermap_api_key)
+                    val apiKey = getString(R.string.openweathermap_api_key)
                     if (apiKey.isBlank() || apiKey == "YOUR_OPENWEATHERMAP_API_KEY") {
                         Toast.makeText(context, "secrets.xml 파일에 날씨 API 키를 입력해주세요.", Toast.LENGTH_LONG).show()
                         return@addOnSuccessListener

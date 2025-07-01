@@ -1,5 +1,3 @@
-// app/src/main/java/com/yehyun/whatshouldiweartoday/MainActivity.kt
-
 package com.yehyun.whatshouldiweartoday
 
 import android.os.Bundle
@@ -10,12 +8,12 @@ import androidx.navigation.NavOptions
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.NavigationUI
 import com.google.android.material.bottomnavigation.BottomNavigationView
-import com.yehyun.whatshouldiweartoday.MainViewModel
 import com.yehyun.whatshouldiweartoday.ui.OnTabReselectedListener
 
 class MainActivity : AppCompatActivity() {
 
     private val mainViewModel: MainViewModel by viewModels()
+    // [삭제] HomeViewModel 참조 삭제
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -27,21 +25,19 @@ class MainActivity : AppCompatActivity() {
 
         setupBottomNav(navView, navController)
 
-        // [수정] MainViewModel의 이벤트를 관찰하여 내비게이션을 리셋합니다.
         mainViewModel.resetAllEvent.observe(this) { shouldReset ->
             if (shouldReset) {
-                // 현재까지 쌓인 모든 화면 이동 기록을 삭제하고,
-                // 홈 화면(startDestination)으로 이동합니다.
                 val navOptions = NavOptions.Builder()
                     .setPopUpTo(navController.graph.startDestinationId, true)
                     .build()
                 navController.navigate(R.id.navigation_home, null, navOptions)
-
-                // 이벤트 처리가 완료되었음을 알립니다.
                 mainViewModel.onResetAllEventHandled()
             }
         }
+        // [삭제] handleIntent 호출 삭제
     }
+
+    // [삭제] onNewIntent, handleIntent 함수 전체 삭제
 
     private fun setupBottomNav(navView: BottomNavigationView, navController: NavController) {
         navView.setOnItemSelectedListener { item ->

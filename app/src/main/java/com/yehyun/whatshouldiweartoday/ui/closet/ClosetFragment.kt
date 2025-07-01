@@ -7,14 +7,21 @@ import android.view.ViewGroup
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.Spinner
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.widget.SearchView
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
+import androidx.work.ExistingWorkPolicy
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.workDataOf
 import com.google.android.material.tabs.TabLayoutMediator
 import com.yehyun.whatshouldiweartoday.R
 import com.yehyun.whatshouldiweartoday.databinding.FragmentClosetBinding
 import com.yehyun.whatshouldiweartoday.ui.OnTabReselectedListener
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 class ClosetFragment : Fragment(), OnTabReselectedListener {
 
@@ -22,6 +29,15 @@ class ClosetFragment : Fragment(), OnTabReselectedListener {
     private val binding get() = _binding!!
 
     private val viewModel: ClosetViewModel by viewModels()
+
+    private val pickMultipleImagesLauncher = registerForActivityResult(
+        ActivityResultContracts.GetMultipleContents()
+    ) { uris ->
+        if (uris.isNotEmpty()) {
+            val uriStrings = uris.map { it.toString() }.toTypedArray()
+            startBatchAddWorker(uriStrings)
+        }
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -33,6 +49,7 @@ class ClosetFragment : Fragment(), OnTabReselectedListener {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
         setupViewPager()
         setupSearch()
         setupSortSpinner()
@@ -40,12 +57,50 @@ class ClosetFragment : Fragment(), OnTabReselectedListener {
         binding.fabAddClothing.setOnClickListener {
             findNavController().navigate(R.id.action_navigation_closet_to_addClothingFragment)
         }
+        binding.fabBatchAdd.setOnClickListener {
+            pickMultipleImagesLauncher.launch("image/*")
+        }
+
+        observeViewModel()
+    }
+
+    private fun observeViewModel() {
+        viewModel.batchAddWorkInfo.observe(viewLifecycleOwner) { workInfos ->
+            val workInfo = workInfos.firstOrNull()
+
+            if (workInfo == null || workInfo.state.isFinished) {
+                // 완료 후 딜레이를 주어 UI가 자연스럽게 복구되도록 함
+                lifecycleScope.launch {
+                    delay(500)
+                    binding.fabBatchAdd.hideProgress()
+                }
+                return@observe
+            }
+
+            val progress = workInfo.progress
+            val current = progress.getInt(BatchAddWorker.PROGRESS_CURRENT, 0)
+            val total = progress.getInt(BatchAddWorker.PROGRESS_TOTAL, 1)
+            val percentage = if (total > 0) (current * 100 / total) else 0
+
+            // 커스텀 버튼에 진행률을 전달하여 그리도록 함
+            binding.fabBatchAdd.showProgress(percentage)
+        }
+    }
+
+    // --- 이하 코드는 기존과 동일 ---
+
+    private fun startBatchAddWorker(uriStrings: Array<String>) {
+        val workRequest = OneTimeWorkRequestBuilder<BatchAddWorker>()
+            .setInputData(workDataOf(
+                BatchAddWorker.KEY_IMAGE_URIS to uriStrings,
+                BatchAddWorker.KEY_API to getString(R.string.gemini_api_key)
+            ))
+            .build()
+        viewModel.workManager.enqueueUniqueWork("batch_add", ExistingWorkPolicy.REPLACE, workRequest)
     }
 
     override fun onResume() {
         super.onResume()
-        // 설정 화면에서 돌아왔을 때, ViewModel의 데이터를 강제로 새로고침하여
-        // 모든 옷 목록이 최신 설정 값(체질 등)으로 다시 그려지도록 합니다.
         viewModel.refreshData()
     }
 

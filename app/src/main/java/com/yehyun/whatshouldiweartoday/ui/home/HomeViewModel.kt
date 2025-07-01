@@ -59,20 +59,24 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     val isRecommendationScrolledToTop: LiveData<Boolean> = _isRecommendationScrolledToTop
     private val settingsManager = SettingsManager(application)
 
+    // [추가] 탭 전환 이벤트를 위한 LiveData
+    private val _switchToTab = MutableLiveData<Int?>()
+    val switchToTab: LiveData<Int?> = _switchToTab
+
     companion object {
         private const val SIGNIFICANT_TEMP_DIFFERENCE = 12.0
-    }
-
-    fun setScrollState(isAtTop: Boolean) {
-        if (_isRecommendationScrolledToTop.value != isAtTop) {
-            _isRecommendationScrolledToTop.value = isAtTop
-        }
     }
 
     init {
         weatherRepository = WeatherRepository(WeatherApiService.create())
         val clothingDao = AppDatabase.getDatabase(application).clothingDao()
         clothingRepository = ClothingRepository(clothingDao)
+    }
+
+    fun setScrollState(isAtTop: Boolean) {
+        if (_isRecommendationScrolledToTop.value != isAtTop) {
+            _isRecommendationScrolledToTop.value = isAtTop
+        }
     }
 
     fun fetchWeatherData(latitude: Double, longitude: Double, apiKey: String) {
@@ -136,11 +140,9 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         val minTempCriteria = (summary.minTemp + summary.minFeelsLike) / 2
         val temperatureTolerance = settingsManager.getTemperatureTolerance()
         val packableOuterTolerance = settingsManager.getPackableOuterTolerance()
-        // [추가] 체질 보정 값 가져오기
         val constitutionAdjustment = settingsManager.getConstitutionAdjustment()
 
         val recommendedClothes = allClothes.filter {
-            // [수정] 보정 값을 적용한 최종 적정 온도 계산
             val adjustedTemp = it.suitableTemperature + constitutionAdjustment
             val itemMinTemp = adjustedTemp - temperatureTolerance
             val itemMaxTemp = adjustedTemp + temperatureTolerance
@@ -159,7 +161,6 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         val packableOuter = if (isTempDifferenceSignificant) {
             allClothes.filter { it.category == "아우터" }
                 .filter {
-                    // [수정] 설정에서 가져온 챙겨갈 아우터 범위 적용
                     val tempRangeForMin = (it.suitableTemperature + packableOuterTolerance)..it.suitableTemperature
                     tempRangeForMin.contains(minTempCriteria)
                 }
@@ -180,5 +181,19 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         }
 
         return RecommendationResult(recommendedTops, recommendedBottoms, recommendedOuters, bestCombination, packableOuter, umbrellaRecommendation, isTempDifferenceSignificant)
+    }
+
+    /**
+     * [추가] 외부(Activity)에서 탭 전환을 요청하는 함수
+     */
+    fun requestTabSwitch(tabIndex: Int) {
+        _switchToTab.value = tabIndex
+    }
+
+    /**
+     * [추가] 탭 전환 이벤트 처리가 완료된 후 호출하여, 중복 실행을 방지하는 함수
+     */
+    fun onTabSwitchHandled() {
+        _switchToTab.value = null
     }
 }
