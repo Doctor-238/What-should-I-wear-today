@@ -73,14 +73,12 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
     }
 
     private fun observeViewModel() {
-        // [수정] DB에서 아이템을 성공적으로 불러오면, 편집 상태를 초기화합니다.
         viewModel.clothingItemFromDb.observe(viewLifecycleOwner) { dbItem ->
             dbItem?.let {
                 viewModel.setInitialState(it)
             }
         }
 
-        // UI는 currentClothingItem을 관찰하여 변경사항을 실시간으로 보여줍니다.
         viewModel.currentClothingItem.observe(viewLifecycleOwner) { editingItem ->
             editingItem?.let { bindDataToViews(it) }
         }
@@ -88,6 +86,17 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
         viewModel.isChanged.observe(viewLifecycleOwner) { hasChanges ->
             buttonSave.isEnabled = hasChanges
             onBackPressedCallback.isEnabled = hasChanges
+        }
+
+        viewModel.isProcessing.observe(viewLifecycleOwner) { isProcessing ->
+            buttonSave.isEnabled = !isProcessing && viewModel.isChanged.value == true
+            buttonDelete.isEnabled = !isProcessing
+            // [오류 수정] isProcessing 상태에 따라 아이콘을 설정하거나 null로 지웁니다.
+            if (isProcessing) {
+                toolbar.navigationIcon = null
+            } else {
+                toolbar.setNavigationIcon(R.drawable.ic_arrow_back)
+            }
         }
 
         viewModel.isSaveComplete.observe(viewLifecycleOwner) { isComplete ->
@@ -193,6 +202,8 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
     }
 
     private fun handleBackButton() {
+        if(viewModel.isProcessing.value == true) return
+
         if (onBackPressedCallback.isEnabled) {
             showSaveChangesDialog()
         } else {

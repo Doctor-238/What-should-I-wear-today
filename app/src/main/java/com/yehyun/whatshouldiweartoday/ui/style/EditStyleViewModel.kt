@@ -1,3 +1,5 @@
+// app/src/main/java/com/yehyun/whatshouldiweartoday/ui/style/EditStyleViewModel.kt
+
 package com.yehyun.whatshouldiweartoday.ui.style
 
 import android.app.Application
@@ -9,7 +11,6 @@ import androidx.lifecycle.viewModelScope
 import com.yehyun.whatshouldiweartoday.data.database.AppDatabase
 import com.yehyun.whatshouldiweartoday.data.database.ClothingItem
 import com.yehyun.whatshouldiweartoday.data.database.SavedStyle
-import com.yehyun.whatshouldiweartoday.data.database.StyleWithItems
 import com.yehyun.whatshouldiweartoday.data.repository.ClothingRepository
 import com.yehyun.whatshouldiweartoday.data.repository.StyleRepository
 import kotlinx.coroutines.launch
@@ -22,6 +23,27 @@ class EditStyleViewModel(application: Application) : AndroidViewModel(applicatio
     private val _clothingCategory = MutableLiveData("전체")
     val filteredClothes = MediatorLiveData<List<ClothingItem>>()
     private val allClothes: LiveData<List<ClothingItem>>
+
+    private var originalStyle: SavedStyle? = null
+    private var initialItemIds: Set<Int>? = null
+
+    val currentStyleName = MutableLiveData<String>()
+    val currentSeason = MutableLiveData<String>()
+    private val _selectedItems = MutableLiveData<List<ClothingItem>>(emptyList())
+    val selectedItems: LiveData<List<ClothingItem>> = _selectedItems
+
+    val toolbarTitle = MutableLiveData<String>()
+    val saveButtonEnabled = MutableLiveData(false)
+    val backPressedCallbackEnabled = MutableLiveData(false)
+
+    private val _isProcessing = MutableLiveData(false)
+    val isProcessing: LiveData<Boolean> = _isProcessing
+
+    private val _isUpdateComplete = MutableLiveData(false)
+    val isUpdateComplete: LiveData<Boolean> = _isUpdateComplete
+
+    private val _isDeleteComplete = MutableLiveData(false)
+    val isDeleteComplete: LiveData<Boolean> = _isDeleteComplete
 
     init {
         val db = AppDatabase.getDatabase(application)
@@ -45,22 +67,121 @@ class EditStyleViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
+    fun loadStyleIfNeeded(styleId: Long) {
+        if (originalStyle != null) return
+
+        viewModelScope.launch {
+            val styleWithItems = styleRepository.getStyleByIdSuspend(styleId)
+            if (styleWithItems != null) {
+                originalStyle = styleWithItems.style
+                initialItemIds = styleWithItems.items.map { it.id }.toSet()
+
+                _selectedItems.postValue(styleWithItems.items)
+                currentStyleName.postValue(styleWithItems.style.styleName)
+                currentSeason.postValue(styleWithItems.style.season)
+                toolbarTitle.postValue("'${styleWithItems.style.styleName}' 수정")
+
+                checkForChanges()
+            }
+        }
+    }
+
     fun setClothingFilter(category: String) {
         if (_clothingCategory.value != category) {
             _clothingCategory.value = category
         }
     }
 
-    fun getStyleWithItems(styleId: Long): LiveData<StyleWithItems> = styleRepository.getStyleById(styleId)
+    fun toggleItemSelection(item: ClothingItem) {
+        val currentList = _selectedItems.value?.toMutableList() ?: mutableListOf()
+        val isSelected = currentList.any { it.id == item.id }
 
-    // [수정] updateStyle 함수를 받아서 처리하도록 변경
-    fun updateStyle(style: SavedStyle, items: List<ClothingItem>) {
-        viewModelScope.launch {
-            styleRepository.updateStyleWithItems(style, items)
+        if (isSelected) {
+            currentList.removeAll { it.id == item.id }
+        } else {
+            if (currentList.size < 10) {
+                currentList.add(item)
+            }
+        }
+        _selectedItems.value = currentList
+        checkForChanges()
+    }
+
+    fun removeSelectedItem(item: ClothingItem) {
+        val currentList = _selectedItems.value?.toMutableList() ?: mutableListOf()
+        currentList.remove(item)
+        _selectedItems.value = currentList
+        checkForChanges()
+    }
+
+    private fun checkForChanges() {
+        if (originalStyle == null || initialItemIds == null) return
+
+        val nameChanged = originalStyle?.styleName != currentStyleName.value
+        val seasonChanged = originalStyle?.season != currentSeason.value
+        val itemsChanged = initialItemIds != _selectedItems.value?.map { it.id }?.toSet()
+
+        val hasChanges = nameChanged || seasonChanged || itemsChanged
+        val isSavable = hasChanges && !currentStyleName.value.isNullOrEmpty() && !currentSeason.value.isNullOrEmpty()
+
+        saveButtonEnabled.value = isSavable
+        backPressedCallbackEnabled.value = hasChanges
+    }
+
+    fun onNameChanged(newName: String) {
+        if (currentStyleName.value != newName) {
+            currentStyleName.value = newName
+            checkForChanges()
         }
     }
 
-    fun deleteStyle(style: SavedStyle) = viewModelScope.launch {
-        styleRepository.deleteStyleAndRefs(style)
+    fun onSeasonChanged(newSeason: String) {
+        if (currentSeason.value != newSeason) {
+            currentSeason.value = newSeason
+            checkForChanges()
+        }
+    }
+
+    fun updateStyle() {
+        if (_isProcessing.value == true) return
+
+        val name = currentStyleName.value
+        val season = currentSeason.value
+        val items = _selectedItems.value
+        val style = originalStyle
+
+        if (name.isNullOrEmpty() || season.isNullOrEmpty() || items == null || style == null) {
+            return
+        }
+
+        _isProcessing.value = true
+        viewModelScope.launch {
+            try {
+                val updatedStyle = style.copy(styleName = name, season = season)
+                styleRepository.updateStyleWithItems(updatedStyle, items)
+                _isUpdateComplete.postValue(true)
+            } finally {
+                _isProcessing.value = false
+            }
+        }
+    }
+
+    fun deleteStyle() {
+        if (_isProcessing.value == true) return
+        _isProcessing.value = true
+        viewModelScope.launch {
+            try {
+                originalStyle?.let {
+                    styleRepository.deleteStyleAndRefs(it)
+                    _isDeleteComplete.postValue(true)
+                }
+            } finally {
+                _isProcessing.value = false
+            }
+        }
+    }
+
+    fun getOriginalStyleName(): String? {
+        return originalStyle?.styleName
     }
 }

@@ -3,6 +3,7 @@
 package com.yehyun.whatshouldiweartoday.ui.closet
 
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.net.Uri
 import android.os.Bundle
@@ -10,6 +11,7 @@ import android.provider.MediaStore
 import android.util.Log
 import android.view.View
 import android.widget.Button
+import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.ProgressBar
 import android.widget.TextView
@@ -17,6 +19,7 @@ import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.navigation.fragment.findNavController
@@ -27,14 +30,17 @@ import com.yehyun.whatshouldiweartoday.R
 import com.yehyun.whatshouldiweartoday.data.preference.SettingsManager
 import com.yehyun.whatshouldiweartoday.ui.OnTabReselectedListener
 import kotlinx.serialization.Serializable
+import android.graphics.Matrix
+import androidx.exifinterface.media.ExifInterface
+import java.io.InputStream
 
 
 @Serializable
 data class ClothingAnalysis(
     val is_wearable: Boolean,
-    val category: String,
-    val suitable_temperature: Double,
-    val color_hex: String
+    val category: String? = null,
+    val suitable_temperature: Double? = null,
+    val color_hex: String? = null
 )
 
 class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabReselectedListener {
@@ -48,6 +54,7 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabResel
     private lateinit var toolbar: MaterialToolbar
     private lateinit var textViewAiResult: TextView
     private lateinit var progressBar: ProgressBar
+    private lateinit var savingOverlay: FrameLayout // 저장 오버레이 추가
     private lateinit var switchRemoveBackground: SwitchMaterial
     private lateinit var viewColorSwatch: View
     private lateinit var textColorLabel: TextView
@@ -59,8 +66,44 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabResel
         ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         uri?.let {
-            val bitmap = MediaStore.Images.Media.getBitmap(requireActivity().contentResolver, it)
-            viewModel.onImageSelected(bitmap, getString(R.string.gemini_api_key))
+            val bitmap = getCorrectlyOrientedBitmap(it)
+            if (bitmap != null) {
+                viewModel.onImageSelected(bitmap, getString(R.string.gemini_api_key))
+            } else {
+                Toast.makeText(requireContext(), "이미지를 불러오는 데 실패했습니다.", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private fun getCorrectlyOrientedBitmap(uri: Uri): Bitmap? {
+        var inputStream: InputStream? = null
+        return try {
+            inputStream = requireContext().contentResolver.openInputStream(uri)
+            if (inputStream == null) return null
+
+            val originalBitmap = BitmapFactory.decodeStream(inputStream)
+            inputStream.close() // 첫 번째 스트림 닫기
+
+            // 회전 정보를 얻기 위해 스트림을 다시 열어야 함
+            inputStream = requireContext().contentResolver.openInputStream(uri)
+            if (inputStream == null) return originalBitmap
+
+            val exifInterface = ExifInterface(inputStream)
+            val orientation = exifInterface.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)
+
+            val matrix = Matrix()
+            when (orientation) {
+                ExifInterface.ORIENTATION_ROTATE_90 -> matrix.postRotate(90f)
+                ExifInterface.ORIENTATION_ROTATE_180 -> matrix.postRotate(180f)
+                ExifInterface.ORIENTATION_ROTATE_270 -> matrix.postRotate(270f)
+            }
+
+            Bitmap.createBitmap(originalBitmap, 0, 0, originalBitmap.width, originalBitmap.height, matrix, true)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        } finally {
+            inputStream?.close()
         }
     }
 
@@ -88,6 +131,7 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabResel
         toolbar = view.findViewById(R.id.toolbar)
         textViewAiResult = view.findViewById(R.id.textView_ai_result)
         progressBar = view.findViewById(R.id.progressBar)
+        savingOverlay = view.findViewById(R.id.saving_overlay) // 오버레이 초기화
         switchRemoveBackground = view.findViewById(R.id.switch_remove_background)
         viewColorSwatch = view.findViewById(R.id.view_color_swatch)
         textColorLabel = view.findViewById(R.id.textView_color_label_add)
@@ -144,6 +188,14 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabResel
 
         viewModel.hasChanges.observe(viewLifecycleOwner) { hasChanges ->
             onBackPressedCallback.isEnabled = hasChanges
+        }
+
+        // [추가] 저장 상태 관찰
+        viewModel.isSaving.observe(viewLifecycleOwner) { isSaving ->
+            savingOverlay.isVisible = isSaving
+            if (viewModel.uiState.value == AddClothingViewModel.UiState.ANALYZED) {
+                buttonSave.isEnabled = !isSaving
+            }
         }
     }
 
