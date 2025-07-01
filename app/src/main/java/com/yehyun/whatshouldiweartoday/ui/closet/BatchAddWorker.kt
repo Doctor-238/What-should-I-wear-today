@@ -65,7 +65,6 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
         val totalItems = uriStrings.size
 
         val generationConfig = GenerationConfig.Builder().apply { responseMimeType = "application/json" }.build()
-        // [수정] AddClothingViewModel과 모델 버전 통일
         val generativeModel = GenerativeModel("gemini-2.5-flash", apiKey, generationConfig)
 
         for (i in uriStrings.indices) {
@@ -87,12 +86,9 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
 
     private suspend fun analyzeAndSave(bitmap: Bitmap, model: GenerativeModel) {
         try {
-            // [수정] AddClothingViewModel과 동일한 재시도 로직 사용
             val analysisResult = analyzeImageWithRetry(bitmap, model)
 
-            // 분석에 성공하고, 입을 수 있는 옷일 경우에만 저장
             if (analysisResult?.is_wearable == true) {
-                // [수정] 배경 제거 로직 복원
                 val processedBitmap = try {
                     val segmenter = Segmentation.getClient(SelfieSegmenterOptions.Builder().setDetectorMode(SelfieSegmenterOptions.SINGLE_IMAGE_MODE).build())
                     val mask = segmenter.process(InputImage.fromBitmap(bitmap, 0)).await()
@@ -108,10 +104,10 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
                 if (originalPath != null) {
                     val finalTemp = if (analysisResult.category == "아우터") analysisResult.suitable_temperature - 3.0 else analysisResult.suitable_temperature
                     val newItem = ClothingItem(
-                        name = analysisResult.category, // [수정] 이름은 카테고리명으로 자동 설정
+                        name = analysisResult.category,
                         imageUri = originalPath,
-                        processedImageUri = processedPath, // [수정] 배경 제거된 이미지 경로 저장
-                        useProcessedImage = false, // [수정] 배경 제거는 기본적으로 꺼둠
+                        processedImageUri = processedPath,
+                        useProcessedImage = false,
                         category = analysisResult.category,
                         suitableTemperature = finalTemp,
                         colorHex = analysisResult.color_hex
@@ -131,7 +127,6 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
         while (attempt < maxRetries) {
             try {
                 val resizedBitmap = resizeBitmap(bitmap)
-                // [수정] AddClothingViewModel과 프롬프트 완전 통일
                 val inputContent = content {
                     image(resizedBitmap)
                     text("""
@@ -149,6 +144,13 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
                 val response = model.generateContent(inputContent)
                 val analysisResult = Json { ignoreUnknownKeys = true }.decodeFromString<ClothingAnalysis>(response.text!!)
 
+                // [핵심 수정] is_wearable이 false이면 재시도를 즉시 중단합니다.
+                if (!analysisResult.is_wearable) {
+                    successfulAnalysis = analysisResult
+                    break
+                }
+
+                // is_wearable이 true일 때만 색상 코드를 검사합니다.
                 if (isValidHexCode(analysisResult.color_hex)) {
                     successfulAnalysis = analysisResult
                     break
