@@ -6,6 +6,7 @@ import android.appwidget.AppWidgetManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.net.Uri
@@ -36,6 +37,7 @@ import java.io.File
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import kotlin.math.abs
+import kotlin.math.min
 
 class WidgetUpdateWorker(private val appContext: Context, workerParams: WorkerParameters) :
     CoroutineWorker(appContext, workerParams) {
@@ -47,18 +49,24 @@ class WidgetUpdateWorker(private val appContext: Context, workerParams: WorkerPa
 
         val appWidgetManager = AppWidgetManager.getInstance(appContext)
         val remoteViews = RemoteViews(appContext.packageName, R.layout.today_reco_widget)
+        var errorMessage: String? = null
+        var resultPair: Pair<DailyWeatherSummary, RecommendationResult>? = null
 
-        // [핵심] try-finally 구문을 사용하여 어떤 경우에도 위젯의 최종 상태가 업데이트되도록 보장
         try {
             showLoadingState(appWidgetId, remoteViews, isToday)
 
             if (ActivityCompat.checkSelfPermission(appContext, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                showPermissionError(appWidgetId, remoteViews, isToday)
+                errorMessage = "위치 권한을 허용해주세요!"
                 return Result.success()
             }
 
             val location = LocationServices.getFusedLocationProviderClient(appContext)
                 .getCurrentLocation(Priority.PRIORITY_BALANCED_POWER_ACCURACY, CancellationTokenSource().token).await()
+
+            if (location == null) {
+                errorMessage = "위치 정보를 가져올 수 없습니다. GPS를 켜주세요."
+                return Result.success()
+            }
 
             val weatherRepo = WeatherRepository(WeatherApiService.create())
             val clothingRepo = ClothingRepository(AppDatabase.getDatabase(appContext).clothingDao())
@@ -67,18 +75,32 @@ class WidgetUpdateWorker(private val appContext: Context, workerParams: WorkerPa
 
             if (weatherResponse.isSuccessful && weatherResponse.body() != null) {
                 val allClothes = clothingRepo.getAllItemsList()
-                val recommendationPair = processAndRecommend(weatherResponse.body()!!, allClothes, isToday)
-                if (recommendationPair != null) {
-                    showSuccessState(appWidgetId, remoteViews, isToday, recommendationPair.first, recommendationPair.second)
-                } else {
-                    showError(appWidgetId, remoteViews, isToday, "날씨 정보가 없습니다.")
+                resultPair = processAndRecommend(weatherResponse.body()!!, allClothes, isToday)
+                if (resultPair == null) {
+                    errorMessage = "날씨 정보가 없습니다."
                 }
             } else {
-                showError(appWidgetId, remoteViews, isToday, "날씨 정보 업데이트 실패")
+                errorMessage = "날씨 정보 업데이트 실패"
             }
         } catch (e: Exception) {
             Log.e("WidgetUpdateWorker", "Error updating widget", e)
-            showError(appWidgetId, remoteViews, isToday, "위치 설정을 켜주세요!")
+            errorMessage = "업데이트 중 오류 발생"
+        } finally {
+            when {
+                errorMessage != null -> {
+                    if (errorMessage.contains("권한")) {
+                        showPermissionError(appWidgetId, remoteViews, isToday)
+                    } else {
+                        showError(appWidgetId, remoteViews, isToday, errorMessage)
+                    }
+                }
+                resultPair != null -> {
+                    showSuccessState(appWidgetId, remoteViews, isToday, resultPair!!.first, resultPair!!.second)
+                }
+                else -> {
+                    showError(appWidgetId, remoteViews, isToday, "알 수 없는 오류")
+                }
+            }
         }
         return Result.success()
     }
@@ -121,7 +143,7 @@ class WidgetUpdateWorker(private val appContext: Context, workerParams: WorkerPa
     }
 
     private fun finalizeWidgetUpdate(appWidgetId: Int, remoteViews: RemoteViews, isToday: Boolean) {
-        setupClickIntents(appContext, appWidgetId, remoteViews, isToday)
+        TodayRecoWidgetProvider.setupClickIntents(appContext, appWidgetId, remoteViews, isToday)
         AppWidgetManager.getInstance(appContext).updateAppWidget(appWidgetId, remoteViews)
     }
 
@@ -137,46 +159,6 @@ class WidgetUpdateWorker(private val appContext: Context, workerParams: WorkerPa
         }
         val pendingIntent = PendingIntent.getActivity(appContext, appWidgetId, intent, pendingIntentFlag)
         remoteViews.setOnClickPendingIntent(R.id.widget_root, pendingIntent)
-    }
-
-    private fun setupClickIntents(context: Context, appWidgetId: Int, remoteViews: RemoteViews, isToday: Boolean) {
-        // [핵심 수정] 최신 안드로이드 버전 호환성 및 안정성을 위해 플래그 명시
-        val pendingIntentFlag = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        } else {
-            PendingIntent.FLAG_UPDATE_CURRENT
-        }
-
-        val primaryColor = Color.parseColor("#0EB4FC"); val secondaryColor = Color.DKGRAY
-        remoteViews.setTextColor(R.id.tv_widget_today, if (isToday) primaryColor else secondaryColor)
-        remoteViews.setTextColor(R.id.tv_widget_tomorrow, if (isToday) secondaryColor else primaryColor)
-
-        val args = Bundle().apply { putInt("target_tab", if (isToday) 0 else 1) }
-        val mainPendingIntent = NavDeepLinkBuilder(context)
-            .setComponentName(MainActivity::class.java).setGraph(R.navigation.mobile_navigation)
-            .setDestination(R.id.navigation_home).setArguments(args).createPendingIntent()
-        remoteViews.setOnClickPendingIntent(R.id.widget_root, mainPendingIntent)
-
-        val todayIntent = Intent(context, TodayRecoWidgetProvider::class.java).apply {
-            action = "WIDGET_TAB_CLICK"; putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId); putExtra("IS_TODAY", true)
-            data = Uri.withAppendedPath(Uri.parse("mywidget://widget/id/"), "$appWidgetId/today")
-        }
-        val todayPendingIntent = PendingIntent.getBroadcast(context, appWidgetId * 10 + 1, todayIntent, pendingIntentFlag)
-        remoteViews.setOnClickPendingIntent(R.id.tv_widget_today, todayPendingIntent)
-
-        val tomorrowIntent = Intent(context, TodayRecoWidgetProvider::class.java).apply {
-            action = "WIDGET_TAB_CLICK"; putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId); putExtra("IS_TODAY", false)
-            data = Uri.withAppendedPath(Uri.parse("mywidget://widget/id/"), "$appWidgetId/tomorrow")
-        }
-        val tomorrowPendingIntent = PendingIntent.getBroadcast(context, appWidgetId * 10 + 2, tomorrowIntent, pendingIntentFlag)
-        remoteViews.setOnClickPendingIntent(R.id.tv_widget_tomorrow, tomorrowPendingIntent)
-
-        val refreshIntent = Intent(context, TodayRecoWidgetProvider::class.java).apply {
-            action = "WIDGET_REFRESH_CLICK"; putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId); putExtra("IS_TODAY", isToday)
-            data = Uri.withAppendedPath(Uri.parse("mywidget://widget/id/"), "$appWidgetId/refresh")
-        }
-        val refreshPendingIntent = PendingIntent.getBroadcast(context, appWidgetId * 10 + 3, refreshIntent, pendingIntentFlag)
-        remoteViews.setOnClickPendingIntent(R.id.iv_widget_refresh, refreshPendingIntent)
     }
 
     private fun processAndRecommend(weatherResponse: WeatherResponse, allClothes: List<ClothingItem>, isToday: Boolean): Pair<DailyWeatherSummary, RecommendationResult>? {
@@ -224,6 +206,46 @@ class WidgetUpdateWorker(private val appContext: Context, workerParams: WorkerPa
         return RecommendationResult(recommendedTops, recommendedBottoms, recommendedOuters, bestCombination, packableOuter, umbrellaRecommendation, isTempDifferenceSignificant)
     }
 
+    // ▼▼▼▼▼ 핵심 수정 부분 ▼▼▼▼▼
+    /**
+     * 파일 경로로부터 이미지를 디코딩하되, 위젯 메모리 제한을 초과하지 않도록
+     * 지정된 크기(256x256)로 리사이즈하여 비트맵을 생성합니다.
+     */
+    private fun getResizedBitmap(path: String, reqWidth: Int = 256, reqHeight: Int = 256): Bitmap? {
+        return try {
+            val options = BitmapFactory.Options().apply {
+                inJustDecodeBounds = true
+            }
+            BitmapFactory.decodeFile(path, options)
+
+            options.inSampleSize = calculateInSampleSize(options, reqWidth, reqHeight)
+            options.inJustDecodeBounds = false
+            BitmapFactory.decodeFile(path, options)
+        } catch (e: Exception) {
+            Log.e("WidgetUpdateWorker", "Failed to create resized bitmap", e)
+            null
+        }
+    }
+
+    /**
+     * 원본 이미지 크기와 요청된 크기를 비교하여 적절한 샘플링 사이즈를 계산합니다.
+     * 이는 메모리 사용량을 효율적으로 줄이기 위한 표준적인 방법입니다.
+     */
+    private fun calculateInSampleSize(options: BitmapFactory.Options, reqWidth: Int, reqHeight: Int): Int {
+        val (height: Int, width: Int) = options.run { outHeight to outWidth }
+        var inSampleSize = 1
+
+        if (height > reqHeight || width > reqWidth) {
+            val halfHeight: Int = height / 2
+            val halfWidth: Int = width / 2
+
+            while (halfHeight / inSampleSize >= reqHeight && halfWidth / inSampleSize >= reqWidth) {
+                inSampleSize *= 2
+            }
+        }
+        return inSampleSize
+    }
+
     private fun updateWidgetImages(remoteViews: RemoteViews, items: List<ClothingItem>) {
         val imageViews = listOf(R.id.iv_widget_item1, R.id.iv_widget_item2, R.id.iv_widget_item3)
         imageViews.forEach { viewId -> remoteViews.setViewVisibility(viewId, View.GONE) }
@@ -233,9 +255,12 @@ class WidgetUpdateWorker(private val appContext: Context, workerParams: WorkerPa
                 try {
                     val file = File(imagePath)
                     if (file.exists()) {
-                        val bitmap = BitmapFactory.decodeFile(file.absolutePath)
-                        remoteViews.setImageViewBitmap(imageViews[index], bitmap)
-                        remoteViews.setViewVisibility(imageViews[index], View.VISIBLE)
+                        // 원본 비트맵을 그대로 사용하는 대신, 크기를 줄인 비트맵을 사용합니다.
+                        val bitmap = getResizedBitmap(file.absolutePath)
+                        if (bitmap != null) {
+                            remoteViews.setImageViewBitmap(imageViews[index], bitmap)
+                            remoteViews.setViewVisibility(imageViews[index], View.VISIBLE)
+                        }
                     }
                 } catch (e: Exception) {
                     Log.e("WidgetUpdateWorker", "Image loading failed for widget", e)
@@ -243,4 +268,5 @@ class WidgetUpdateWorker(private val appContext: Context, workerParams: WorkerPa
             }
         }
     }
+    // ▲▲▲▲▲ 핵심 수정 부분 ▲▲▲▲▲
 }

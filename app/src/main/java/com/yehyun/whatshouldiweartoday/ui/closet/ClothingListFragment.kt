@@ -41,7 +41,6 @@ class ClothingListFragment : Fragment() {
     }
 
     private fun setupRecyclerView() {
-        // [오류 수정] ClothingAdapter를 생성할 때, 생성자에는 클릭 리스너만 전달합니다.
         adapter = ClothingAdapter { clickedItem ->
             val action = ClosetFragmentDirections.actionNavigationClosetToEditClothingFragment(clickedItem.id)
             requireParentFragment().findNavController().navigate(action)
@@ -57,7 +56,16 @@ class ClothingListFragment : Fragment() {
             } else {
                 items.filter { it.category == category }
             }
-            adapter.submitList(filteredList)
+            // ▼▼▼▼▼ 핵심 수정 부분 ▼▼▼▼▼
+            // 어댑터에 새 리스트를 전달하고, UI 업데이트가 완료된 후 실행될 콜백을 추가합니다.
+            // 이 콜백에서 리스트의 스크롤을 맨 위(0번 위치)로 이동시킵니다.
+            // 이렇게 하면 정렬 순서를 바꿀 때마다 항상 스크롤이 최상단으로 이동합니다.
+            adapter.submitList(filteredList) {
+                if (filteredList.isNotEmpty()) {
+                    binding.recyclerViewClothingList.scrollToPosition(0)
+                }
+            }
+            // ▲▲▲▲▲ 핵심 수정 부분 ▲▲▲▲▲
         }
     }
 

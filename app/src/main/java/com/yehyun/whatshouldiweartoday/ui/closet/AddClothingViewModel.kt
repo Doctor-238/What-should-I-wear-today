@@ -32,9 +32,6 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
     private val _isAiAnalyzing = MutableLiveData(false)
     val isAiAnalyzing: LiveData<Boolean> = _isAiAnalyzing
 
-    private val _isImageProcessing = MutableLiveData(false)
-    val isImageProcessing: LiveData<Boolean> = _isImageProcessing
-
     private val _isSaving = MutableLiveData(false)
     val isSaving: LiveData<Boolean> = _isSaving
 
@@ -69,56 +66,61 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
     private var generativeModel: GenerativeModel? = null
 
     private var analysisResult: ClothingAnalysis? = null
-    private var imageProcessingJob: Deferred<Pair<String, String?>>? = null
+    private var processedImageJob: Deferred<Bitmap?>? = null
+    private var originalImageJob: Deferred<Bitmap>? = null
+    private var isImageProcessing = false
 
     fun onImageSelected(bitmap: Bitmap, apiKey: String) {
         resetAllState()
         hasChanges.value = true
         _originalBitmap.value = bitmap
         generativeModel = AiModelProvider.getModel(getApplication(), apiKey)
+        isImageProcessing = true
 
         _isAiAnalyzing.value = true
-        _isImageProcessing.value = true
 
         viewModelScope.launch {
-            imageProcessingJob = async(Dispatchers.IO) {
-                val originalPath = saveBitmapToInternalStorage(bitmap, "original_", getApplication<Application>().filesDir)
-                    ?: throw IOException("원본 이미지 저장 실패")
-                val processedBitmap = try {
-                    val segmenter = Segmentation.getClient(SelfieSegmenterOptions.Builder().setDetectorMode(SelfieSegmenterOptions.SINGLE_IMAGE_MODE).build())
-                    val mask = segmenter.process(InputImage.fromBitmap(bitmap, 0)).await()
-                    createBitmapWithMask(bitmap, mask)
-                } catch (e: Exception) { null }
-
-                withContext(Dispatchers.Main) {
-                    _processedBitmap.value = processedBitmap ?: bitmap
-                    _segmentationSucceeded.value = (processedBitmap != null)
-                }
-                val processedPath = processedBitmap?.let { savePngToInternalStorage(it, "processed_", getApplication<Application>().filesDir) }
-                _isImageProcessing.postValue(false)
-                Pair(originalPath, processedPath)
-            }
-
             val analysisJob = async(Dispatchers.IO) { analyzeImageWithRetry(bitmap) }
-            analysisResult = analysisJob.await()
+            processedImageJob = async(Dispatchers.IO) { createProcessedBitmap(bitmap) }
+            originalImageJob = async(Dispatchers.Default) { bitmap }
 
-            withContext(Dispatchers.Main) {
-                _isAiAnalyzing.value = false
-                if (analysisResult == null || analysisResult?.is_wearable == false) {
+            // AI 분석을 먼저 기다려서 UI에 반영 (이때 스위치 가시성도 결정됨)
+            analysisResult = analysisJob.await()
+            _isAiAnalyzing.postValue(false) // AI 분석 완료
+
+            if (analysisResult == null || analysisResult?.is_wearable == false) {
+                withContext(Dispatchers.Main) {
                     _errorMessage.value = "올바른 사진을 입력해주세요."
                     resetAllState()
-                } else {
-                    processAnalysisResult(analysisResult!!)
+                }
+            } else {
+                withContext(Dispatchers.Main) { processAnalysisResult(analysisResult!!) }
+                // 배경 제거 이미지 생성을 기다리고 결과를 반영
+                val processed = processedImageJob?.await()
+                withContext(Dispatchers.Main) {
+                    _processedBitmap.value = processed
+                    _segmentationSucceeded.value = (processed != null)
+                    isImageProcessing = false // 모든 이미지 생성 작업 완료
                 }
             }
         }
     }
 
+    private suspend fun createProcessedBitmap(bitmap: Bitmap): Bitmap? {
+        return try {
+            val segmenter = Segmentation.getClient(SelfieSegmenterOptions.Builder().setDetectorMode(SelfieSegmenterOptions.SINGLE_IMAGE_MODE).build())
+            val mask = segmenter.process(InputImage.fromBitmap(bitmap, 0)).await()
+            if (mask != null) createBitmapWithMask(bitmap, mask) else null
+        } catch (e: Exception) {
+            null
+        }
+    }
+
     fun onUseProcessedImageToggled(isChecked: Boolean) {
         viewModelScope.launch {
-            if (_isImageProcessing.value == true) {
+            if (_processedBitmap.value == null && isImageProcessing) {
                 _isSaving.value = true
-                imageProcessingJob?.await()
+                _processedBitmap.value = processedImageJob?.await()
                 _isSaving.value = false
             }
             _useProcessedImage.value = isChecked
@@ -128,22 +130,37 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
 
     fun saveClothingItem(name: String) {
         viewModelScope.launch {
-            if (_isAiAnalyzing.value == true || imageProcessingJob == null) {
-                _errorMessage.value = "아직 분석이 진행중입니다."
-                return@launch
-            }
             if (analysisResult == null) {
                 _errorMessage.value = "AI 분석 결과가 없습니다."
                 return@launch
             }
             _isSaving.value = true
             try {
-                val (originalPath, processedPath) = imageProcessingJob!!.await()
+                // 원본과 처리된 비트맵 생성을 기다림
+                val original = originalImageJob?.await()
+                val processed = processedImageJob?.await()
+
+                if (original == null) {
+                    throw IOException("원본 이미지가 없습니다.")
+                }
+
+                // 파일 저장 작업을 병렬로 실행하고 기다림
+                val originalPathJob = async(Dispatchers.IO) { saveBitmapToInternalStorage(original, "original_", getApplication<Application>().filesDir) }
+                val processedPathJob = async(Dispatchers.IO) { processed?.let { savePngToInternalStorage(it, "processed_", getApplication<Application>().filesDir) } }
+
+                val originalPath = originalPathJob.await()
+                val processedPath = processedPathJob.await()
+
+                if (originalPath == null) {
+                    throw IOException("원본 이미지 저장 실패")
+                }
+
                 val finalTemperature = if (analysisResult!!.category == "아우터") {
                     analysisResult!!.suitable_temperature!! - 3.0
                 } else {
                     analysisResult!!.suitable_temperature!!
                 }
+
                 val newClothingItem = ClothingItem(
                     name = name,
                     imageUri = originalPath,
@@ -196,7 +213,6 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
     }
 
     fun processAnalysisResult(result: ClothingAnalysis) {
-        clothingName.value = result.category ?: "새 옷"
         val category = result.category ?: "기타"
         val temp = result.suitable_temperature
         if (category in listOf("상의", "하의", "아우터") && temp != null) {
@@ -238,13 +254,16 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
     fun clearErrorMessage() { _errorMessage.value = null }
 
     fun resetAllState() {
-        imageProcessingJob?.cancel()
+        processedImageJob?.cancel()
+        originalImageJob?.cancel()
+        isImageProcessing = false
+
         _originalBitmap.value = null
         _processedBitmap.value = null
         analysisResult = null
-        imageProcessingJob = null
+        processedImageJob = null
+        originalImageJob = null
         _isAiAnalyzing.value = false
-        _isImageProcessing.value = false
         _isSaving.value = false
         _isSaveCompleted.value = false
         hasChanges.value = false

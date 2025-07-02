@@ -1,5 +1,3 @@
-// app/src/main/java/com/yehyun/whatshouldiweartoday/ui/style/EditStyleFragment.kt
-
 package com.yehyun.whatshouldiweartoday.ui.style
 
 import android.os.Bundle
@@ -28,6 +26,7 @@ import com.yehyun.whatshouldiweartoday.ui.home.RecommendationAdapter
 
 class EditStyleFragment : Fragment(R.layout.fragment_edit_style), OnTabReselectedListener {
 
+    // [핵심] ViewModel의 범위를 이 프래그먼트로 한정합니다.
     private val viewModel: EditStyleViewModel by viewModels()
     private val args: EditStyleFragmentArgs by navArgs()
     private lateinit var tabLayout: TabLayout
@@ -57,7 +56,6 @@ class EditStyleFragment : Fragment(R.layout.fragment_edit_style), OnTabReselecte
         viewModel.loadStyleIfNeeded(args.styleId)
     }
 
-    // [핵심 추가] 화면이 다시 나타날 때마다 데이터를 새로고침합니다.
     override fun onResume() {
         super.onResume()
         viewModel.refreshCurrentStyle()

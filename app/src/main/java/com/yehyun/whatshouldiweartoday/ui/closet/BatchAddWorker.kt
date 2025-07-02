@@ -1,22 +1,25 @@
 package com.yehyun.whatshouldiweartoday.ui.closet
 
-import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.Context
 import android.content.pm.ServiceInfo
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Color
-import android.net.Uri
+import android.graphics.Matrix
 import android.os.Build
 import android.util.Log
 import androidx.core.app.NotificationCompat
+import androidx.exifinterface.media.ExifInterface
+import androidx.navigation.NavDeepLinkBuilder
 import androidx.work.*
 import com.google.ai.client.generativeai.GenerativeModel
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.segmentation.Segmentation
 import com.google.mlkit.vision.segmentation.SegmentationMask
 import com.google.mlkit.vision.segmentation.selfie.SelfieSegmenterOptions
+import com.yehyun.whatshouldiweartoday.MainActivity
 import com.yehyun.whatshouldiweartoday.R
 import com.yehyun.whatshouldiweartoday.ai.AiModelProvider
 import com.yehyun.whatshouldiweartoday.data.database.AppDatabase
@@ -28,11 +31,9 @@ import kotlinx.serialization.json.Json
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
+import java.io.InputStream
 import java.text.SimpleDateFormat
 import java.util.*
-import android.graphics.Matrix
-import androidx.exifinterface.media.ExifInterface
-import java.io.InputStream
 
 class BatchAddWorker(private val context: Context, workerParams: WorkerParameters) : CoroutineWorker(context, workerParams) {
 
@@ -40,8 +41,16 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
     private val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
     private val settingsManager = SettingsManager(context)
 
+    private val closetTabPendingIntent: PendingIntent by lazy {
+        NavDeepLinkBuilder(applicationContext)
+            .setComponentName(MainActivity::class.java)
+            .setGraph(R.navigation.mobile_navigation)
+            .setDestination(R.id.navigation_closet)
+            .createPendingIntent()
+    }
+
     companion object {
-        const val KEY_IMAGE_URIS = "image_uris"
+        const val KEY_IMAGE_PATHS = "image_paths"
         const val KEY_API = "api_key"
         const val PROGRESS_CURRENT = "current"
         const val PROGRESS_TOTAL = "total"
@@ -50,13 +59,14 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
     }
 
     override suspend fun getForegroundInfo(): ForegroundInfo {
-        createNotificationChannel()
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setContentTitle("새 옷 추가 중")
             .setContentText("AI가 옷을 분석하고 있습니다...")
             .setSmallIcon(R.mipmap.ic_launcher)
             .setOngoing(true)
             .setProgress(100, 0, true)
+            .setContentIntent(closetTabPendingIntent)
+            .setAutoCancel(true)
             .build()
 
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -71,25 +81,24 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
     }
 
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
-        setForeground(getForegroundInfo())
-
-        val uriStrings = inputData.getStringArray(KEY_IMAGE_URIS) ?: return@withContext Result.failure()
+        val imagePaths = inputData.getStringArray(KEY_IMAGE_PATHS) ?: return@withContext Result.failure()
         val apiKey = inputData.getString(KEY_API) ?: return@withContext Result.failure()
-        val totalItems = uriStrings.size
 
         try {
-            // [핵심 수정] AiModelProvider를 통해 모델 인스턴스를 가져옴
+            setForeground(getForegroundInfo())
+            val totalItems = imagePaths.size
+
             val generativeModel = AiModelProvider.getModel(context, apiKey)
 
-            for (i in uriStrings.indices) {
+            for (i in imagePaths.indices) {
                 try {
-                    val uri = Uri.parse(uriStrings[i])
-                    val bitmap = getCorrectlyOrientedBitmap(uri)
+                    val path = imagePaths[i]
+                    val bitmap = getCorrectlyOrientedBitmap(path)
                     if (bitmap != null) {
                         analyzeAndSave(bitmap, generativeModel)
                     }
                 } catch (e: Exception) {
-                    Log.e("BatchAddWorker", "Failed to process image URI: ${uriStrings[i]}", e)
+                    Log.e("BatchAddWorker", "Failed to process image URI: ${imagePaths[i]}", e)
                 }
                 val progressData = workDataOf(PROGRESS_CURRENT to i + 1, PROGRESS_TOTAL to totalItems)
                 setProgress(progressData)
@@ -100,24 +109,30 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
             Log.e("BatchAddWorker", "Major failure in doWork", e)
             return@withContext Result.failure()
         } finally {
+            // ▼▼▼▼▼ 핵심 수정 부분 ▼▼▼▼▼
+            // 작업이 성공하든 실패하든, 사용했던 임시 캐시 파일들을 모두 삭제하여
+            // 불필요한 공간을 차지하지 않도록 합니다.
+            imagePaths.forEach { path ->
+                try {
+                    val file = File(path)
+                    if (file.exists()) {
+                        file.delete()
+                    }
+                } catch (e: Exception) {
+                    // 파일 삭제 실패는 치명적인 오류가 아니므로 로그만 남깁니다.
+                    Log.e("BatchAddWorker", "Failed to delete cache file: $path", e)
+                }
+            }
+            // 진행률 알림을 최종적으로 제거합니다.
             notificationManager.cancel(NOTIFICATION_ID)
+            // ▲▲▲▲▲ 핵심 수정 부분 ▲▲▲▲▲
         }
     }
 
-    // ... (이하 BatchAddWorker의 다른 함수들은 변경 없음)
-    private fun getCorrectlyOrientedBitmap(uri: Uri): Bitmap? {
-        var inputStream: InputStream? = null
+    private fun getCorrectlyOrientedBitmap(path: String): Bitmap? {
         return try {
-            inputStream = context.contentResolver.openInputStream(uri)
-            if (inputStream == null) return null
-
-            val originalBitmap = BitmapFactory.decodeStream(inputStream)
-            inputStream.close()
-
-            inputStream = context.contentResolver.openInputStream(uri)
-            if (inputStream == null) return originalBitmap
-
-            val exifInterface = ExifInterface(inputStream)
+            val originalBitmap = BitmapFactory.decodeFile(path)
+            val exifInterface = ExifInterface(path)
             val orientation = exifInterface.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)
 
             val matrix = Matrix()
@@ -131,31 +146,29 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
         } catch (e: Exception) {
             e.printStackTrace()
             null
-        } finally {
-            inputStream?.close()
         }
     }
 
     private suspend fun analyzeAndSave(bitmap: Bitmap, model: GenerativeModel) = coroutineScope {
-        val analysisResultDeferred = async { analyzeImageWithRetry(bitmap, model) }
-
-        val segmentationMaskDeferred = async {
+        val analysisJob = async { analyzeImageWithRetry(bitmap, model) }
+        val processedImageJob = async {
             try {
                 val segmenter = Segmentation.getClient(SelfieSegmenterOptions.Builder().setDetectorMode(SelfieSegmenterOptions.SINGLE_IMAGE_MODE).build())
-                segmenter.process(InputImage.fromBitmap(bitmap, 0)).await()
+                val mask = segmenter.process(InputImage.fromBitmap(bitmap, 0)).await()
+                if (mask != null) createBitmapWithMask(bitmap, mask) else null
             } catch (e: Exception) {
                 Log.e("BatchAddWorker", "Segmentation failed.", e)
                 null
             }
         }
+        val originalImageJob = async { bitmap }
 
-        val analysisResult = analysisResultDeferred.await()
-        val segmentationMask = segmentationMaskDeferred.await()
+        val analysisResult = analysisJob.await()
+        val processedBitmap = processedImageJob.await()
+        val originalBitmap = originalImageJob.await()
 
         if (analysisResult?.is_wearable == true && analysisResult.category != null && analysisResult.suitable_temperature != null && analysisResult.color_hex != null) {
-            val processedBitmap = segmentationMask?.let { createBitmapWithMask(bitmap, it) }
-
-            val originalPath = saveBitmapToInternalStorage(bitmap, "original_")
+            val originalPath = saveBitmapToInternalStorage(originalBitmap, "original_")
             val processedPath = processedBitmap?.let { savePngToInternalStorage(it, "processed_") }
 
             if (originalPath != null) {
@@ -173,7 +186,6 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
             }
         }
     }
-
 
     private suspend fun analyzeImageWithRetry(bitmap: Bitmap, model: GenerativeModel, maxRetries: Int = 2): ClothingAnalysis? {
         var attempt = 0
@@ -288,18 +300,6 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
         }
     }
 
-    private fun createNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val name = "옷 일괄 추가"
-            val descriptionText = "여러 개의 옷을 백그라운드에서 추가할 때 사용됩니다."
-            val importance = NotificationManager.IMPORTANCE_LOW
-            val channel = NotificationChannel(CHANNEL_ID, name, importance).apply {
-                description = descriptionText
-            }
-            notificationManager.createNotificationChannel(channel)
-        }
-    }
-
     private fun updateNotification(current: Int, total: Int) {
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setContentTitle("새 옷 추가 중")
@@ -307,6 +307,8 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
             .setSmallIcon(R.mipmap.ic_launcher)
             .setOngoing(true)
             .setProgress(total, current, false)
+            .setContentIntent(closetTabPendingIntent)
+            .setAutoCancel(true)
             .build()
         notificationManager.notify(NOTIFICATION_ID, notification)
     }

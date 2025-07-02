@@ -12,6 +12,9 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
+import androidx.work.workDataOf
 
 class WidgetConfigurationActivity : AppCompatActivity() {
 
@@ -19,21 +22,15 @@ class WidgetConfigurationActivity : AppCompatActivity() {
     private var isPermissionRequestInProgress = false
     private var dialog: AlertDialog? = null
 
-    // [핵심] 홈 화면과 완전히 동일한 권한 요청 런처
     private val locationPermissionRequest = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted: Boolean ->
-        isPermissionRequestInProgress = false // 요청 완료
         if (isGranted) {
-            // 권한이 허용되면 위젯 설정을 완료합니다.
             configureWidget()
         } else {
-            // 권한이 거부된 경우
             if (!shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_COARSE_LOCATION)) {
-                // '다시 묻지 않음'을 선택하며 영구 거부했다면 설정 안내창을 띄웁니다.
                 showGoToSettingsDialog()
             } else {
-                // 한 번만 거부했다면, 위젯 추가를 취소합니다.
                 finishWidgetSetup(isSuccess = false)
             }
         }
@@ -54,26 +51,29 @@ class WidgetConfigurationActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        // 화면이 다시 나타날 때마다 권한 상태를 확인합니다.
-        checkPermissions()
+        if (!isPermissionRequestInProgress) {
+            checkPermissions()
+        }
+    }
+
+    // [핵심] 액티비티가 파괴될 때 세션을 리셋합니다.
+    override fun onDestroy() {
+        super.onDestroy()
+        dialog?.dismiss()
+        isPermissionRequestInProgress = false
     }
 
     private fun checkPermissions() {
-        // 중복 요청 및 다이얼로그 중복 표시 방지
         if (isPermissionRequestInProgress || dialog?.isShowing == true) return
 
-        // '앱 사용 중' 권한이 있는지 확인합니다.
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-            // 권한이 있다면 위젯 설정을 완료합니다.
             configureWidget()
         } else {
-            // 권한이 없다면, 시스템에 권한을 요청합니다.
             isPermissionRequestInProgress = true
             locationPermissionRequest.launch(Manifest.permission.ACCESS_COARSE_LOCATION)
         }
     }
 
-    // [핵심] 홈 화면과 완전히 동일한 '예/아니오' 안내창
     private fun showGoToSettingsDialog() {
         if (isFinishing || isDestroyed || dialog?.isShowing == true) return
 
@@ -101,11 +101,13 @@ class WidgetConfigurationActivity : AppCompatActivity() {
     }
 
     private fun configureWidget() {
-        val workerIntent = Intent(this, TodayRecoWidgetProvider::class.java).apply {
-            action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
-            putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, intArrayOf(appWidgetId))
-        }
-        sendBroadcast(workerIntent)
+        val workRequest = OneTimeWorkRequestBuilder<WidgetUpdateWorker>()
+            .setInputData(workDataOf(
+                AppWidgetManager.EXTRA_APPWIDGET_ID to appWidgetId,
+                "IS_TODAY" to true
+            ))
+            .build()
+        WorkManager.getInstance(this).enqueue(workRequest)
         finishWidgetSetup(isSuccess = true)
     }
 

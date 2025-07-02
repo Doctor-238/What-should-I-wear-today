@@ -48,6 +48,12 @@ class StyleFragment : Fragment(), OnTabReselectedListener {
         val adapter = StyleViewPagerAdapter(this, seasons)
         binding.viewPagerStyle.adapter = adapter
 
+        // ▼▼▼▼▼ 핵심 수정 부분 ▼▼▼▼▼
+        // isUserInputEnabled를 false로 설정하여 사용자가 직접 스와이프하는 것을 막습니다.
+        // 이제 계절 탭은 상단의 TabLayout을 통해서만 전환할 수 있습니다.
+        binding.viewPagerStyle.isUserInputEnabled = false
+        // ▲▲▲▲▲ 핵심 수정 부분 ▲▲▲▲▲
+
         TabLayoutMediator(binding.tabLayoutStyleSeason, binding.viewPagerStyle) { tab, position ->
             tab.text = seasons[position]
         }.attach()

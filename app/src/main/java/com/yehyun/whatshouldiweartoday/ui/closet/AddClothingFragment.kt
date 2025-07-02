@@ -130,6 +130,8 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabResel
         viewModel.isAiAnalyzing.observe(viewLifecycleOwner) { isAnalyzing ->
             progressBar.isVisible = isAnalyzing
             buttonSave.isEnabled = !isAnalyzing && viewModel.originalBitmap.value != null && !editTextName.text.isNullOrBlank()
+
+            // [수정] AI 분석이 끝나고, 세그멘테이션(배경제거)이 성공했을 때만 스위치를 보여줌
             if (isAnalyzing) {
                 switchRemoveBackground.isVisible = false
             } else {
@@ -157,6 +159,7 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabResel
         }
 
         viewModel.segmentationSucceeded.observe(viewLifecycleOwner) { succeeded ->
+            // [수정] AI 분석 상태와 함께 고려하여 스위치 가시성 결정
             if (viewModel.isAiAnalyzing.value == false) {
                 switchRemoveBackground.isVisible = succeeded
             }

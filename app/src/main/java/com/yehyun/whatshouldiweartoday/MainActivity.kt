@@ -10,9 +10,10 @@ import androidx.appcompat.app.AppCompatDelegate
 import androidx.navigation.NavController
 import androidx.navigation.NavOptions
 import androidx.navigation.fragment.NavHostFragment
-import androidx.navigation.ui.NavigationUI
+import androidx.navigation.ui.setupWithNavController
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.yehyun.whatshouldiweartoday.ui.OnTabReselectedListener
+import androidx.navigation.ui.NavigationUI
 
 class MainActivity : AppCompatActivity() {
 
@@ -27,7 +28,48 @@ class MainActivity : AppCompatActivity() {
         val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_host_fragment_activity_main) as NavHostFragment
         val navController = navHostFragment.navController
 
-        setupBottomNav(navView, navController)
+        // ▼▼▼▼▼ 핵심 수정 부분 ▼▼▼▼▼
+        // 기존의 간단한 setupWithNavController 대신, 각 탭의 상태와 백스택을
+        // 독립적으로 저장하고 복원하도록 커스텀 리스너를 설정합니다.
+        // 이 방식이 여러 탭의 내비게이션 상태를 관리하는 현대적인 표준 방식입니다.
+        navView.setOnItemSelectedListener { item ->
+            // NavOptions를 사용하여 내비게이션 동작을 커스터마이징합니다.
+            val builder = NavOptions.Builder().setLaunchSingleTop(true).setRestoreState(true)
+
+            // 현재 탭의 백스택을 '저장'하고, 다른 탭의 백스택을 '복원'하는 핵심 로직
+            val destination = navController.graph.findNode(item.itemId)
+            val currentDestination = navController.currentDestination
+            if (destination != null && currentDestination != null) {
+                val popUpToId = navController.graph.startDestinationId
+                builder.setPopUpTo(popUpToId, false, true)
+            }
+
+            val options = builder.build()
+            try {
+                // 설정된 옵션으로 선택된 탭의 목적지로 이동합니다.
+                NavigationUI.onNavDestinationSelected(item, navController)
+                navController.navigate(item.itemId, null, options)
+                true
+            } catch (e: IllegalArgumentException) {
+                // 사용자가 매우 빠르게 탭을 연속으로 누를 때 발생할 수 있는 오류 방지
+                false
+            }
+        }
+
+        // 뒤로가기 버튼 등으로 화면이 전환될 때, 하단 네비게이션 뷰의 선택된 아이콘이
+        // 현재 화면과 일치하도록 동기화해주는 리스너입니다.
+        navController.addOnDestinationChangedListener { _, destination, _ ->
+            navView.menu.findItem(destination.id)?.isChecked = true
+        }
+        // ▲▲▲▲▲ 핵심 수정 부분 ▲▲▲▲▲
+
+        // 같은 탭을 다시 눌렀을 때의 동작은 그대로 유지합니다.
+        navView.setOnItemReselectedListener {
+            val currentFragment = navHostFragment.childFragmentManager.fragments.firstOrNull()
+            if (currentFragment is OnTabReselectedListener) {
+                currentFragment.onTabReselected()
+            }
+        }
 
         mainViewModel.resetAllEvent.observe(this) { shouldReset ->
             if (shouldReset) {
@@ -39,37 +81,9 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // [핵심 추가] 앱이 시작될 때마다 모든 위젯을 업데이트하여 '먹통' 상태를 복구합니다.
         updateAllWidgets()
     }
 
-    private fun setupBottomNav(navView: BottomNavigationView, navController: NavController) {
-        navView.setOnItemSelectedListener { item ->
-            NavigationUI.onNavDestinationSelected(item, navController)
-            true
-        }
-
-        navView.setOnItemReselectedListener {
-            val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_host_fragment_activity_main) as NavHostFragment
-            val currentFragment = navHostFragment.childFragmentManager.fragments.firstOrNull()
-            if (currentFragment is OnTabReselectedListener) {
-                currentFragment.onTabReselected()
-            }
-        }
-
-        navController.addOnDestinationChangedListener { _, destination, _ ->
-            val menu = navView.menu
-            for (i in 0 until menu.size()) {
-                val menuItem = menu.getItem(i)
-                if (menuItem.itemId == destination.id) {
-                    menuItem.isChecked = true
-                    break
-                }
-            }
-        }
-    }
-
-    // [핵심 추가] 현재 설치된 모든 위젯의 업데이트를 요청하는 함수
     private fun updateAllWidgets() {
         val appWidgetManager = AppWidgetManager.getInstance(this)
         val componentName = ComponentName(this, TodayRecoWidgetProvider::class.java)

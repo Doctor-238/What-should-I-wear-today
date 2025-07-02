@@ -36,27 +36,20 @@ class HomeFragment : Fragment(), OnTabReselectedListener {
     private val args: HomeFragmentArgs by navArgs()
 
     private var toast: Toast? = null
-    private var permissionDialog: AlertDialog? = null
-    private var isRequestingPermission = false
 
-    // [핵심] 권한 요청 결과 처리를 안드로이드 정석대로 재구성
     private val locationPermissionRequest = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted: Boolean ->
-        isRequestingPermission = false // 요청 프로세스 종료
+        homeViewModel.permissionRequestedThisSession = false
         if (isGranted) {
-            // 1. 사용자가 권한을 허용한 경우
             getCurrentLocation()
         } else {
-            // 2. 사용자가 권한을 거부한 경우
-            if (!shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_COARSE_LOCATION)) {
-                // 2a. '다시 묻지 않음'을 선택하여 영구적으로 거부한 경우에만 안내창 표시
-                showPermissionSettingsDialog()
+            homeViewModel.stopLoading() // 권한 거부 시 로딩 중단
+            if (shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_COARSE_LOCATION)) {
+                showToast("위치 권한이 거부되어 날씨 정보를 자동으로 가져올 수 없습니다.")
             } else {
-                // 2b. 이번 한 번만 거부한 경우에는 토스트 메시지만 표시
-                showToast("위치 권한이 거부되어 날씨 정보를 가져올 수 없습니다.")
+                showAppTerminationDialog()
             }
-            homeViewModel.locationPermissionGranted.value = false
         }
     }
 
@@ -72,23 +65,20 @@ class HomeFragment : Fragment(), OnTabReselectedListener {
         super.onViewCreated(view, savedInstanceState)
         binding.ivSettings.setOnClickListener { findNavController().navigate(R.id.action_navigation_home_to_settingsFragment) }
         setupViewPager()
-        binding.swipeRefreshLayout.setOnRefreshListener { checkLocationPermission() }
-        if (args.targetTab != 0) { homeViewModel.requestTabSwitch(args.targetTab) }
-        observeViewModel()
-    }
 
-    override fun onResume() {
-        super.onResume()
-        // 다른 화면에 갔다 돌아왔을 때, 진행 중인 요청이 없다면 다시 확인
-        if (!isRequestingPermission) {
+        binding.swipeRefreshLayout.setOnRefreshListener {
             checkLocationPermission()
         }
+
+        if (args.targetTab != 0) { homeViewModel.requestTabSwitch(args.targetTab) }
+
+        observeViewModel()
+
+        checkLocationPermission()
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
-        permissionDialog?.dismiss()
-        permissionDialog = null
         toast?.cancel()
         _binding = null
     }
@@ -109,57 +99,68 @@ class HomeFragment : Fragment(), OnTabReselectedListener {
                 homeViewModel.onTabSwitchHandled()
             }
         }
-        homeViewModel.locationPermissionGranted.observe(viewLifecycleOwner) { isGranted ->
-            if (isGranted == false && _binding != null) {
-                binding.swipeRefreshLayout.isRefreshing = false
-            }
-        }
     }
 
     private fun checkLocationPermission() {
-        if (isRequestingPermission) return
+        if (ContextCompat.checkSelfPermission(
+                requireContext(),
+                Manifest.permission.ACCESS_COARSE_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED
+        ) {
+            getCurrentLocation()
+            return
+        }
 
-        when {
-            // 권한이 이미 있는 경우
-            ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED -> {
-                getCurrentLocation()
-            }
-            // 이전에 거부했지만 '다시 묻지 않음'은 선택하지 않은 경우, 다시 요청하기 전에 왜 필요한지 설명 (선택사항, 여기서는 생략)
-            // shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_COARSE_LOCATION) -> { ... }
+        if (homeViewModel.permissionRequestedThisSession) {
+            homeViewModel.stopLoading() // 요청이 이미 진행중일 때 새로고침을 시도하면 로딩 중단
+            return
+        }
 
-            // 권한이 없고, 요청한 적이 없거나 영구 거부된 경우
-            else -> {
-                isRequestingPermission = true // 시스템 팝업을 띄우기 직전에만 잠금
-                locationPermissionRequest.launch(Manifest.permission.ACCESS_COARSE_LOCATION)
-            }
+        if (shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_COARSE_LOCATION)) {
+            AlertDialog.Builder(requireContext())
+                .setTitle("위치 권한 안내")
+                .setMessage("현재 위치의 날씨 정보를 가져오기 위해 위치 권한이 필요합니다. 권한을 허용해주시겠습니까?")
+                .setPositiveButton("권한 허용") { _, _ ->
+                    homeViewModel.permissionRequestedThisSession = true
+                    locationPermissionRequest.launch(Manifest.permission.ACCESS_COARSE_LOCATION)
+                }
+                .setNegativeButton("거부") { _, _ ->
+                    showToast("위치 권한이 거부되어 날씨 정보를 자동으로 가져올 수 없습니다.")
+                    homeViewModel.stopLoading() // '거부' 시 로딩 중단
+                }
+                .setOnDismissListener {
+                    // 다이얼로그가 어떤 이유로든 닫힐 때도 로딩 상태를 확인하고 필요시 중단
+                    if (binding.swipeRefreshLayout.isRefreshing){
+                        homeViewModel.stopLoading()
+                    }
+                }
+                .show()
+        } else {
+            homeViewModel.permissionRequestedThisSession = true
+            locationPermissionRequest.launch(Manifest.permission.ACCESS_COARSE_LOCATION)
         }
     }
 
-    private fun showPermissionSettingsDialog() {
-        if (permissionDialog?.isShowing == true || !isAdded) return
-
-        permissionDialog = AlertDialog.Builder(requireContext())
-            .setTitle("위치 권한이 필요합니다")
-            .setMessage("날씨 정보 조회를 위해 위치 권한이 반드시 필요합니다. '예'를 눌러 설정 화면으로 이동한 후, '권한' 메뉴에서 '위치' 권한을 허용해주세요.")
-            .setPositiveButton("예") { _, _ ->
-                val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
-                val uri = Uri.fromParts("package", requireContext().packageName, null)
-                intent.data = uri
+    private fun showAppTerminationDialog() {
+        AlertDialog.Builder(requireContext())
+            .setTitle("권한 필요")
+            .setMessage("이 앱은 위치 권한이 반드시 필요합니다. 앱을 사용하려면 '설정'으로 이동하여 위치 권한을 허용해주세요.")
+            .setPositiveButton("설정으로 이동") { _, _ ->
+                val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                    data = Uri.fromParts("package", requireContext().packageName, null)
+                }
                 startActivity(intent)
+                requireActivity().finish()
             }
-            .setNegativeButton("아니오") { _, _ ->
-                showToast("위치 권한이 없어 기능을 실행할 수 없습니다.")
-                homeViewModel.locationPermissionGranted.value = false
+            .setNegativeButton("앱 종료") { _, _ ->
+                requireActivity().finish()
             }
             .setCancelable(false)
-            .setOnDismissListener { permissionDialog = null }
             .show()
     }
 
     private fun showTurnOnLocationDialog() {
-        if (permissionDialog?.isShowing == true || !isAdded) return
-
-        permissionDialog = AlertDialog.Builder(requireContext())
+        AlertDialog.Builder(requireContext())
             .setTitle("위치 서비스 비활성화")
             .setMessage("날씨 정보를 가져오려면 기기의 위치 서비스를 켜야 합니다. 설정으로 이동하시겠습니까?")
             .setPositiveButton("설정으로 이동") { _, _ ->
@@ -167,28 +168,33 @@ class HomeFragment : Fragment(), OnTabReselectedListener {
             }
             .setNegativeButton("취소") { _, _ ->
                 showToast("위치 서비스가 꺼져있어 날씨를 조회할 수 없습니다.")
-                if(_binding != null) binding.swipeRefreshLayout.isRefreshing = false
             }
-            .setCancelable(false)
-            .setOnDismissListener { permissionDialog = null }
+            .setOnDismissListener {
+                if(_binding != null && binding.swipeRefreshLayout.isRefreshing) {
+                    homeViewModel.stopLoading()
+                }
+            }
             .show()
     }
 
 
     private fun getCurrentLocation() {
         if (!isAdded) return
+
         if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            homeViewModel.locationPermissionGranted.value = false
+            showToast("위치 권한이 없어 날씨를 조회할 수 없습니다.")
+            homeViewModel.stopLoading()
             return
         }
 
         val locationManager = requireContext().getSystemService(Context.LOCATION_SERVICE) as LocationManager
         if (!locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) && !locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
             showTurnOnLocationDialog()
+            // showTurnOnLocationDialog의 Dismiss 리스너에서 stopLoading을 호출하므로 여기선 return만 함
             return
         }
 
-        homeViewModel.locationPermissionGranted.value = true
+        homeViewModel.startLoading()
         val fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireActivity())
 
         fusedLocationClient.getCurrentLocation(Priority.PRIORITY_BALANCED_POWER_ACCURACY, CancellationTokenSource().token)
@@ -198,17 +204,18 @@ class HomeFragment : Fragment(), OnTabReselectedListener {
                     val apiKey = getString(R.string.openweathermap_api_key)
                     if (apiKey.isBlank() || apiKey == "YOUR_OPENWEATHERMAP_API_KEY") {
                         showToast("secrets.xml 파일에 날씨 API 키를 입력해주세요.")
+                        homeViewModel.stopLoading()
                         return@addOnSuccessListener
                     }
                     homeViewModel.fetchWeatherData(location.latitude, location.longitude, apiKey)
                 } else {
                     showToast("위치 정보를 가져올 수 없습니다. 잠시 후 다시 시도해주세요.")
-                    if(_binding != null) binding.swipeRefreshLayout.isRefreshing = false
+                    homeViewModel.stopLoading()
                 }
             }.addOnFailureListener {
                 if (!isAdded) return@addOnFailureListener
                 showToast("위치 정보를 가져오는 데 실패했습니다.")
-                if(_binding != null) binding.swipeRefreshLayout.isRefreshing = false
+                homeViewModel.stopLoading()
             }
     }
 
