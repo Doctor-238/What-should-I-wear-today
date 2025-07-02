@@ -1,13 +1,26 @@
 package com.yehyun.whatshouldiweartoday
 
+import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.graphics.Color
+import android.net.Uri
+import android.os.Build
+import android.os.Bundle
 import android.view.View
 import android.widget.RemoteViews
-import androidx.work.*
+import androidx.navigation.NavDeepLinkBuilder
+import androidx.work.Constraints
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.ExistingWorkPolicy
+import androidx.work.NetworkType
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkManager
+import androidx.work.workDataOf
 import java.util.concurrent.TimeUnit
 
 class TodayRecoWidgetProvider : AppWidgetProvider() {
@@ -17,38 +30,32 @@ class TodayRecoWidgetProvider : AppWidgetProvider() {
         appWidgetManager: AppWidgetManager,
         appWidgetIds: IntArray
     ) {
+        // 위젯이 추가되거나 주기적으로 업데이트될 때 각 위젯에 대해 작업을 시작합니다.
         for (appWidgetId in appWidgetIds) {
             schedulePeriodicWork(context, appWidgetId)
+            startOneTimeWork(context, appWidgetId, true)
         }
     }
 
     override fun onReceive(context: Context, intent: Intent) {
         super.onReceive(context, intent)
-        val appWidgetId = intent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID)
 
+        // 재부팅 또는 앱 업데이트 시 모든 위젯을 강제로 업데이트합니다.
+        if (intent.action == Intent.ACTION_BOOT_COMPLETED || intent.action == "android.intent.action.MY_PACKAGE_REPLACED") {
+            val appWidgetManager = AppWidgetManager.getInstance(context)
+            val thisAppWidget = ComponentName(context.packageName, javaClass.name)
+            val appWidgetIds = appWidgetManager.getAppWidgetIds(thisAppWidget)
+            for (appWidgetId in appWidgetIds) {
+                startOneTimeWork(context, appWidgetId, true)
+            }
+            return
+        }
+
+        // 위젯 버튼 클릭 시, UI를 직접 건드리지 않고 Worker만 실행시킵니다.
+        val appWidgetId = intent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID)
         if (appWidgetId != AppWidgetManager.INVALID_APPWIDGET_ID) {
             if (intent.action in listOf("WIDGET_TAB_CLICK", "WIDGET_REFRESH_CLICK")) {
                 val isToday = intent.getBooleanExtra("IS_TODAY", true)
-
-                // [추가] 즉각적인 UI 피드백을 위한 코드
-                val appWidgetManager = AppWidgetManager.getInstance(context)
-                val remoteViews = RemoteViews(context.packageName, R.layout.today_reco_widget)
-
-                // 1. 탭 색상을 즉시 변경
-                val primaryColor = Color.parseColor("#0EB4FC")
-                val secondaryColor = Color.DKGRAY
-                remoteViews.setTextColor(R.id.tv_widget_today, if (isToday) primaryColor else secondaryColor)
-                remoteViews.setTextColor(R.id.tv_widget_tomorrow, if (isToday) secondaryColor else primaryColor)
-
-                // 2. "업데이트 중..." 문구를 바로 표시
-                remoteViews.setTextViewText(R.id.tv_widget_weather_summary, "업데이트 중...")
-                remoteViews.setViewVisibility(R.id.ll_widget_clothing_images, View.INVISIBLE) // 기존 옷 이미지를 숨김
-                remoteViews.setViewVisibility(R.id.tv_widget_no_reco, View.GONE)
-
-                // 3. 변경된 UI를 위젯에 즉시 적용
-                appWidgetManager.updateAppWidget(appWidgetId, remoteViews)
-
-                // 4. UI 변경 후, 백그라운드에서 데이터 업데이트 작업 시작
                 startOneTimeWork(context, appWidgetId, isToday)
             }
         }
@@ -59,10 +66,9 @@ class TodayRecoWidgetProvider : AppWidgetProvider() {
             .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
             .setInputData(workDataOf(AppWidgetManager.EXTRA_APPWIDGET_ID to appWidgetId))
             .build()
-
         WorkManager.getInstance(context).enqueueUniquePeriodicWork(
             "widget_update_$appWidgetId",
-            ExistingPeriodicWorkPolicy.KEEP,
+            ExistingPeriodicWorkPolicy.REPLACE,
             workRequest
         )
     }
@@ -74,6 +80,58 @@ class TodayRecoWidgetProvider : AppWidgetProvider() {
                 "IS_TODAY" to isToday
             ))
             .build()
-        WorkManager.getInstance(context).enqueue(workRequest)
+        WorkManager.getInstance(context).enqueueUniqueWork("one_time_widget_update_$appWidgetId", ExistingWorkPolicy.REPLACE, workRequest)
+    }
+
+    companion object {
+        fun setupClickIntents(context: Context, appWidgetId: Int, remoteViews: RemoteViews, isToday: Boolean) {
+            val pendingIntentFlag = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            } else {
+                PendingIntent.FLAG_UPDATE_CURRENT
+            }
+
+            val primaryColor = Color.parseColor("#0EB4FC")
+            val secondaryColor = Color.DKGRAY
+            remoteViews.setTextColor(R.id.tv_widget_today, if (isToday) primaryColor else secondaryColor)
+            remoteViews.setTextColor(R.id.tv_widget_tomorrow, if (isToday) secondaryColor else primaryColor)
+
+            val args = Bundle()
+            args.putInt("target_tab", if (isToday) 0 else 1)
+            val mainPendingIntent = NavDeepLinkBuilder(context)
+                .setComponentName(MainActivity::class.java)
+                .setGraph(R.navigation.mobile_navigation)
+                .setDestination(R.id.navigation_home)
+                .setArguments(args)
+                .createPendingIntent()
+            remoteViews.setOnClickPendingIntent(R.id.widget_root, mainPendingIntent)
+
+            val todayIntent = Intent(context, TodayRecoWidgetProvider::class.java).apply {
+                action = "WIDGET_TAB_CLICK"
+                putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
+                putExtra("IS_TODAY", true)
+                data = Uri.withAppendedPath(Uri.parse("mywidget://widget/id/"), "$appWidgetId/today")
+            }
+            val todayPendingIntent = PendingIntent.getBroadcast(context, appWidgetId * 10 + 1, todayIntent, pendingIntentFlag)
+            remoteViews.setOnClickPendingIntent(R.id.tv_widget_today, todayPendingIntent)
+
+            val tomorrowIntent = Intent(context, TodayRecoWidgetProvider::class.java).apply {
+                action = "WIDGET_TAB_CLICK"
+                putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
+                putExtra("IS_TODAY", false)
+                data = Uri.withAppendedPath(Uri.parse("mywidget://widget/id/"), "$appWidgetId/tomorrow")
+            }
+            val tomorrowPendingIntent = PendingIntent.getBroadcast(context, appWidgetId * 10 + 2, tomorrowIntent, pendingIntentFlag)
+            remoteViews.setOnClickPendingIntent(R.id.tv_widget_tomorrow, tomorrowPendingIntent)
+
+            val refreshIntent = Intent(context, TodayRecoWidgetProvider::class.java).apply {
+                action = "WIDGET_REFRESH_CLICK"
+                putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
+                putExtra("IS_TODAY", isToday)
+                data = Uri.withAppendedPath(Uri.parse("mywidget://widget/id/"), "$appWidgetId/refresh")
+            }
+            val refreshPendingIntent = PendingIntent.getBroadcast(context, appWidgetId * 10 + 3, refreshIntent, pendingIntentFlag)
+            remoteViews.setOnClickPendingIntent(R.id.iv_widget_refresh, refreshPendingIntent)
+        }
     }
 }

@@ -25,7 +25,7 @@ class SettingsFragment : Fragment(), OnTabReselectedListener {
     private val binding get() = _binding!!
 
     private lateinit var settingsManager: SettingsManager
-    private val viewModel: SettingsViewModel by viewModels() // ViewModel 추가
+    private val viewModel: SettingsViewModel by viewModels()
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -42,7 +42,7 @@ class SettingsFragment : Fragment(), OnTabReselectedListener {
         setupSpinner()
         setupSliders()
         setupListeners()
-        observeViewModel() // ViewModel 관찰 시작
+        observeViewModel()
     }
 
     private fun observeViewModel() {
@@ -75,7 +75,7 @@ class SettingsFragment : Fragment(), OnTabReselectedListener {
             .setTitle("전체 초기화")
             .setMessage("저장된 모든 옷, 스타일, 설정이 삭제됩니다. 정말 진행하시겠습니까?")
             .setPositiveButton("예") { _, _ ->
-                viewModel.resetAllData() // ViewModel에 초기화 요청
+                viewModel.resetAllData()
             }
             .setNegativeButton("아니오", null)
             .show()
@@ -103,6 +103,9 @@ class SettingsFragment : Fragment(), OnTabReselectedListener {
 
         binding.sliderSensitivity.value = settingsManager.sensitivityLevel.toFloat()
         updateSensitivityLabel(settingsManager.sensitivityLevel)
+
+        binding.sliderAiModel.value = if (settingsManager.aiModel == SettingsManager.AI_MODEL_FAST) 1.0f else 2.0f
+        updateAiModelLabel(binding.sliderAiModel.value.toInt())
     }
 
     private fun setupListeners() {
@@ -124,6 +127,12 @@ class SettingsFragment : Fragment(), OnTabReselectedListener {
             val level = value.toInt()
             settingsManager.sensitivityLevel = level
             updateSensitivityLabel(level)
+        }
+
+        binding.sliderAiModel.addOnChangeListener { _, value, _ ->
+            val model = if (value == 1.0f) SettingsManager.AI_MODEL_FAST else SettingsManager.AI_MODEL_ACCURATE
+            settingsManager.aiModel = model
+            updateAiModelLabel(value.toInt())
         }
 
         binding.tvGithubLink.setOnClickListener {
@@ -153,6 +162,13 @@ class SettingsFragment : Fragment(), OnTabReselectedListener {
             4 -> "조금 민감"
             5 -> "민감"
             else -> "보통"
+        }
+    }
+
+    private fun updateAiModelLabel(level: Int) {
+        binding.tvAiModelValue.text = when (level) {
+            1 -> "빠름, 정확성 감소"
+            else -> "느림, 정확성 증가"
         }
     }
 

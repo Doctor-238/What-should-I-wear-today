@@ -1,33 +1,29 @@
-// app/src/main/java/com/yehyun/whatshouldiweartoday/ui/closet/BatchAddWorker.kt
-
 package com.yehyun.whatshouldiweartoday.ui.closet
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
+import android.content.pm.ServiceInfo
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.net.Uri
 import android.os.Build
-import android.provider.MediaStore
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.work.*
 import com.google.ai.client.generativeai.GenerativeModel
-import com.google.ai.client.generativeai.type.GenerationConfig
-import com.google.ai.client.generativeai.type.content
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.segmentation.Segmentation
 import com.google.mlkit.vision.segmentation.SegmentationMask
 import com.google.mlkit.vision.segmentation.selfie.SelfieSegmenterOptions
 import com.yehyun.whatshouldiweartoday.R
+import com.yehyun.whatshouldiweartoday.ai.AiModelProvider
 import com.yehyun.whatshouldiweartoday.data.database.AppDatabase
 import com.yehyun.whatshouldiweartoday.data.database.ClothingItem
 import com.yehyun.whatshouldiweartoday.data.preference.SettingsManager
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.*
 import kotlinx.coroutines.tasks.await
-import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import java.io.File
 import java.io.FileOutputStream
@@ -58,21 +54,32 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setContentTitle("새 옷 추가 중")
             .setContentText("AI가 옷을 분석하고 있습니다...")
-            .setSmallIcon(R.drawable.infinite)
+            .setSmallIcon(R.mipmap.ic_launcher)
             .setOngoing(true)
             .setProgress(100, 0, true)
             .build()
-        return ForegroundInfo(NOTIFICATION_ID, notification)
+
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            ForegroundInfo(
+                NOTIFICATION_ID,
+                notification,
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
+            )
+        } else {
+            ForegroundInfo(NOTIFICATION_ID, notification)
+        }
     }
 
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
+        setForeground(getForegroundInfo())
+
         val uriStrings = inputData.getStringArray(KEY_IMAGE_URIS) ?: return@withContext Result.failure()
         val apiKey = inputData.getString(KEY_API) ?: return@withContext Result.failure()
         val totalItems = uriStrings.size
 
         try {
-            val generationConfig = GenerationConfig.Builder().apply { responseMimeType = "application/json" }.build()
-            val generativeModel = GenerativeModel("gemini-2.5-flash", apiKey, generationConfig)
+            // [핵심 수정] AiModelProvider를 통해 모델 인스턴스를 가져옴
+            val generativeModel = AiModelProvider.getModel(context, apiKey)
 
             for (i in uriStrings.indices) {
                 try {
@@ -83,7 +90,6 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
                     }
                 } catch (e: Exception) {
                     Log.e("BatchAddWorker", "Failed to process image URI: ${uriStrings[i]}", e)
-                    // 개별 이미지 실패 시 다음 이미지로 계속 진행
                 }
                 val progressData = workDataOf(PROGRESS_CURRENT to i + 1, PROGRESS_TOTAL to totalItems)
                 setProgress(progressData)
@@ -98,6 +104,7 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
         }
     }
 
+    // ... (이하 BatchAddWorker의 다른 함수들은 변경 없음)
     private fun getCorrectlyOrientedBitmap(uri: Uri): Bitmap? {
         var inputStream: InputStream? = null
         return try {
@@ -129,18 +136,24 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
         }
     }
 
-    private suspend fun analyzeAndSave(bitmap: Bitmap, model: GenerativeModel) {
-        val analysisResult = analyzeImageWithRetry(bitmap, model)
+    private suspend fun analyzeAndSave(bitmap: Bitmap, model: GenerativeModel) = coroutineScope {
+        val analysisResultDeferred = async { analyzeImageWithRetry(bitmap, model) }
 
-        if (analysisResult?.is_wearable == true && analysisResult.category != null && analysisResult.suitable_temperature != null && analysisResult.color_hex != null) {
-            val processedBitmap = try {
+        val segmentationMaskDeferred = async {
+            try {
                 val segmenter = Segmentation.getClient(SelfieSegmenterOptions.Builder().setDetectorMode(SelfieSegmenterOptions.SINGLE_IMAGE_MODE).build())
-                val mask = segmenter.process(InputImage.fromBitmap(bitmap, 0)).await()
-                createBitmapWithMask(bitmap, mask)
+                segmenter.process(InputImage.fromBitmap(bitmap, 0)).await()
             } catch (e: Exception) {
                 Log.e("BatchAddWorker", "Segmentation failed.", e)
                 null
             }
+        }
+
+        val analysisResult = analysisResultDeferred.await()
+        val segmentationMask = segmentationMaskDeferred.await()
+
+        if (analysisResult?.is_wearable == true && analysisResult.category != null && analysisResult.suitable_temperature != null && analysisResult.color_hex != null) {
+            val processedBitmap = segmentationMask?.let { createBitmapWithMask(bitmap, it) }
 
             val originalPath = saveBitmapToInternalStorage(bitmap, "original_")
             val processedPath = processedBitmap?.let { savePngToInternalStorage(it, "processed_") }
@@ -161,6 +174,7 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
         }
     }
 
+
     private suspend fun analyzeImageWithRetry(bitmap: Bitmap, model: GenerativeModel, maxRetries: Int = 2): ClothingAnalysis? {
         var attempt = 0
         var successfulAnalysis: ClothingAnalysis? = null
@@ -168,7 +182,7 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
         while (attempt < maxRetries) {
             try {
                 val resizedBitmap = resizeBitmap(bitmap)
-                val inputContent = content {
+                val inputContent = com.google.ai.client.generativeai.type.content {
                     image(resizedBitmap)
                     text("""
                         You are a Precise Climate & Fashion Analyst for Korean weather.
@@ -290,7 +304,7 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setContentTitle("새 옷 추가 중")
             .setContentText("$current / $total 완료")
-            .setSmallIcon(R.drawable.infinite)
+            .setSmallIcon(R.mipmap.ic_launcher)
             .setOngoing(true)
             .setProgress(total, current, false)
             .build()

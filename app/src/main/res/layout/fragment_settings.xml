@@ -100,6 +100,68 @@
             android:textSize="12sp"
             app:layout_constraintEnd_toEndOf="@id/slider_constitution"
             app:layout_constraintTop_toBottomOf="@id/slider_constitution" />
+
+        <View
+            android:id="@+id/divider_ai_model"
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_marginHorizontal="16dp"
+            android:layout_marginTop="16dp"
+            android:background="?android:attr/listDivider"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/tv_constitution_max_label" />
+
+        <TextView
+            android:id="@+id/tv_ai_model_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:text="AI 모델"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            app:layout_constraintStart_toStartOf="@id/divider_ai_model"
+            app:layout_constraintTop_toBottomOf="@id/divider_ai_model" />
+
+        <TextView
+            android:id="@+id/tv_ai_model_value"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textStyle="bold"
+            app:layout_constraintEnd_toEndOf="@id/divider_ai_model"
+            app:layout_constraintTop_toTopOf="@id/tv_ai_model_label"
+            tools:text="느림, 정확성 증가" />
+
+        <com.google.android.material.slider.Slider
+            android:id="@+id/slider_ai_model"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:stepSize="1.0"
+            android:value="2.0"
+            android:valueFrom="1.0"
+            android:valueTo="2.0"
+            app:layout_constraintEnd_toEndOf="@id/divider_ai_model"
+            app:layout_constraintStart_toStartOf="@id/divider_ai_model"
+            app:layout_constraintTop_toBottomOf="@id/tv_ai_model_label" />
+
+        <TextView
+            android:id="@+id/tv_ai_model_min_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="빠름, 정확성 감소"
+            android:textSize="12sp"
+            app:layout_constraintStart_toStartOf="@id/slider_ai_model"
+            app:layout_constraintTop_toBottomOf="@id/slider_ai_model" />
+
+        <TextView
+            android:id="@+id/tv_ai_model_max_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="느림, 정확성 증가"
+            android:textSize="12sp"
+            app:layout_constraintEnd_toEndOf="@id/slider_ai_model"
+            app:layout_constraintTop_toBottomOf="@id/slider_ai_model" />
+
         <View
             android:id="@+id/divider_2"
             android:layout_width="0dp"
@@ -109,7 +171,7 @@
             android:background="?android:attr/listDivider"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/tv_constitution_max_label" />
+            app:layout_constraintTop_toBottomOf="@id/tv_ai_model_max_label" />
 
 
         <TextView

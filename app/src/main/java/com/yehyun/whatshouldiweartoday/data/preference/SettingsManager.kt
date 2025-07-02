@@ -21,9 +21,11 @@ class SettingsManager(context: Context) {
         get() = prefs.getInt(KEY_SENSITIVITY, 3)
         set(value) = prefs.edit().putInt(KEY_SENSITIVITY, value).apply()
 
+    var aiModel: String
+        get() = prefs.getString(KEY_AI_MODEL, AI_MODEL_ACCURATE) ?: AI_MODEL_ACCURATE
+        set(value) = prefs.edit().putString(KEY_AI_MODEL, value).apply()
 
     fun getTemperatureTolerance(): Double {
-        // [수정] 요청에 따라 적정온도 범위 값 변경
         return when (temperatureRange) {
             TEMP_RANGE_NARROW -> 1.5
             TEMP_RANGE_WIDE -> 3.5
@@ -32,7 +34,6 @@ class SettingsManager(context: Context) {
     }
 
     fun getConstitutionAdjustment(): Double {
-        // [수정] 요청에 따라 체질별 온도 보정 값 변경
         return when (constitutionLevel) {
             1 -> -2.0  // 더위 많이 탐
             2 -> -1.0  // 더위 조금 탐
@@ -52,8 +53,6 @@ class SettingsManager(context: Context) {
         }
     }
 
-    // '챙겨갈 아우터' 로직은 '적정온도 범위' 설정과 독립적으로 운영되므로 이 부분은 수정하지 않습니다.
-    // 만약 이 값도 변경을 원하시면 알려주세요.
     fun getPackableOuterTolerance(): Double {
         return when (temperatureRange) {
             TEMP_RANGE_NARROW -> -3.0
@@ -62,9 +61,11 @@ class SettingsManager(context: Context) {
         }
     }
 
+    fun getAiModelName(): String {
+        return if (aiModel == AI_MODEL_FAST) "gemini-2.5-flash-lite-preview-06-17" else "gemini-2.5-flash"
+    }
+
     fun resetToDefaults() {
-        // [수정] 비동기(apply) 방식에서 동기(commit) 방식으로 변경하여
-        // 설정이 확실히 삭제된 후 다음 작업이 진행되도록 보장합니다.
         prefs.edit().clear().commit()
     }
 
@@ -73,9 +74,12 @@ class SettingsManager(context: Context) {
         private const val KEY_TEMP_RANGE = "temperature_range"
         private const val KEY_CONSTITUTION = "constitution_level"
         private const val KEY_SENSITIVITY = "sensitivity_level"
+        private const val KEY_AI_MODEL = "ai_model"
 
         const val TEMP_RANGE_NARROW = "좁게"
         const val TEMP_RANGE_NORMAL = "보통"
         const val TEMP_RANGE_WIDE = "넓게"
+        const val AI_MODEL_FAST = "fast"
+        const val AI_MODEL_ACCURATE = "accurate"
     }
 }

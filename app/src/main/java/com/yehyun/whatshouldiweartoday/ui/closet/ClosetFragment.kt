@@ -39,20 +39,15 @@ class ClosetFragment : Fragment(), OnTabReselectedListener {
 
     private val viewModel: ClosetViewModel by viewModels()
 
-    // [수정] 권한 거부 시의 동작을 더 상세하게 변경
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted: Boolean ->
         if (isGranted) {
             pickMultipleImagesLauncher.launch("image/*")
         } else {
-            // 권한 요청이 거부된 직후, '다시 묻지 않음'을 선택했는지 확인합니다.
-            // shouldShowRequestPermissionRationale이 false라면 영구 거부된 상태입니다.
             if (!shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS)) {
-                // 설정으로 이동할지 묻는 대화상자를 띄웁니다.
                 showGoToSettingsDialog()
             } else {
-                // '다시 묻지 않음'을 선택하지 않은 일반 거부일 경우, 토스트 메시지를 보여줍니다.
                 Toast.makeText(requireContext(), "알림 권한이 거부되어 기능을 실행할 수 없습니다.", Toast.LENGTH_SHORT).show()
             }
         }
@@ -93,20 +88,16 @@ class ClosetFragment : Fragment(), OnTabReselectedListener {
         observeViewModel()
     }
 
-    // [추가] 설정 화면으로 이동을 안내하는 대화상자 함수
     private fun showGoToSettingsDialog() {
         AlertDialog.Builder(requireContext())
             .setTitle("알림 권한이 필요합니다")
             .setMessage("진행률을 표시하려면 알림 권한이 반드시 필요합니다. '예'를 눌러 설정 화면으로 이동한 후, '알림' 권한을 허용해주세요.")
             .setPositiveButton("예") { _, _ ->
-                // [수정] 앱의 '알림 설정' 화면으로 바로 이동하도록 수정
                 val intent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    // Android 8.0 (Oreo) 이상
                     Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
                         putExtra(Settings.EXTRA_APP_PACKAGE, requireContext().packageName)
                     }
                 } else {
-                    // Android 8.0 미만
                     Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
                         data = Uri.fromParts("package", requireContext().packageName, null)
                     }
@@ -137,9 +128,11 @@ class ClosetFragment : Fragment(), OnTabReselectedListener {
             val workInfo = workInfos.firstOrNull()
 
             if (workInfo == null || workInfo.state.isFinished) {
-                lifecycleScope.launch {
+                // [핵심 수정] viewLifecycleOwner.lifecycleScope를 사용하여 fragment의 view가 살아있을 때만 코드가 실행되도록 보장합니다.
+                viewLifecycleOwner.lifecycleScope.launch {
                     delay(500)
-                    binding.fabBatchAdd.hideProgress()
+                    // [핵심 수정] _binding이 null일 수 있는 상황을 대비해 안전 호출(?.)을 사용합니다.
+                    _binding?.fabBatchAdd?.hideProgress()
                 }
                 return@observe
             }
