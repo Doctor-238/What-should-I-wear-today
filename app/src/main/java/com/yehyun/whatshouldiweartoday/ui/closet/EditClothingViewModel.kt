@@ -1,5 +1,3 @@
-// app/src/main/java/com/yehyun/whatshouldiweartoday/ui/closet/EditClothingViewModel.kt
-
 package com.yehyun.whatshouldiweartoday.ui.closet
 
 import android.app.Application
@@ -123,18 +121,5 @@ class EditClothingViewModel(application: Application) : AndroidViewModel(applica
                 }
             }
         }
-    }
-
-    fun resetCompletionState() {
-        _isSaveComplete.value = false
-        _isDeleteComplete.value = false
-    }
-
-    fun resetAllState() {
-        originalClothingItem = null
-        _currentClothingItem.value = null
-        _isChanged.value = false
-        _isProcessing.value = false
-        resetCompletionState()
     }
 }

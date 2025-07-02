@@ -78,7 +78,6 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
         val totalItems = uriStrings.size
 
         try {
-            // [핵심 수정] AiModelProvider를 통해 모델 인스턴스를 가져옴
             val generativeModel = AiModelProvider.getModel(context, apiKey)
 
             for (i in uriStrings.indices) {
@@ -104,7 +103,6 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
         }
     }
 
-    // ... (이하 BatchAddWorker의 다른 함수들은 변경 없음)
     private fun getCorrectlyOrientedBitmap(uri: Uri): Bitmap? {
         var inputStream: InputStream? = null
         return try {
@@ -136,32 +134,33 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
         }
     }
 
+    // [핵심 수정] 3가지 작업을 병렬로 처리하도록 수정
     private suspend fun analyzeAndSave(bitmap: Bitmap, model: GenerativeModel) = coroutineScope {
-        val analysisResultDeferred = async { analyzeImageWithRetry(bitmap, model) }
-
-        val segmentationMaskDeferred = async {
+        val analysisJob = async { analyzeImageWithRetry(bitmap, model) }
+        val processedImageJob = async {
             try {
                 val segmenter = Segmentation.getClient(SelfieSegmenterOptions.Builder().setDetectorMode(SelfieSegmenterOptions.SINGLE_IMAGE_MODE).build())
-                segmenter.process(InputImage.fromBitmap(bitmap, 0)).await()
+                val mask = segmenter.process(InputImage.fromBitmap(bitmap, 0)).await()
+                if (mask != null) createBitmapWithMask(bitmap, mask) else null
             } catch (e: Exception) {
                 Log.e("BatchAddWorker", "Segmentation failed.", e)
                 null
             }
         }
+        val originalImageJob = async { bitmap }
 
-        val analysisResult = analysisResultDeferred.await()
-        val segmentationMask = segmentationMaskDeferred.await()
+        val analysisResult = analysisJob.await()
+        val processedBitmap = processedImageJob.await()
+        val originalBitmap = originalImageJob.await()
 
         if (analysisResult?.is_wearable == true && analysisResult.category != null && analysisResult.suitable_temperature != null && analysisResult.color_hex != null) {
-            val processedBitmap = segmentationMask?.let { createBitmapWithMask(bitmap, it) }
-
-            val originalPath = saveBitmapToInternalStorage(bitmap, "original_")
+            val originalPath = saveBitmapToInternalStorage(originalBitmap, "original_")
             val processedPath = processedBitmap?.let { savePngToInternalStorage(it, "processed_") }
 
             if (originalPath != null) {
                 val finalTemp = if (analysisResult.category == "아우터") analysisResult.suitable_temperature - 3.0 else analysisResult.suitable_temperature
                 val newItem = ClothingItem(
-                    name = analysisResult.category,
+                    name = analysisResult.category, // 일괄 추가 시에는 카테고리를 이름으로 사용
                     imageUri = originalPath,
                     processedImageUri = processedPath,
                     useProcessedImage = false,
@@ -173,7 +172,6 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
             }
         }
     }
-
 
     private suspend fun analyzeImageWithRetry(bitmap: Bitmap, model: GenerativeModel, maxRetries: Int = 2): ClothingAnalysis? {
         var attempt = 0

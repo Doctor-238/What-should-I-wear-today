@@ -47,18 +47,24 @@ class WidgetUpdateWorker(private val appContext: Context, workerParams: WorkerPa
 
         val appWidgetManager = AppWidgetManager.getInstance(appContext)
         val remoteViews = RemoteViews(appContext.packageName, R.layout.today_reco_widget)
+        var errorMessage: String? = null
+        var resultPair: Pair<DailyWeatherSummary, RecommendationResult>? = null
 
-        // [핵심] try-finally 구문을 사용하여 어떤 경우에도 위젯의 최종 상태가 업데이트되도록 보장
         try {
             showLoadingState(appWidgetId, remoteViews, isToday)
 
             if (ActivityCompat.checkSelfPermission(appContext, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                showPermissionError(appWidgetId, remoteViews, isToday)
+                errorMessage = "위치 권한을 허용해주세요!"
                 return Result.success()
             }
 
             val location = LocationServices.getFusedLocationProviderClient(appContext)
                 .getCurrentLocation(Priority.PRIORITY_BALANCED_POWER_ACCURACY, CancellationTokenSource().token).await()
+
+            if (location == null) {
+                errorMessage = "위치 정보를 가져올 수 없습니다. GPS를 켜주세요."
+                return Result.success()
+            }
 
             val weatherRepo = WeatherRepository(WeatherApiService.create())
             val clothingRepo = ClothingRepository(AppDatabase.getDatabase(appContext).clothingDao())
@@ -67,18 +73,32 @@ class WidgetUpdateWorker(private val appContext: Context, workerParams: WorkerPa
 
             if (weatherResponse.isSuccessful && weatherResponse.body() != null) {
                 val allClothes = clothingRepo.getAllItemsList()
-                val recommendationPair = processAndRecommend(weatherResponse.body()!!, allClothes, isToday)
-                if (recommendationPair != null) {
-                    showSuccessState(appWidgetId, remoteViews, isToday, recommendationPair.first, recommendationPair.second)
-                } else {
-                    showError(appWidgetId, remoteViews, isToday, "날씨 정보가 없습니다.")
+                resultPair = processAndRecommend(weatherResponse.body()!!, allClothes, isToday)
+                if (resultPair == null) {
+                    errorMessage = "날씨 정보가 없습니다."
                 }
             } else {
-                showError(appWidgetId, remoteViews, isToday, "날씨 정보 업데이트 실패")
+                errorMessage = "날씨 정보 업데이트 실패"
             }
         } catch (e: Exception) {
             Log.e("WidgetUpdateWorker", "Error updating widget", e)
-            showError(appWidgetId, remoteViews, isToday, "위치 설정을 켜주세요!")
+            errorMessage = "업데이트 중 오류 발생"
+        } finally {
+            when {
+                errorMessage != null -> {
+                    if (errorMessage.contains("권한")) {
+                        showPermissionError(appWidgetId, remoteViews, isToday)
+                    } else {
+                        showError(appWidgetId, remoteViews, isToday, errorMessage!!)
+                    }
+                }
+                resultPair != null -> {
+                    showSuccessState(appWidgetId, remoteViews, isToday, resultPair!!.first, resultPair!!.second)
+                }
+                else -> {
+                    showError(appWidgetId, remoteViews, isToday, "알 수 없는 오류")
+                }
+            }
         }
         return Result.success()
     }
@@ -121,7 +141,8 @@ class WidgetUpdateWorker(private val appContext: Context, workerParams: WorkerPa
     }
 
     private fun finalizeWidgetUpdate(appWidgetId: Int, remoteViews: RemoteViews, isToday: Boolean) {
-        setupClickIntents(appContext, appWidgetId, remoteViews, isToday)
+        // [핵심 수정] TodayRecoWidgetProvider 클래스를 명시하여 함수를 정확히 호출합니다.
+        TodayRecoWidgetProvider.setupClickIntents(appContext, appWidgetId, remoteViews, isToday)
         AppWidgetManager.getInstance(appContext).updateAppWidget(appWidgetId, remoteViews)
     }
 
@@ -137,46 +158,6 @@ class WidgetUpdateWorker(private val appContext: Context, workerParams: WorkerPa
         }
         val pendingIntent = PendingIntent.getActivity(appContext, appWidgetId, intent, pendingIntentFlag)
         remoteViews.setOnClickPendingIntent(R.id.widget_root, pendingIntent)
-    }
-
-    private fun setupClickIntents(context: Context, appWidgetId: Int, remoteViews: RemoteViews, isToday: Boolean) {
-        // [핵심 수정] 최신 안드로이드 버전 호환성 및 안정성을 위해 플래그 명시
-        val pendingIntentFlag = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        } else {
-            PendingIntent.FLAG_UPDATE_CURRENT
-        }
-
-        val primaryColor = Color.parseColor("#0EB4FC"); val secondaryColor = Color.DKGRAY
-        remoteViews.setTextColor(R.id.tv_widget_today, if (isToday) primaryColor else secondaryColor)
-        remoteViews.setTextColor(R.id.tv_widget_tomorrow, if (isToday) secondaryColor else primaryColor)
-
-        val args = Bundle().apply { putInt("target_tab", if (isToday) 0 else 1) }
-        val mainPendingIntent = NavDeepLinkBuilder(context)
-            .setComponentName(MainActivity::class.java).setGraph(R.navigation.mobile_navigation)
-            .setDestination(R.id.navigation_home).setArguments(args).createPendingIntent()
-        remoteViews.setOnClickPendingIntent(R.id.widget_root, mainPendingIntent)
-
-        val todayIntent = Intent(context, TodayRecoWidgetProvider::class.java).apply {
-            action = "WIDGET_TAB_CLICK"; putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId); putExtra("IS_TODAY", true)
-            data = Uri.withAppendedPath(Uri.parse("mywidget://widget/id/"), "$appWidgetId/today")
-        }
-        val todayPendingIntent = PendingIntent.getBroadcast(context, appWidgetId * 10 + 1, todayIntent, pendingIntentFlag)
-        remoteViews.setOnClickPendingIntent(R.id.tv_widget_today, todayPendingIntent)
-
-        val tomorrowIntent = Intent(context, TodayRecoWidgetProvider::class.java).apply {
-            action = "WIDGET_TAB_CLICK"; putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId); putExtra("IS_TODAY", false)
-            data = Uri.withAppendedPath(Uri.parse("mywidget://widget/id/"), "$appWidgetId/tomorrow")
-        }
-        val tomorrowPendingIntent = PendingIntent.getBroadcast(context, appWidgetId * 10 + 2, tomorrowIntent, pendingIntentFlag)
-        remoteViews.setOnClickPendingIntent(R.id.tv_widget_tomorrow, tomorrowPendingIntent)
-
-        val refreshIntent = Intent(context, TodayRecoWidgetProvider::class.java).apply {
-            action = "WIDGET_REFRESH_CLICK"; putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId); putExtra("IS_TODAY", isToday)
-            data = Uri.withAppendedPath(Uri.parse("mywidget://widget/id/"), "$appWidgetId/refresh")
-        }
-        val refreshPendingIntent = PendingIntent.getBroadcast(context, appWidgetId * 10 + 3, refreshIntent, pendingIntentFlag)
-        remoteViews.setOnClickPendingIntent(R.id.iv_widget_refresh, refreshPendingIntent)
     }
 
     private fun processAndRecommend(weatherResponse: WeatherResponse, allClothes: List<ClothingItem>, isToday: Boolean): Pair<DailyWeatherSummary, RecommendationResult>? {

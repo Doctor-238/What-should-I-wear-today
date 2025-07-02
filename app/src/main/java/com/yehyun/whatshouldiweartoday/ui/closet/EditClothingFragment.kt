@@ -1,5 +1,3 @@
-// app/src/main/java/com/yehyun/whatshouldiweartoday/ui/closet/EditClothingFragment.kt
-
 package com.yehyun.whatshouldiweartoday.ui.closet
 
 import android.graphics.Color
@@ -15,7 +13,7 @@ import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
-import androidx.fragment.app.activityViewModels
+import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import com.bumptech.glide.Glide
@@ -32,11 +30,11 @@ import java.io.File
 
 class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabReselectedListener {
 
-    private val viewModel: EditClothingViewModel by activityViewModels()
+    // [핵심] ViewModel의 범위를 이 프래그먼트로 한정합니다.
+    private val viewModel: EditClothingViewModel by viewModels()
     private val args: EditClothingFragmentArgs by navArgs()
 
     private lateinit var onBackPressedCallback: OnBackPressedCallback
-
     private lateinit var imageViewPreview: ImageView
     private lateinit var switchRemoveBackground: SwitchMaterial
     private lateinit var textViewTemperature: TextView
@@ -101,7 +99,6 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
         viewModel.isSaveComplete.observe(viewLifecycleOwner) { isComplete ->
             if(isComplete) {
                 findNavController().popBackStack()
-                viewModel.resetAllState()
             }
         }
 
@@ -109,7 +106,6 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
             if(isComplete) {
                 Toast.makeText(context, "삭제되었습니다.", Toast.LENGTH_SHORT).show()
                 findNavController().popBackStack()
-                viewModel.resetAllState()
             }
         }
     }
@@ -143,7 +139,6 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
 
         updateImagePreview(item)
 
-        // [핵심 수정] 데이터가 준비되면 이미지 뷰를 다시 보이게 하여 초기 깜박임 방지
         if (imageViewPreview.visibility != View.VISIBLE) {
             imageViewPreview.visibility = View.VISIBLE
         }
@@ -171,7 +166,6 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
             item.imageUri
         }
 
-        // [핵심 수정] 현재 이미지를 placeholder로 사용하여 이미지 변경 시 깜박임 방지
         val currentDrawable = imageViewPreview.drawable
 
         Glide.with(this)
@@ -219,7 +213,6 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
         if (onBackPressedCallback.isEnabled) {
             showSaveChangesDialog()
         } else {
-            viewModel.resetAllState()
             findNavController().popBackStack()
         }
     }
@@ -229,7 +222,6 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
             .setMessage("변경사항을 저장하시겠습니까?")
             .setPositiveButton("예") { _, _ -> viewModel.saveChanges() }
             .setNegativeButton("아니오") { _, _ ->
-                viewModel.resetAllState()
                 findNavController().popBackStack()
             }
             .setCancelable(true)

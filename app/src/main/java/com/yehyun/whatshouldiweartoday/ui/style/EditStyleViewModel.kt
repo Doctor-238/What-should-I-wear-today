@@ -1,5 +1,3 @@
-// app/src/main/java/com/yehyun/whatshouldiweartoday/ui/style/EditStyleViewModel.kt
-
 package com.yehyun.whatshouldiweartoday.ui.style
 
 import android.app.Application
@@ -26,7 +24,7 @@ class EditStyleViewModel(application: Application) : AndroidViewModel(applicatio
 
     private var originalStyle: SavedStyle? = null
     private var initialItemIds: Set<Int>? = null
-    private var currentStyleId: Long? = null // [핵심 추가] 새로고침을 위해 스타일 ID 저장
+    private var currentStyleId: Long? = null
 
     val currentStyleName = MutableLiveData<String>()
     val currentSeason = MutableLiveData<String>()
@@ -69,12 +67,11 @@ class EditStyleViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     fun loadStyleIfNeeded(styleId: Long) {
-        if (originalStyle != null) return
+        if (originalStyle != null && currentStyleId == styleId) return
         this.currentStyleId = styleId
         refreshCurrentStyle()
     }
 
-    // [핵심 추가] 데이터를 새로고침하는 함수
     fun refreshCurrentStyle() {
         val styleId = currentStyleId ?: return
         viewModelScope.launch {
@@ -90,7 +87,6 @@ class EditStyleViewModel(application: Application) : AndroidViewModel(applicatio
 
                 checkForChanges()
             } else {
-                // 스타일 자체가 삭제된 경우, 삭제 완료 신호를 보내 화면을 닫도록 유도
                 _isDeleteComplete.postValue(true)
             }
         }
