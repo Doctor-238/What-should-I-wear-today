@@ -44,9 +44,13 @@ class HomeFragment : Fragment(), OnTabReselectedListener {
         if (isGranted) {
             // 1. 권한 허용 시: 위치 정보 가져오기 실행
             getCurrentLocation()
-        } else {
-            // 2. 권한 거부 시: 앱 종료 안내 팝업 표시
-            showAppTerminationDialog()
+        }  else {
+            if (!shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_COARSE_LOCATION)) {
+                showAppTerminationDialog()
+            } else {
+                Toast.makeText(requireContext(), "위치 권한이 거부되어 일부 기능에 제한이 있을 수 있습니다.", Toast.LENGTH_SHORT).show()
+            }
+
         }
     }
 

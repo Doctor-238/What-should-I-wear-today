@@ -35,10 +35,10 @@ class SettingsManager(context: Context) {
 
     fun getConstitutionAdjustment(): Double {
         return when (constitutionLevel) {
-            1 -> -2.0  // 더위 많이 탐
-            2 -> -1.0  // 더위 조금 탐
-            4 -> 1.0   // 추위 조금 탐
-            5 -> 2.0   // 추위 많이 탐
+            1 -> -3.0  // 더위 많이 탐
+            2 -> -1.5  // 더위 조금 탐
+            4 -> 1.5   // 추위 조금 탐
+            5 -> 3.0   // 추위 많이 탐
             else -> 0.0 // 보통
         }
     }
