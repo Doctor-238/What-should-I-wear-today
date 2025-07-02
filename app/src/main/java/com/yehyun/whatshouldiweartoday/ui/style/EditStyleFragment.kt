@@ -57,6 +57,12 @@ class EditStyleFragment : Fragment(R.layout.fragment_edit_style), OnTabReselecte
         viewModel.loadStyleIfNeeded(args.styleId)
     }
 
+    // [핵심 추가] 화면이 다시 나타날 때마다 데이터를 새로고침합니다.
+    override fun onResume() {
+        super.onResume()
+        viewModel.refreshCurrentStyle()
+    }
+
     private fun setupViews(view: View) {
         buttonSave = view.findViewById(R.id.button_save_style_edit)
         buttonDelete = view.findViewById(R.id.button_delete_style)
@@ -118,7 +124,6 @@ class EditStyleFragment : Fragment(R.layout.fragment_edit_style), OnTabReselecte
         viewModel.isProcessing.observe(viewLifecycleOwner) { isProcessing ->
             buttonSave.isEnabled = !isProcessing && viewModel.saveButtonEnabled.value == true
             buttonDelete.isEnabled = !isProcessing
-            // [오류 수정] isProcessing 상태에 따라 아이콘을 설정하거나 null로 지웁니다.
             if (isProcessing) {
                 toolbar.navigationIcon = null
             } else {

@@ -91,7 +91,6 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
         viewModel.isProcessing.observe(viewLifecycleOwner) { isProcessing ->
             buttonSave.isEnabled = !isProcessing && viewModel.isChanged.value == true
             buttonDelete.isEnabled = !isProcessing
-            // [오류 수정] isProcessing 상태에 따라 아이콘을 설정하거나 null로 지웁니다.
             if (isProcessing) {
                 toolbar.navigationIcon = null
             } else {
@@ -141,7 +140,13 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
 
         switchRemoveBackground.visibility = if (item.processedImageUri != null) View.VISIBLE else View.GONE
         switchRemoveBackground.isChecked = item.useProcessedImage
+
         updateImagePreview(item)
+
+        // [핵심 수정] 데이터가 준비되면 이미지 뷰를 다시 보이게 하여 초기 깜박임 방지
+        if (imageViewPreview.visibility != View.VISIBLE) {
+            imageViewPreview.visibility = View.VISIBLE
+        }
     }
 
     private fun updateTemperatureDisplay(item: ClothingItem) {
@@ -165,7 +170,14 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
         } else {
             item.imageUri
         }
-        Glide.with(this).load(Uri.fromFile(File(imageUriString))).into(imageViewPreview)
+
+        // [핵심 수정] 현재 이미지를 placeholder로 사용하여 이미지 변경 시 깜박임 방지
+        val currentDrawable = imageViewPreview.drawable
+
+        Glide.with(this)
+            .load(Uri.fromFile(File(imageUriString)))
+            .placeholder(currentDrawable)
+            .into(imageViewPreview)
     }
 
     private fun setupListeners(view: View) {

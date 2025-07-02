@@ -61,9 +61,11 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
     val locationPermissionGranted = MutableLiveData<Boolean?>(null)
 
-    // [추가] 탭 전환 이벤트를 위한 LiveData
     private val _switchToTab = MutableLiveData<Int?>()
     val switchToTab: LiveData<Int?> = _switchToTab
+
+    // [핵심 수정] 현재 세션에서 권한 요청이 있었는지 추적하는 상태 변수
+    var permissionRequestedThisSession = false
 
     companion object {
         private const val SIGNIFICANT_TEMP_DIFFERENCE = 12.0
@@ -149,8 +151,8 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             val itemMinTemp = adjustedTemp - temperatureTolerance
             val itemMaxTemp = adjustedTemp + temperatureTolerance
             val isFitForMaxTemp = maxTempCriteria in itemMinTemp..itemMaxTemp
-            val isFitForHotDay = maxTempCriteria > 30 && itemMaxTemp >= 30
-            val isFitForFreezingDay = minTempCriteria < 0 && itemMinTemp <= 0
+            val isFitForHotDay = maxTempCriteria > 31 && itemMaxTemp >= 31
+            val isFitForFreezingDay = minTempCriteria < -1 && itemMinTemp <= -1
             isFitForMaxTemp || isFitForHotDay || isFitForFreezingDay
         }
 
@@ -185,9 +187,6 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         return RecommendationResult(recommendedTops, recommendedBottoms, recommendedOuters, bestCombination, packableOuter, umbrellaRecommendation, isTempDifferenceSignificant)
     }
 
-    /**
-     * [추가] 외부(Activity)에서 탭 전환을 요청하는 함수
-     */
     fun requestTabSwitch(tabIndex: Int) {
         _switchToTab.value = tabIndex
     }

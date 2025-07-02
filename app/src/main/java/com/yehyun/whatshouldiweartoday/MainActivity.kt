@@ -1,5 +1,8 @@
 package com.yehyun.whatshouldiweartoday
 
+import android.appwidget.AppWidgetManager
+import android.content.ComponentName
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
@@ -14,7 +17,6 @@ import com.yehyun.whatshouldiweartoday.ui.OnTabReselectedListener
 class MainActivity : AppCompatActivity() {
 
     private val mainViewModel: MainViewModel by viewModels()
-    // [삭제] HomeViewModel 참조 삭제
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -36,10 +38,10 @@ class MainActivity : AppCompatActivity() {
                 mainViewModel.onResetAllEventHandled()
             }
         }
-        // [삭제] handleIntent 호출 삭제
-    }
 
-    // [삭제] onNewIntent, handleIntent 함수 전체 삭제
+        // [핵심 추가] 앱이 시작될 때마다 모든 위젯을 업데이트하여 '먹통' 상태를 복구합니다.
+        updateAllWidgets()
+    }
 
     private fun setupBottomNav(navView: BottomNavigationView, navController: NavController) {
         navView.setOnItemSelectedListener { item ->
@@ -64,6 +66,20 @@ class MainActivity : AppCompatActivity() {
                     break
                 }
             }
+        }
+    }
+
+    // [핵심 추가] 현재 설치된 모든 위젯의 업데이트를 요청하는 함수
+    private fun updateAllWidgets() {
+        val appWidgetManager = AppWidgetManager.getInstance(this)
+        val componentName = ComponentName(this, TodayRecoWidgetProvider::class.java)
+        val appWidgetIds = appWidgetManager.getAppWidgetIds(componentName)
+        if (appWidgetIds.isNotEmpty()) {
+            val intent = Intent(this, TodayRecoWidgetProvider::class.java).apply {
+                action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
+                putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, appWidgetIds)
+            }
+            sendBroadcast(intent)
         }
     }
 }
