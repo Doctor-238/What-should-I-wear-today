@@ -16,6 +16,7 @@ import androidx.core.content.ContextCompat
 class WidgetConfigurationActivity : AppCompatActivity() {
 
     private var appWidgetId = AppWidgetManager.INVALID_APPWIDGET_ID
+    // [추가] 중복 요청 및 다이얼로그 중복 표시를 막기 위한 플래그
     private var isPermissionRequestInProgress = false
     private var dialog: AlertDialog? = null
 
@@ -101,11 +102,14 @@ class WidgetConfigurationActivity : AppCompatActivity() {
     }
 
     private fun configureWidget() {
+        // [수정] 위젯 업데이트를 브로드캐스트로 직접 트리거
         val workerIntent = Intent(this, TodayRecoWidgetProvider::class.java).apply {
             action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
             putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, intArrayOf(appWidgetId))
         }
         sendBroadcast(workerIntent)
+
+        // 설정 완료를 시스템에 알림
         finishWidgetSetup(isSuccess = true)
     }
 

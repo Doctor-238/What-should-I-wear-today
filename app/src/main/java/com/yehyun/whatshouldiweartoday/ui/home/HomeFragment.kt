@@ -37,6 +37,7 @@ class HomeFragment : Fragment(), OnTabReselectedListener {
 
     private var toast: Toast? = null
     private var permissionDialog: AlertDialog? = null
+    // [추가] 권한 요청이 진행 중인지 확인하는 플래그
     private var isRequestingPermission = false
 
     // [핵심] 권한 요청 결과 처리를 안드로이드 정석대로 재구성
@@ -109,6 +110,7 @@ class HomeFragment : Fragment(), OnTabReselectedListener {
                 homeViewModel.onTabSwitchHandled()
             }
         }
+        // [추가] 권한 거부 시 로딩 상태 해제
         homeViewModel.locationPermissionGranted.observe(viewLifecycleOwner) { isGranted ->
             if (isGranted == false && _binding != null) {
                 binding.swipeRefreshLayout.isRefreshing = false
@@ -117,6 +119,7 @@ class HomeFragment : Fragment(), OnTabReselectedListener {
     }
 
     private fun checkLocationPermission() {
+        // [수정] 요청 진행중이면 바로 리턴하여 중복 요청 방지
         if (isRequestingPermission) return
 
         when {
@@ -124,8 +127,7 @@ class HomeFragment : Fragment(), OnTabReselectedListener {
             ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED -> {
                 getCurrentLocation()
             }
-            // 이전에 거부했지만 '다시 묻지 않음'은 선택하지 않은 경우, 다시 요청하기 전에 왜 필요한지 설명 (선택사항, 여기서는 생략)
-            // shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_COARSE_LOCATION) -> { ... }
+            // [삭제] shouldShow... 부분은 ActivityResultCallback에서 처리하므로 여기서 필요 없음
 
             // 권한이 없고, 요청한 적이 없거나 영구 거부된 경우
             else -> {
@@ -136,6 +138,7 @@ class HomeFragment : Fragment(), OnTabReselectedListener {
     }
 
     private fun showPermissionSettingsDialog() {
+        // [수정] 다이얼로그가 이미 떠있거나, 프래그먼트가 detach된 상태면 띄우지 않음
         if (permissionDialog?.isShowing == true || !isAdded) return
 
         permissionDialog = AlertDialog.Builder(requireContext())
@@ -152,7 +155,7 @@ class HomeFragment : Fragment(), OnTabReselectedListener {
                 homeViewModel.locationPermissionGranted.value = false
             }
             .setCancelable(false)
-            .setOnDismissListener { permissionDialog = null }
+            .setOnDismissListener { permissionDialog = null } // 다이얼로그가 닫히면 참조 해제
             .show()
     }
 
@@ -232,6 +235,7 @@ class HomeFragment : Fragment(), OnTabReselectedListener {
             navController.popBackStack(R.id.navigation_home, false)
             return
         }
+
         if (binding.viewPagerHome.currentItem != 0) {
             binding.viewPagerHome.currentItem = 0
         } else {
