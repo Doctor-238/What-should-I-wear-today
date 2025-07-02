@@ -6,6 +6,7 @@ import android.appwidget.AppWidgetManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.net.Uri
@@ -36,6 +37,7 @@ import java.io.File
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import kotlin.math.abs
+import kotlin.math.min
 
 class WidgetUpdateWorker(private val appContext: Context, workerParams: WorkerParameters) :
     CoroutineWorker(appContext, workerParams) {
@@ -89,7 +91,7 @@ class WidgetUpdateWorker(private val appContext: Context, workerParams: WorkerPa
                     if (errorMessage.contains("권한")) {
                         showPermissionError(appWidgetId, remoteViews, isToday)
                     } else {
-                        showError(appWidgetId, remoteViews, isToday, errorMessage!!)
+                        showError(appWidgetId, remoteViews, isToday, errorMessage)
                     }
                 }
                 resultPair != null -> {
@@ -141,7 +143,6 @@ class WidgetUpdateWorker(private val appContext: Context, workerParams: WorkerPa
     }
 
     private fun finalizeWidgetUpdate(appWidgetId: Int, remoteViews: RemoteViews, isToday: Boolean) {
-        // [핵심 수정] TodayRecoWidgetProvider 클래스를 명시하여 함수를 정확히 호출합니다.
         TodayRecoWidgetProvider.setupClickIntents(appContext, appWidgetId, remoteViews, isToday)
         AppWidgetManager.getInstance(appContext).updateAppWidget(appWidgetId, remoteViews)
     }
@@ -205,6 +206,46 @@ class WidgetUpdateWorker(private val appContext: Context, workerParams: WorkerPa
         return RecommendationResult(recommendedTops, recommendedBottoms, recommendedOuters, bestCombination, packableOuter, umbrellaRecommendation, isTempDifferenceSignificant)
     }
 
+    // ▼▼▼▼▼ 핵심 수정 부분 ▼▼▼▼▼
+    /**
+     * 파일 경로로부터 이미지를 디코딩하되, 위젯 메모리 제한을 초과하지 않도록
+     * 지정된 크기(256x256)로 리사이즈하여 비트맵을 생성합니다.
+     */
+    private fun getResizedBitmap(path: String, reqWidth: Int = 256, reqHeight: Int = 256): Bitmap? {
+        return try {
+            val options = BitmapFactory.Options().apply {
+                inJustDecodeBounds = true
+            }
+            BitmapFactory.decodeFile(path, options)
+
+            options.inSampleSize = calculateInSampleSize(options, reqWidth, reqHeight)
+            options.inJustDecodeBounds = false
+            BitmapFactory.decodeFile(path, options)
+        } catch (e: Exception) {
+            Log.e("WidgetUpdateWorker", "Failed to create resized bitmap", e)
+            null
+        }
+    }
+
+    /**
+     * 원본 이미지 크기와 요청된 크기를 비교하여 적절한 샘플링 사이즈를 계산합니다.
+     * 이는 메모리 사용량을 효율적으로 줄이기 위한 표준적인 방법입니다.
+     */
+    private fun calculateInSampleSize(options: BitmapFactory.Options, reqWidth: Int, reqHeight: Int): Int {
+        val (height: Int, width: Int) = options.run { outHeight to outWidth }
+        var inSampleSize = 1
+
+        if (height > reqHeight || width > reqWidth) {
+            val halfHeight: Int = height / 2
+            val halfWidth: Int = width / 2
+
+            while (halfHeight / inSampleSize >= reqHeight && halfWidth / inSampleSize >= reqWidth) {
+                inSampleSize *= 2
+            }
+        }
+        return inSampleSize
+    }
+
     private fun updateWidgetImages(remoteViews: RemoteViews, items: List<ClothingItem>) {
         val imageViews = listOf(R.id.iv_widget_item1, R.id.iv_widget_item2, R.id.iv_widget_item3)
         imageViews.forEach { viewId -> remoteViews.setViewVisibility(viewId, View.GONE) }
@@ -214,9 +255,12 @@ class WidgetUpdateWorker(private val appContext: Context, workerParams: WorkerPa
                 try {
                     val file = File(imagePath)
                     if (file.exists()) {
-                        val bitmap = BitmapFactory.decodeFile(file.absolutePath)
-                        remoteViews.setImageViewBitmap(imageViews[index], bitmap)
-                        remoteViews.setViewVisibility(imageViews[index], View.VISIBLE)
+                        // 원본 비트맵을 그대로 사용하는 대신, 크기를 줄인 비트맵을 사용합니다.
+                        val bitmap = getResizedBitmap(file.absolutePath)
+                        if (bitmap != null) {
+                            remoteViews.setImageViewBitmap(imageViews[index], bitmap)
+                            remoteViews.setViewVisibility(imageViews[index], View.VISIBLE)
+                        }
                     }
                 } catch (e: Exception) {
                     Log.e("WidgetUpdateWorker", "Image loading failed for widget", e)
@@ -224,4 +268,5 @@ class WidgetUpdateWorker(private val appContext: Context, workerParams: WorkerPa
             }
         }
     }
+    // ▲▲▲▲▲ 핵심 수정 부분 ▲▲▲▲▲
 }

@@ -74,7 +74,12 @@ class TodayRecoWidgetProvider : AppWidgetProvider() {
                 "IS_TODAY" to isToday
             ))
             .build()
-        WorkManager.getInstance(context).enqueueUniqueWork("one_time_widget_update_$appWidgetId", ExistingWorkPolicy.REPLACE, workRequest)
+        // ▼▼▼▼▼ 핵심 수정 부분 ▼▼▼▼▼
+        // 작업의 고유 이름에 isToday 값을 포함시켜 오늘/내일 업데이트가 서로를 방해하지 않도록 합니다.
+        // 이렇게 하면 각 탭의 업데이트 작업이 독립적으로 실행되어 '업데이트 중...'에 멈추는 현상을 방지합니다.
+        val uniqueWorkName = "one_time_widget_update_${appWidgetId}_$isToday"
+        WorkManager.getInstance(context).enqueueUniqueWork(uniqueWorkName, ExistingWorkPolicy.REPLACE, workRequest)
+        // ▲▲▲▲▲ 핵심 수정 부분 ▲▲▲▲▲
     }
 
     companion object {

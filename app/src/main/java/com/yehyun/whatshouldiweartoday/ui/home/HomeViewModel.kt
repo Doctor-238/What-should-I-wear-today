@@ -83,8 +83,21 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun fetchWeatherData(latitude: Double, longitude: Double, apiKey: String) {
+    /**
+     * 프래그먼트에서 로딩 상태를 직접 제어할 수 있도록 public 함수를 추가합니다.
+     * 이 함수들은 모든 예외 상황(권한 거부, GPS 비활성화 등)에서
+     * 새로고침 애니메이션이 계속 실행되는 버그를 방지합니다.
+     */
+    fun startLoading() {
         _isLoading.value = true
+    }
+
+    fun stopLoading() {
+        _isLoading.value = false
+    }
+
+    fun fetchWeatherData(latitude: Double, longitude: Double, apiKey: String) {
+        startLoading()
         viewModelScope.launch {
             try {
                 val response = weatherRepository.getFiveDayForecast(latitude, longitude, apiKey)
@@ -98,7 +111,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             } catch (e: Exception) {
                 _error.postValue("네트워크 오류가 발생했습니다: ${e.message}")
             } finally {
-                _isLoading.postValue(false)
+                stopLoading()
             }
         }
     }
