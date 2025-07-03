@@ -1,3 +1,5 @@
+// 파일 경로: app/src/main/java/com/yehyun/whatshouldiweartoday/ui/closet/ClosetFragment.kt
+
 package com.yehyun.whatshouldiweartoday.ui.closet
 
 import android.Manifest
@@ -171,7 +173,6 @@ class ClosetFragment : Fragment(), OnTabReselectedListener {
                 lifecycleScope.launch {
                     delay(500)
                     _binding?.fabBatchAdd?.hideProgress()
-                    // 완료/취소/실패된 작업은 WorkManager가 자동으로 정리하도록 pruneWork() 호출
                     viewModel.workManager.pruneWork()
                 }
             } else { // RUNNING or ENQUEUED
@@ -183,10 +184,7 @@ class ClosetFragment : Fragment(), OnTabReselectedListener {
             }
         }
 
-        // 옷 목록 관찰 로직은 그대로 유지
-        viewModel.clothes.observe(viewLifecycleOwner) {
-            // ...
-        }
+        viewModel.clothes.observe(viewLifecycleOwner) {}
     }
 
     private fun startBatchAddWorker(imagePaths: Array<String>) {
@@ -230,6 +228,12 @@ class ClosetFragment : Fragment(), OnTabReselectedListener {
         val arrayAdapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, sortOptions)
         arrayAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         spinner.adapter = arrayAdapter
+
+        val currentSortType = viewModel.getCurrentSortType()
+        val currentPosition = sortOptions.indexOf(currentSortType)
+        if (currentPosition >= 0) {
+            spinner.setSelection(currentPosition)
+        }
 
         spinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {

@@ -1,3 +1,5 @@
+// 파일 경로: app/src/main/java/com/yehyun/whatshouldiweartoday/ui/closet/BatchAddWorker.kt
+
 package com.yehyun.whatshouldiweartoday.ui.closet
 
 import android.app.NotificationManager
@@ -7,7 +9,6 @@ import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.graphics.Color
 import android.graphics.Matrix
 import android.os.Build
 import android.util.Log
@@ -33,7 +34,6 @@ import kotlinx.serialization.json.Json
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
-import java.io.InputStream
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -220,8 +220,8 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
     }
 
     private fun createMainActivityPendingIntent(): PendingIntent {
+        // [수정] 특정 목적지로 이동하는 'extra'를 제거하고, 단순히 앱을 여는 인텐트로 변경합니다.
         val intent = Intent(applicationContext, MainActivity::class.java).apply {
-            putExtra("destination", R.id.navigation_closet)
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
         }
         val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT else PendingIntent.FLAG_UPDATE_CURRENT

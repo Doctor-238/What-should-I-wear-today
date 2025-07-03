@@ -1,3 +1,5 @@
+// 파일 경로: app/src/main/java/com/yehyun/whatshouldiweartoday/ui/closet/ClothingAdapter.kt
+
 package com.yehyun.whatshouldiweartoday.ui.closet
 
 import android.graphics.Color
@@ -44,10 +46,7 @@ class ClothingAdapter(
 
             if (item.category in listOf("상의", "하의", "아우터")) {
                 val temperatureTolerance = settingsManager.getTemperatureTolerance()
-                // ▼▼▼▼▼ 핵심 수정 부분 ▼▼▼▼▼
-                // baseTemperature 대신 이미 가중치가 적용된 suitableTemperature를 사용합니다.
                 val adjustedTemp = item.suitableTemperature + constitutionAdjustment
-                // ▲▲▲▲▲ 핵심 수정 부분 ▲▲▲▲▲
                 val minTemp = adjustedTemp - temperatureTolerance
                 val maxTemp = adjustedTemp + temperatureTolerance
                 tempTextView.text = "%.1f°C ~ %.1f°C".format(minTemp, maxTemp)
