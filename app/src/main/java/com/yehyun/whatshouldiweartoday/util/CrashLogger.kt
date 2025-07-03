@@ -54,8 +54,8 @@ class CrashLogger(private val context: Context) : Thread.UncaughtExceptionHandle
             writer.close()
 
         } catch (e: Exception) {
-            // 로그 기록 자체에서 오류가 발생하면 막을 방법이 없으므로 콘솔에만 출력합니다.
-            e.printStackTrace()
+
+            // 로그 기록 자체에서 오류가 발생하면 막을 방법이 없으므로 콘솔에만 출력합니다. e.printStackTrace()
         }
     }
 }
