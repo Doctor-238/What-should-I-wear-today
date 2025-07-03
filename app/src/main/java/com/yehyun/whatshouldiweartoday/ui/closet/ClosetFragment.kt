@@ -28,6 +28,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkInfo
 import androidx.work.workDataOf
 import com.google.android.material.tabs.TabLayoutMediator
 import com.yehyun.whatshouldiweartoday.MainActivity
@@ -69,11 +70,13 @@ class ClosetFragment : Fragment(), OnTabReselectedListener {
     ) { uris ->
         if (uris.isNotEmpty()) {
             viewLifecycleOwner.lifecycleScope.launch {
+                binding.fabBatchAdd.showProgress(0)
                 val copiedImagePaths = copyUrisToCache(uris)
                 if (copiedImagePaths.isNotEmpty()) {
                     startBatchAddWorker(copiedImagePaths.toTypedArray())
                 } else {
                     Toast.makeText(requireContext(), "이미지를 처리하는 데 실패했습니다.", Toast.LENGTH_SHORT).show()
+                    binding.fabBatchAdd.hideProgress()
                 }
             }
         }
@@ -165,27 +168,54 @@ class ClosetFragment : Fragment(), OnTabReselectedListener {
 
     private fun observeViewModel() {
         viewModel.batchAddWorkInfo.observe(viewLifecycleOwner) { workInfos ->
-            val workInfo = workInfos.firstOrNull()
+            val workInfo = workInfos.firstOrNull() ?: return@observe
 
-            if (workInfo == null || workInfo.state.isFinished) {
-                viewLifecycleOwner.lifecycleScope.launch {
+            if (workInfo.state.isFinished) {
+                // ▼▼▼▼▼ 핵심 수정 부분 ▼▼▼▼▼
+                // 이전에 이 작업에 대한 알림을 띄운 적이 있는지 확인하여 중복을 방지합니다.
+                if (!viewModel.processedWorkIds.contains(workInfo.id)) {
+                    val message: String
+                    val title: String
+
+                    when (workInfo.state) {
+                        WorkInfo.State.SUCCEEDED -> {
+                            title = "작업 완료"
+                            val successCount = workInfo.outputData.getInt(BatchAddWorker.OUTPUT_SUCCESS_COUNT, 0)
+                            val failureCount = workInfo.outputData.getInt(BatchAddWorker.OUTPUT_FAILURE_COUNT, 0)
+                            message = "$successCount 개의 옷을 성공적으로 추가했습니다.\n$failureCount 개의 옷이 추가되지 않았습니다."
+                        }
+                        WorkInfo.State.CANCELLED -> {
+                            title = "작업 취소됨"
+                            message = "옷 추가 작업이 취소되었습니다."
+                        }
+                        else -> { // FAILED
+                            title = "작업 실패"
+                            message = "옷 추가 중 오류가 발생했습니다."
+                        }
+                    }
+                    showFinalNotification(title, message)
+                    // 알림을 띄웠으므로, 이 작업 ID를 처리된 목록에 추가합니다.
+                    viewModel.processedWorkIds.add(workInfo.id)
+                }
+                // ▲▲▲▲▲ 핵심 수정 부분 ▲▲▲▲▲
+
+                lifecycleScope.launch {
                     delay(500)
                     _binding?.fabBatchAdd?.hideProgress()
                 }
-                return@observe
+            } else {
+                val progress = workInfo.progress
+                val current = progress.getInt(BatchAddWorker.PROGRESS_CURRENT, 0)
+                val total = progress.getInt(BatchAddWorker.PROGRESS_TOTAL, 1)
+                val percentage = if (total > 0) (current * 100 / total) else 0
+                binding.fabBatchAdd.showProgress(percentage)
             }
-
-            val progress = workInfo.progress
-            val current = progress.getInt(BatchAddWorker.PROGRESS_CURRENT, 0)
-            val total = progress.getInt(BatchAddWorker.PROGRESS_TOTAL, 1)
-            val percentage = if (total > 0) (current * 100 / total) else 0
-
-            binding.fabBatchAdd.showProgress(percentage)
         }
     }
 
-    private fun startBatchAddWorker(imagePaths: Array<String>) {
-        // ▼▼▼▼▼ 핵심 수정 부분 ▼▼▼▼▼
+    private fun showFinalNotification(title: String, message: String) {
+        if (context == null) return
+
         val intent = Intent(requireContext(), MainActivity::class.java).apply {
             putExtra("destination", R.id.navigation_closet)
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
@@ -195,18 +225,20 @@ class ClosetFragment : Fragment(), OnTabReselectedListener {
 
         val notificationManager = requireContext().getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         val notification = NotificationCompat.Builder(requireContext(), "batch_add_channel")
-            .setContentTitle("옷 추가 준비 중")
-            .setContentText("백그라운드에서 분석을 시작합니다...")
+            .setContentTitle(title)
+            .setContentText(message)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(message)) // 여러 줄 메시지 표시
             .setSmallIcon(R.mipmap.ic_launcher)
-            .setPriority(NotificationCompat.PRIORITY_LOW)
-            .setOngoing(true)
+            .setAutoCancel(true) // 사용자가 클릭하면 사라짐
+            .setOngoing(false) // 사용자가 스와이프로 지울 수 있음
             .setContentIntent(pendingIntent)
-            .setAutoCancel(true)
             .build()
-        // ▲▲▲▲▲ 핵심 수정 부분 ▲▲▲▲▲
+        notificationManager.notify(1, notification)
+    }
 
-        val NOTIFICATION_ID = 1
-        notificationManager.notify(NOTIFICATION_ID, notification)
+    private fun startBatchAddWorker(imagePaths: Array<String>) {
+        // 이전에 처리된 작업 ID 목록을 초기화합니다.
+        viewModel.processedWorkIds.clear()
 
         val workRequest = OneTimeWorkRequestBuilder<BatchAddWorker>()
             .setInputData(workDataOf(

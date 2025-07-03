@@ -64,6 +64,8 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
         const val KEY_API = "api_key"
         const val PROGRESS_CURRENT = "current"
         const val PROGRESS_TOTAL = "total"
+        const val OUTPUT_SUCCESS_COUNT = "success_count"
+        const val OUTPUT_FAILURE_COUNT = "failure_count" // [추가] 실패 개수 키
         private const val NOTIFICATION_ID = 1
         private const val CHANNEL_ID = "batch_add_channel"
     }
@@ -72,11 +74,7 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
         val notification = createNotificationBuilder(0, 0).build()
 
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            ForegroundInfo(
-                NOTIFICATION_ID,
-                notification,
-                ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
-            )
+            ForegroundInfo(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
         } else {
             ForegroundInfo(NOTIFICATION_ID, notification)
         }
@@ -86,6 +84,7 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
         val imagePaths = inputData.getStringArray(KEY_IMAGE_PATHS) ?: return Result.failure()
         val apiKey = inputData.getString(KEY_API) ?: return Result.failure()
         var successCount = 0
+        var failureCount = 0 // [추가] 실패 카운터
 
         try {
             setForeground(getForegroundInfo())
@@ -100,11 +99,16 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
                     val bitmap = getCorrectlyOrientedBitmap(path)
                     if (bitmap != null) {
                         val saved = analyzeAndSave(bitmap, generativeModel)
-                        if(saved) successCount++
+                        if (saved) successCount++ else failureCount++ // [수정] 성공/실패 카운트
+                    } else {
+                        failureCount++ // 비트맵 생성 실패
                     }
                 } catch (e: Exception) {
                     Log.e("BatchAddWorker", "Failed to process image: ${imagePaths[i]}", e)
+                    failureCount++
                 }
+
+                if (isStopped) break
 
                 val progressData = workDataOf(PROGRESS_CURRENT to i + 1, PROGRESS_TOTAL to totalItems)
                 setProgress(progressData)
@@ -114,38 +118,29 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
             Log.e("BatchAddWorker", "Major failure in doWork", e)
             return Result.failure()
         } finally {
-            cleanup(imagePaths, successCount)
-        }
-        return Result.success()
-    }
-
-    private fun cleanup(imagePaths: Array<String>, successCount: Int) {
-        val title = if (isStopped) "작업 취소됨" else "작업 완료"
-        val message = if (isStopped) "옷 추가 작업이 취소되었습니다." else "$successCount개의 옷을 성공적으로 추가했습니다."
-        val finalNotification = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setContentTitle(title)
-            .setContentText(message)
-            .setSmallIcon(R.mipmap.ic_launcher)
-            .setAutoCancel(true)
-            .setContentIntent(createMainActivityPendingIntent())
-            .build()
-        notificationManager.notify(NOTIFICATION_ID, finalNotification)
-
-        imagePaths.forEach { path ->
-            try {
-                val file = File(path)
-                if (file.exists()) {
-                    file.delete()
+            notificationManager.cancel(NOTIFICATION_ID)
+            imagePaths.forEach { path ->
+                try {
+                    val file = File(path)
+                    if (file.exists()) file.delete()
+                } catch (e: Exception) {
+                    Log.e("BatchAddWorker", "Failed to delete cache file: $path", e)
                 }
-            } catch (e: Exception) {
-                Log.e("BatchAddWorker", "Failed to delete cache file: $path", e)
             }
         }
+        // [수정] 성공 및 실패 개수를 모두 결과로 반환합니다.
+        val outputData = workDataOf(
+            OUTPUT_SUCCESS_COUNT to successCount,
+            OUTPUT_FAILURE_COUNT to failureCount
+        )
+        return Result.success(outputData)
     }
 
     private suspend fun analyzeAndSave(bitmap: Bitmap, model: GenerativeModel): Boolean {
         var saved = false
         coroutineScope {
+            if (isStopped) return@coroutineScope
+
             val analysisJob = async { analyzeImageWithRetry(bitmap, model) }
             val processedImageJob = async {
                 try {
@@ -157,10 +152,19 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
             val originalImageJob = async { bitmap }
 
             val analysisResult = analysisJob.await()
+            if (isStopped) return@coroutineScope
+
+            // ▼▼▼▼▼ 핵심 수정 부분 ▼▼▼▼▼
+            // is_wearable이 false이면 저장하지 않고 함수를 종료하여 실패로 카운트되도록 합니다.
+            if (analysisResult == null || !analysisResult.is_wearable) {
+                return@coroutineScope
+            }
+            // ▲▲▲▲▲ 핵심 수정 부분 ▲▲▲▲▲
+
             val processedBitmap = processedImageJob.await()
             val originalBitmap = originalImageJob.await()
 
-            if (analysisResult?.is_wearable == true && analysisResult.category != null && analysisResult.suitable_temperature != null && analysisResult.color_hex != null) {
+            if (analysisResult.category != null && analysisResult.suitable_temperature != null && analysisResult.color_hex != null) {
                 val originalPath = saveBitmapToInternalStorage(originalBitmap, "original_")
                 val processedPath = processedBitmap?.let { savePngToInternalStorage(it, "processed_") }
 
@@ -185,14 +189,16 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
 
     private fun createNotificationBuilder(current: Int, total: Int): NotificationCompat.Builder {
         val title = if (total > 0) "새 옷 추가 중 ($current/$total)" else "새 옷 추가 중"
+        val isIndeterminate = total == 0
         return NotificationCompat.Builder(context, CHANNEL_ID)
             .setContentTitle(title)
             .setContentText("AI가 옷을 분석하고 있습니다...")
             .setSmallIcon(R.mipmap.ic_launcher)
             .setOngoing(true)
-            .setProgress(total, current, if (total == 0) true else false) // 초기 상태에서는 indeterminate progress
+            .setOnlyAlertOnce(true) // 알림이 업데이트될 때마다 소리가 나지 않도록 설정
+            .setProgress(total, current, isIndeterminate)
             .setContentIntent(createMainActivityPendingIntent())
-            .addAction(R.drawable.ic_cancel, "취소", createCancelPendingIntent())
+            .addAction(R.drawable.ic_arrow_back, "취소", createCancelPendingIntent())
     }
 
     private fun getCorrectlyOrientedBitmap(path: String): Bitmap? {
@@ -200,14 +206,12 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
             val originalBitmap = BitmapFactory.decodeFile(path)
             val exifInterface = ExifInterface(path)
             val orientation = exifInterface.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)
-
             val matrix = Matrix()
             when (orientation) {
                 ExifInterface.ORIENTATION_ROTATE_90 -> matrix.postRotate(90f)
                 ExifInterface.ORIENTATION_ROTATE_180 -> matrix.postRotate(180f)
                 ExifInterface.ORIENTATION_ROTATE_270 -> matrix.postRotate(270f)
             }
-
             Bitmap.createBitmap(originalBitmap, 0, 0, originalBitmap.width, originalBitmap.height, matrix, true)
         } catch (e: Exception) {
             e.printStackTrace()
@@ -218,8 +222,8 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
     private suspend fun analyzeImageWithRetry(bitmap: Bitmap, model: GenerativeModel, maxRetries: Int = 2): ClothingAnalysis? {
         var attempt = 0
         var successfulAnalysis: ClothingAnalysis? = null
-
         while (attempt < maxRetries) {
+            if(isStopped) return null
             try {
                 val resizedBitmap = resizeBitmap(bitmap)
                 val inputContent = com.google.ai.client.generativeai.type.content {
@@ -227,9 +231,7 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
                     text("""
                         You are a Precise Climate & Fashion Analyst for Korean weather.
                         Your task is to analyze the clothing item in the image and provide a detailed analysis in a strict JSON format, without any additional text or explanations.
-
                         Your JSON response MUST contain ONLY the following keys: "is_wearable", "category", "suitable_temperature", and "color_hex".
-
                         - "is_wearable": (boolean) If the image contains a single primary clothing item (or a single person's outfit), this is True. If the image contains multiple people or multiple separate clothing items laid out, this MUST be False.
                         - "category": (string) If wearable, one of '상의', '하의', '아우터', '신발', '가방', '모자', '기타'.
                         - "color_hex": (string) If wearable, the dominant color of the item as a hex string.
@@ -237,14 +239,9 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
                     """.trimIndent())
                 }
                 val response = model.generateContent(inputContent)
-                val analysisResult = Json { ignoreUnknownKeys = true }.decodeFromString<ClothingAnalysis>(response.text!!)
-
-                if (!analysisResult.is_wearable || isValidHexCode(analysisResult.color_hex)) {
-                    successfulAnalysis = analysisResult
-                    break
-                } else {
-                    successfulAnalysis = analysisResult
-                }
+                // [수정] is_wearable이 false라도 결과를 반환하도록 수정
+                successfulAnalysis = Json { ignoreUnknownKeys = true }.decodeFromString<ClothingAnalysis>(response.text!!)
+                break
             } catch (e: Exception) {
                 Log.e("AI_ERROR_WORKER", "Attempt ${attempt + 1} failed", e)
                 if (attempt == maxRetries - 1) return null
