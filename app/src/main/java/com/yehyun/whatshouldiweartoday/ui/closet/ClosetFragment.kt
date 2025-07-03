@@ -25,7 +25,6 @@ import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
-import androidx.navigation.NavDeepLinkBuilder
 import androidx.navigation.fragment.findNavController
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
@@ -42,8 +41,7 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
 import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
+import java.util.*
 
 class ClosetFragment : Fragment(), OnTabReselectedListener {
 
@@ -70,9 +68,6 @@ class ClosetFragment : Fragment(), OnTabReselectedListener {
         ActivityResultContracts.GetMultipleContents()
     ) { uris ->
         if (uris.isNotEmpty()) {
-            // ▼▼▼▼▼ 핵심 수정 부분 ▼▼▼▼▼
-            // 사용자가 선택한 이미지들의 URI로부터 실제 파일 경로를 가져와 Worker에게 전달합니다.
-            // SecurityException을 방지하기 위해, content URI를 앱 내부 캐시로 복사합니다.
             viewLifecycleOwner.lifecycleScope.launch {
                 val copiedImagePaths = copyUrisToCache(uris)
                 if (copiedImagePaths.isNotEmpty()) {
@@ -81,16 +76,9 @@ class ClosetFragment : Fragment(), OnTabReselectedListener {
                     Toast.makeText(requireContext(), "이미지를 처리하는 데 실패했습니다.", Toast.LENGTH_SHORT).show()
                 }
             }
-            // ▲▲▲▲▲ 핵심 수정 부분 ▲▲▲▲▲
         }
     }
 
-    // ▼▼▼▼▼ 핵심 수정 부분 ▼▼▼▼▼
-    /**
-     * content URI 목록을 받아 앱의 내부 캐시 디렉토리에 복사하고,
-     * 복사된 파일들의 절대 경로 목록을 반환합니다.
-     * 이는 백그라운드 Worker가 URI 접근 권한을 잃는 SecurityException을 해결하기 위함입니다.
-     */
     private suspend fun copyUrisToCache(uris: List<Uri>): List<String> = withContext(Dispatchers.IO) {
         val pathList = mutableListOf<String>()
         val cacheDir = requireContext().cacheDir
@@ -108,13 +96,11 @@ class ClosetFragment : Fragment(), OnTabReselectedListener {
                 }
                 pathList.add(tempFile.absolutePath)
             } catch (e: Exception) {
-                // 파일 복사 중 오류가 발생하면 로그를 남깁니다.
                 e.printStackTrace()
             }
         }
         pathList
     }
-    // ▲▲▲▲▲ 핵심 수정 부분 ▲▲▲▲▲
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -199,11 +185,13 @@ class ClosetFragment : Fragment(), OnTabReselectedListener {
     }
 
     private fun startBatchAddWorker(imagePaths: Array<String>) {
-        val pendingIntent = NavDeepLinkBuilder(requireContext())
-            .setComponentName(MainActivity::class.java)
-            .setGraph(R.navigation.mobile_navigation)
-            .setDestination(R.id.navigation_closet)
-            .createPendingIntent()
+        // ▼▼▼▼▼ 핵심 수정 부분 ▼▼▼▼▼
+        val intent = Intent(requireContext(), MainActivity::class.java).apply {
+            putExtra("destination", R.id.navigation_closet)
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
+        }
+        val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT else PendingIntent.FLAG_UPDATE_CURRENT
+        val pendingIntent = PendingIntent.getActivity(requireContext(), 1001, intent, flags)
 
         val notificationManager = requireContext().getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         val notification = NotificationCompat.Builder(requireContext(), "batch_add_channel")
@@ -215,13 +203,14 @@ class ClosetFragment : Fragment(), OnTabReselectedListener {
             .setContentIntent(pendingIntent)
             .setAutoCancel(true)
             .build()
+        // ▲▲▲▲▲ 핵심 수정 부분 ▲▲▲▲▲
 
         val NOTIFICATION_ID = 1
         notificationManager.notify(NOTIFICATION_ID, notification)
 
         val workRequest = OneTimeWorkRequestBuilder<BatchAddWorker>()
             .setInputData(workDataOf(
-                BatchAddWorker.KEY_IMAGE_PATHS to imagePaths, // [수정] KEY 변경
+                BatchAddWorker.KEY_IMAGE_PATHS to imagePaths,
                 BatchAddWorker.KEY_API to getString(R.string.gemini_api_key)
             ))
             .build()
