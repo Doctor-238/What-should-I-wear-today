@@ -22,6 +22,7 @@ import com.google.mlkit.vision.segmentation.selfie.SelfieSegmenterOptions
 import com.yehyun.whatshouldiweartoday.MainActivity
 import com.yehyun.whatshouldiweartoday.R
 import com.yehyun.whatshouldiweartoday.TodayRecoWidgetProvider
+import com.yehyun.whatshouldiweartoday.WhatShouldIWearTodayApplication
 import com.yehyun.whatshouldiweartoday.ai.AiModelProvider
 import com.yehyun.whatshouldiweartoday.data.database.AppDatabase
 import com.yehyun.whatshouldiweartoday.data.database.ClothingItem
@@ -42,41 +43,23 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
     private val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
     private val settingsManager = SettingsManager(context)
 
-    private fun createMainActivityPendingIntent(): PendingIntent {
-        val intent = Intent(applicationContext, MainActivity::class.java).apply {
-            putExtra("destination", R.id.navigation_closet)
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
-        }
-        val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT else PendingIntent.FLAG_UPDATE_CURRENT
-        return PendingIntent.getActivity(applicationContext, 1001, intent, flags)
-    }
-
-    private fun createCancelPendingIntent(): PendingIntent {
-        val intent = Intent(applicationContext, TodayRecoWidgetProvider::class.java).apply {
-            action = "ACTION_CANCEL_BATCH_ADD"
-        }
-        val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT else PendingIntent.FLAG_UPDATE_CURRENT
-        return PendingIntent.getBroadcast(applicationContext, 1002, intent, flags)
-    }
-
     companion object {
         const val KEY_IMAGE_PATHS = "image_paths"
         const val KEY_API = "api_key"
         const val PROGRESS_CURRENT = "current"
         const val PROGRESS_TOTAL = "total"
         const val OUTPUT_SUCCESS_COUNT = "success_count"
-        const val OUTPUT_FAILURE_COUNT = "failure_count" // [추가] 실패 개수 키
-        private const val NOTIFICATION_ID = 1
-        private const val CHANNEL_ID = "batch_add_channel"
+        const val OUTPUT_FAILURE_COUNT = "failure_count"
+        private const val FOREGROUND_NOTIFICATION_ID = 1
+        private const val COMPLETE_NOTIFICATION_ID = 2 // 완료 알림 ID 분리
     }
 
     override suspend fun getForegroundInfo(): ForegroundInfo {
-        val notification = createNotificationBuilder(0, 0).build()
-
+        val notification = createProgressNotification(0, 0).build()
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            ForegroundInfo(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
+            ForegroundInfo(FOREGROUND_NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
         } else {
-            ForegroundInfo(NOTIFICATION_ID, notification)
+            ForegroundInfo(FOREGROUND_NOTIFICATION_ID, notification)
         }
     }
 
@@ -84,10 +67,11 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
         val imagePaths = inputData.getStringArray(KEY_IMAGE_PATHS) ?: return Result.failure()
         val apiKey = inputData.getString(KEY_API) ?: return Result.failure()
         var successCount = 0
-        var failureCount = 0 // [추가] 실패 카운터
+        var failureCount = 0
 
         try {
             setForeground(getForegroundInfo())
+
             val totalItems = imagePaths.size
             val generativeModel = AiModelProvider.getModel(context, apiKey)
 
@@ -99,9 +83,9 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
                     val bitmap = getCorrectlyOrientedBitmap(path)
                     if (bitmap != null) {
                         val saved = analyzeAndSave(bitmap, generativeModel)
-                        if (saved) successCount++ else failureCount++ // [수정] 성공/실패 카운트
+                        if (saved) successCount++ else failureCount++
                     } else {
-                        failureCount++ // 비트맵 생성 실패
+                        failureCount++
                     }
                 } catch (e: Exception) {
                     Log.e("BatchAddWorker", "Failed to process image: ${imagePaths[i]}", e)
@@ -112,28 +96,72 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
 
                 val progressData = workDataOf(PROGRESS_CURRENT to i + 1, PROGRESS_TOTAL to totalItems)
                 setProgress(progressData)
-                notificationManager.notify(NOTIFICATION_ID, createNotificationBuilder(i + 1, totalItems).build())
+
+                val notification = createProgressNotification(i + 1, totalItems).build()
+                notificationManager.notify(FOREGROUND_NOTIFICATION_ID, notification)
             }
         } catch (e: Exception) {
             Log.e("BatchAddWorker", "Major failure in doWork", e)
+            showFinalNotification("작업 실패", "옷 추가 중 오류가 발생했습니다.")
             return Result.failure()
         } finally {
-            notificationManager.cancel(NOTIFICATION_ID)
-            imagePaths.forEach { path ->
-                try {
-                    val file = File(path)
-                    if (file.exists()) file.delete()
-                } catch (e: Exception) {
-                    Log.e("BatchAddWorker", "Failed to delete cache file: $path", e)
-                }
-            }
+            cleanup(imagePaths)
         }
-        // [수정] 성공 및 실패 개수를 모두 결과로 반환합니다.
+
         val outputData = workDataOf(
             OUTPUT_SUCCESS_COUNT to successCount,
             OUTPUT_FAILURE_COUNT to failureCount
         )
+
+        val message = if (isStopped) {
+            "작업이 취소되었습니다."
+        } else {
+            "$successCount 개의 옷을 성공적으로 추가했습니다.\n$failureCount 개의 옷이 추가되지 않았습니다."
+        }
+        val title = if(isStopped) "작업 취소됨" else "작업 완료"
+        showFinalNotification(title, message)
+
         return Result.success(outputData)
+    }
+
+    private fun cleanup(imagePaths: Array<String>) {
+        notificationManager.cancel(FOREGROUND_NOTIFICATION_ID)
+        imagePaths.forEach { path ->
+            try {
+                val file = File(path)
+                if (file.exists()) file.delete()
+            } catch (e: Exception) {
+                Log.e("BatchAddWorker", "Failed to delete cache file: $path", e)
+            }
+        }
+    }
+
+    private fun createProgressNotification(current: Int, total: Int): NotificationCompat.Builder {
+        val title = if (total > 0) "새 옷 추가 중 ($current/$total)" else "새 옷 추가 중"
+        val isIndeterminate = total == 0
+
+        return NotificationCompat.Builder(context, WhatShouldIWearTodayApplication.PROGRESS_CHANNEL_ID)
+            .setContentTitle(title)
+            .setContentText("AI가 옷을 분석하고 있습니다...")
+            .setSmallIcon(R.mipmap.ic_launcher)
+            .setOngoing(true)
+            .setOnlyAlertOnce(true)
+            .setProgress(total, current, isIndeterminate)
+            .setContentIntent(createMainActivityPendingIntent())
+            .addAction(R.drawable.ic_arrow_back, "취소", createCancelPendingIntent())
+            .setAutoCancel(false)
+    }
+
+    private fun showFinalNotification(title: String, message: String) {
+        val notification = NotificationCompat.Builder(context, WhatShouldIWearTodayApplication.COMPLETE_CHANNEL_ID)
+            .setContentTitle(title)
+            .setContentText(message)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(message))
+            .setSmallIcon(R.mipmap.ic_launcher)
+            .setContentIntent(createMainActivityPendingIntent())
+            .setAutoCancel(true)
+            .build()
+        notificationManager.notify(COMPLETE_NOTIFICATION_ID, notification)
     }
 
     private suspend fun analyzeAndSave(bitmap: Bitmap, model: GenerativeModel): Boolean {
@@ -154,12 +182,9 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
             val analysisResult = analysisJob.await()
             if (isStopped) return@coroutineScope
 
-            // ▼▼▼▼▼ 핵심 수정 부분 ▼▼▼▼▼
-            // is_wearable이 false이면 저장하지 않고 함수를 종료하여 실패로 카운트되도록 합니다.
             if (analysisResult == null || !analysisResult.is_wearable) {
                 return@coroutineScope
             }
-            // ▲▲▲▲▲ 핵심 수정 부분 ▲▲▲▲▲
 
             val processedBitmap = processedImageJob.await()
             val originalBitmap = originalImageJob.await()
@@ -169,7 +194,13 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
                 val processedPath = processedBitmap?.let { savePngToInternalStorage(it, "processed_") }
 
                 if (originalPath != null) {
-                    val finalTemp = if (analysisResult.category == "아우터") analysisResult.suitable_temperature - 3.0 else analysisResult.suitable_temperature
+                    val baseTemp = analysisResult.suitable_temperature
+                    val finalTemp = when (analysisResult.category) {
+                        "아우터" -> baseTemp - 3.0
+                        "상의", "하의" -> baseTemp + 2.0
+                        else -> baseTemp
+                    }
+
                     val newItem = ClothingItem(
                         name = analysisResult.category,
                         imageUri = originalPath,
@@ -177,6 +208,7 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
                         useProcessedImage = false,
                         category = analysisResult.category,
                         suitableTemperature = finalTemp,
+                        baseTemperature = baseTemp,
                         colorHex = analysisResult.color_hex
                     )
                     clothingDao.insert(newItem)
@@ -187,18 +219,21 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
         return saved
     }
 
-    private fun createNotificationBuilder(current: Int, total: Int): NotificationCompat.Builder {
-        val title = if (total > 0) "새 옷 추가 중 ($current/$total)" else "새 옷 추가 중"
-        val isIndeterminate = total == 0
-        return NotificationCompat.Builder(context, CHANNEL_ID)
-            .setContentTitle(title)
-            .setContentText("AI가 옷을 분석하고 있습니다...")
-            .setSmallIcon(R.mipmap.ic_launcher)
-            .setOngoing(true)
-            .setOnlyAlertOnce(true) // 알림이 업데이트될 때마다 소리가 나지 않도록 설정
-            .setProgress(total, current, isIndeterminate)
-            .setContentIntent(createMainActivityPendingIntent())
-            .addAction(R.drawable.ic_arrow_back, "취소", createCancelPendingIntent())
+    private fun createMainActivityPendingIntent(): PendingIntent {
+        val intent = Intent(applicationContext, MainActivity::class.java).apply {
+            putExtra("destination", R.id.navigation_closet)
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
+        }
+        val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT else PendingIntent.FLAG_UPDATE_CURRENT
+        return PendingIntent.getActivity(applicationContext, 1001, intent, flags)
+    }
+
+    private fun createCancelPendingIntent(): PendingIntent {
+        val intent = Intent(applicationContext, TodayRecoWidgetProvider::class.java).apply {
+            action = "ACTION_CANCEL_BATCH_ADD"
+        }
+        val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT else PendingIntent.FLAG_UPDATE_CURRENT
+        return PendingIntent.getBroadcast(applicationContext, 1002, intent, flags)
     }
 
     private fun getCorrectlyOrientedBitmap(path: String): Bitmap? {
@@ -239,7 +274,6 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
                     """.trimIndent())
                 }
                 val response = model.generateContent(inputContent)
-                // [수정] is_wearable이 false라도 결과를 반환하도록 수정
                 successfulAnalysis = Json { ignoreUnknownKeys = true }.decodeFromString<ClothingAnalysis>(response.text!!)
                 break
             } catch (e: Exception) {
@@ -249,16 +283,6 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
             attempt++
         }
         return successfulAnalysis
-    }
-
-    private fun isValidHexCode(hexCode: String?): Boolean {
-        if (hexCode.isNullOrBlank()) return false
-        return try {
-            Color.parseColor(hexCode)
-            true
-        } catch (e: IllegalArgumentException) {
-            false
-        }
     }
 
     private fun createBitmapWithMask(original: Bitmap, mask: SegmentationMask): Bitmap {

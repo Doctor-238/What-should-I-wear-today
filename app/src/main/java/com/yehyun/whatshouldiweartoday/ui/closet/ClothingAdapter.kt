@@ -40,13 +40,14 @@ class ClothingAdapter(
             nameTextView.text = item.name
 
             val settingsManager = SettingsManager(itemView.context)
-            // [추가] 체질 보정 값 가져오기
             val constitutionAdjustment = settingsManager.getConstitutionAdjustment()
 
             if (item.category in listOf("상의", "하의", "아우터")) {
                 val temperatureTolerance = settingsManager.getTemperatureTolerance()
-                // [수정] 보정 값을 적용한 최종 적정 온도 계산
+                // ▼▼▼▼▼ 핵심 수정 부분 ▼▼▼▼▼
+                // baseTemperature 대신 이미 가중치가 적용된 suitableTemperature를 사용합니다.
                 val adjustedTemp = item.suitableTemperature + constitutionAdjustment
+                // ▲▲▲▲▲ 핵심 수정 부분 ▲▲▲▲▲
                 val minTemp = adjustedTemp - temperatureTolerance
                 val maxTemp = adjustedTemp + temperatureTolerance
                 tempTextView.text = "%.1f°C ~ %.1f°C".format(minTemp, maxTemp)

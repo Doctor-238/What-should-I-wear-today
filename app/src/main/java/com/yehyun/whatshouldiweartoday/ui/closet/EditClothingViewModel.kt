@@ -68,15 +68,27 @@ class EditClothingViewModel(application: Application) : AndroidViewModel(applica
         }
     }
 
+    // ▼▼▼▼▼ 핵심 수정 부분 ▼▼▼▼▼
     fun updateCategory(category: String) {
         _currentClothingItem.value?.let {
             if (it.category != category) {
                 it.category = category
-                _currentClothingItem.postValue(it)
+
+                // 카테고리 변경 시, baseTemperature를 기준으로 suitableTemperature를 다시 계산
+                val baseTemp = it.baseTemperature
+                it.suitableTemperature = when (category) {
+                    "아우터" -> baseTemp - 3.0
+                    "상의", "하의" -> baseTemp + 2.0
+                    else -> baseTemp
+                }
+
+                _currentClothingItem.postValue(it) // LiveData 업데이트하여 UI에 즉시 반영
                 checkForChanges()
             }
         }
     }
+    // ▲▲▲▲▲ 핵심 수정 부분 ▲▲▲▲▲
+
 
     fun updateUseProcessedImage(use: Boolean) {
         _currentClothingItem.value?.let {

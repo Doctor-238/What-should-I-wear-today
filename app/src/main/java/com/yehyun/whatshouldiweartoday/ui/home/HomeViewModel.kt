@@ -1,11 +1,19 @@
 package com.yehyun.whatshouldiweartoday.ui.home
 
+import android.Manifest
+import android.annotation.SuppressLint
 import android.app.Application
+import android.content.pm.PackageManager
+import android.location.Location
+import android.os.Looper
 import android.util.Log
+import androidx.core.app.ActivityCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
+import com.google.android.gms.location.*
+import com.google.android.gms.tasks.CancellationTokenSource
 import com.yehyun.whatshouldiweartoday.data.api.Forecast
 import com.yehyun.whatshouldiweartoday.data.api.WeatherApiService
 import com.yehyun.whatshouldiweartoday.data.database.AppDatabase
@@ -13,11 +21,15 @@ import com.yehyun.whatshouldiweartoday.data.database.ClothingItem
 import com.yehyun.whatshouldiweartoday.data.preference.SettingsManager
 import com.yehyun.whatshouldiweartoday.data.repository.ClothingRepository
 import com.yehyun.whatshouldiweartoday.data.repository.WeatherRepository
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
+import java.io.IOException
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import kotlin.math.abs
 
+// Data Class들은 변경 없습니다.
 data class RecommendationResult(
     val recommendedTops: List<ClothingItem>,
     val recommendedBottoms: List<ClothingItem>,
@@ -38,33 +50,35 @@ data class DailyWeatherSummary(
     val precipitationProbability: Int
 )
 
+@SuppressLint("MissingPermission")
 class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
     private val weatherRepository: WeatherRepository
     private val clothingRepository: ClothingRepository
+    private val settingsManager = SettingsManager(application)
+    private val fusedLocationClient = LocationServices.getFusedLocationProviderClient(application)
+    private var fetchJob: Job? = null
+    private var cancellationTokenSource = CancellationTokenSource()
 
-    private val _todayWeatherSummary = MutableLiveData<DailyWeatherSummary>()
-    val todayWeatherSummary: LiveData<DailyWeatherSummary> = _todayWeatherSummary
-    private val _tomorrowWeatherSummary = MutableLiveData<DailyWeatherSummary>()
-    val tomorrowWeatherSummary: LiveData<DailyWeatherSummary> = _tomorrowWeatherSummary
-    private val _todayRecommendation = MutableLiveData<RecommendationResult>()
-    val todayRecommendation: LiveData<RecommendationResult> = _todayRecommendation
-    private val _tomorrowRecommendation = MutableLiveData<RecommendationResult>()
-    val tomorrowRecommendation: LiveData<RecommendationResult> = _tomorrowRecommendation
-    private val _error = MutableLiveData<String>()
-    val error: LiveData<String> = _error
+
+    private val _todayWeatherSummary = MutableLiveData<DailyWeatherSummary?>()
+    val todayWeatherSummary: LiveData<DailyWeatherSummary?> = _todayWeatherSummary
+    private val _tomorrowWeatherSummary = MutableLiveData<DailyWeatherSummary?>()
+    val tomorrowWeatherSummary: LiveData<DailyWeatherSummary?> = _tomorrowWeatherSummary
+    private val _todayRecommendation = MutableLiveData<RecommendationResult?>()
+    val todayRecommendation: LiveData<RecommendationResult?> = _todayRecommendation
+    private val _tomorrowRecommendation = MutableLiveData<RecommendationResult?>()
+    val tomorrowRecommendation: LiveData<RecommendationResult?> = _tomorrowRecommendation
+    private val _error = MutableLiveData<String?>()
+    val error: LiveData<String?> = _error
     private val _isLoading = MutableLiveData<Boolean>()
     val isLoading: LiveData<Boolean> = _isLoading
     private val _isRecommendationScrolledToTop = MutableLiveData(true)
     val isRecommendationScrolledToTop: LiveData<Boolean> = _isRecommendationScrolledToTop
-    private val settingsManager = SettingsManager(application)
-
-    val locationPermissionGranted = MutableLiveData<Boolean?>(null)
 
     private val _switchToTab = MutableLiveData<Int?>()
     val switchToTab: LiveData<Int?> = _switchToTab
 
-    // [핵심 수정] 현재 세션에서 권한 요청이 있었는지 추적하는 상태 변수
     var permissionRequestedThisSession = false
 
     companion object {
@@ -83,37 +97,74 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    /**
-     * 프래그먼트에서 로딩 상태를 직접 제어할 수 있도록 public 함수를 추가합니다.
-     * 이 함수들은 모든 예외 상황(권한 거부, GPS 비활성화 등)에서
-     * 새로고침 애니메이션이 계속 실행되는 버그를 방지합니다.
-     */
     fun startLoading() {
-        _isLoading.value = true
+        if (_isLoading.value != true) _isLoading.value = true
     }
 
     fun stopLoading() {
         _isLoading.value = false
     }
 
-    fun fetchWeatherData(latitude: Double, longitude: Double, apiKey: String) {
-        startLoading()
-        viewModelScope.launch {
+    fun refreshWeatherData(apiKey: String) {
+        // 기존 요청 취소
+        cancellationTokenSource.cancel()
+        cancellationTokenSource = CancellationTokenSource()
+
+        fetchJob?.cancel()
+        fetchJob = viewModelScope.launch {
+            startLoading()
             try {
-                val response = weatherRepository.getFiveDayForecast(latitude, longitude, apiKey)
-                if (response.isSuccessful && response.body() != null) {
-                    processAndRecommend(response.body()!!)
-                } else {
-                    val errorBody = response.errorBody()?.string() ?: "알 수 없는 오류"
-                    Log.e("HomeViewModel", "API Error: ${response.code()} - $errorBody")
-                    _error.postValue("날씨 정보를 가져오는 데 실패했습니다. (코드: ${response.code()})")
+                if (ActivityCompat.checkSelfPermission(getApplication(), Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                    throw SecurityException("위치 권한이 없습니다.")
                 }
+                val location = getFreshLocation()
+                fetchWeatherForLocation(location, apiKey)
+
             } catch (e: Exception) {
-                _error.postValue("네트워크 오류가 발생했습니다: ${e.message}")
+                handleFetchError(e)
             } finally {
                 stopLoading()
             }
         }
+    }
+
+    private suspend fun getFreshLocation(): Location {
+        // 1. 마지막 위치 확인 (빠름)
+        try {
+            val lastLocation = fusedLocationClient.lastLocation.await()
+            if (lastLocation != null && (System.currentTimeMillis() - lastLocation.time) < 600000) { // 10분 이내
+                return lastLocation
+            }
+        } catch (e: Exception) {
+            Log.w("HomeViewModel", "마지막 위치 가져오기 실패", e)
+        }
+
+        // 2. 현재 위치 요청 (안정적)
+        return fusedLocationClient.getCurrentLocation(
+            Priority.PRIORITY_BALANCED_POWER_ACCURACY,
+            cancellationTokenSource.token
+        ).await()
+    }
+
+    private suspend fun fetchWeatherForLocation(location: Location, apiKey: String) {
+        val response = weatherRepository.getFiveDayForecast(location.latitude, location.longitude, apiKey)
+        if (response.isSuccessful && response.body() != null) {
+            processAndRecommend(response.body()!!)
+        } else {
+            val errorBody = response.errorBody()?.string() ?: "알 수 없는 오류"
+            throw IOException("날씨 정보를 가져오는 데 실패했습니다. (코드: ${response.code()}) - $errorBody")
+        }
+    }
+
+    private fun handleFetchError(e: Exception) {
+        Log.e("HomeViewModel", "데이터 가져오기 오류", e)
+        val errorMessage = when (e) {
+            is SecurityException -> "날씨 정보를 보려면 위치 권한을 허용해주세요."
+            is IOException -> e.message
+            is com.google.android.gms.tasks.RuntimeExecutionException -> "위치를 가져올 수 없습니다. GPS를 켜고 잠시 후 다시 시도해주세요."
+            else -> "데이터 로딩 중 알 수 없는 오류가 발생했습니다."
+        }
+        _error.postValue(errorMessage)
     }
 
     suspend fun processAndRecommend(weatherResponse: com.yehyun.whatshouldiweartoday.data.api.WeatherResponse) {
@@ -130,11 +181,17 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             val summary = createDailySummary(todayForecasts)
             _todayWeatherSummary.postValue(summary)
             _todayRecommendation.postValue(generateRecommendation(summary, allClothes))
+        } else {
+            _todayWeatherSummary.postValue(null)
+            _todayRecommendation.postValue(null)
         }
         if (tomorrowForecasts.isNotEmpty()) {
             val summary = createDailySummary(tomorrowForecasts)
             _tomorrowWeatherSummary.postValue(summary)
             _tomorrowRecommendation.postValue(generateRecommendation(summary, allClothes))
+        } else {
+            _tomorrowWeatherSummary.postValue(null)
+            _tomorrowRecommendation.postValue(null)
         }
     }
 
@@ -168,7 +225,6 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             val isFitForFreezingDay = minTempCriteria < -1 && itemMinTemp <= -1
             isFitForMaxTemp || isFitForHotDay || isFitForFreezingDay
         }
-
 
         val recommendedTops = recommendedClothes.filter { it.category == "상의" }
         val recommendedBottoms = recommendedClothes.filter { it.category == "하의" }
@@ -206,5 +262,14 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
     fun onTabSwitchHandled() {
         _switchToTab.value = null
+    }
+
+    fun onErrorShown() {
+        _error.value = null
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        cancellationTokenSource.cancel()
     }
 }
