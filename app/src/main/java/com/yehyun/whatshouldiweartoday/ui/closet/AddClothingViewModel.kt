@@ -1,3 +1,5 @@
+// 파일 경로: app/src/main/java/com/yehyun/whatshouldiweartoday/ui/closet/AddClothingViewModel.kt
+
 package com.yehyun.whatshouldiweartoday.ui.closet
 
 import android.app.Application
@@ -6,6 +8,7 @@ import android.graphics.Color
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
+import androidx.lifecycle.MediatorLiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import com.google.ai.client.generativeai.GenerativeModel
@@ -51,7 +54,21 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
     val useProcessedImage: LiveData<Boolean> = _useProcessedImage
 
     val clothingName = MutableLiveData<String>()
-    val hasChanges = MutableLiveData(false)
+
+    // ▼▼▼▼▼ 핵심 수정 부분 ▼▼▼▼▼
+    // hasChanges를 MediatorLiveData로 변경하여, 이미지나 이름에 실제 변경이 있을 때만 true가 되도록 합니다.
+    val hasChanges = MediatorLiveData<Boolean>().apply {
+        value = false
+        // 소스 1: 원본 이미지 비트맵
+        addSource(_originalBitmap) { bitmap ->
+            value = bitmap != null || !clothingName.value.isNullOrEmpty()
+        }
+        // 소스 2: 옷 이름
+        addSource(clothingName) { name ->
+            value = _originalBitmap.value != null || !name.isNullOrEmpty()
+        }
+    }
+    // ▲▲▲▲▲ 핵심 수정 부분 ▲▲▲▲▲
 
     private val _analysisResultText = MutableLiveData<String>()
     val analysisResultText: LiveData<String> = _analysisResultText
@@ -72,7 +89,7 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
 
     fun onImageSelected(bitmap: Bitmap, apiKey: String) {
         resetAllState()
-        hasChanges.value = true
+        // [수정] hasChanges를 직접 설정하는 대신, _originalBitmap 값이 변경되면 MediatorLiveData가 자동으로 계산합니다.
         _originalBitmap.value = bitmap
         generativeModel = AiModelProvider.getModel(getApplication(), apiKey)
         isImageProcessing = true
@@ -84,9 +101,8 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
             processedImageJob = async(Dispatchers.IO) { createProcessedBitmap(bitmap) }
             originalImageJob = async(Dispatchers.Default) { bitmap }
 
-            // AI 분석을 먼저 기다려서 UI에 반영 (이때 스위치 가시성도 결정됨)
             analysisResult = analysisJob.await()
-            _isAiAnalyzing.postValue(false) // AI 분석 완료
+            _isAiAnalyzing.postValue(false)
 
             if (analysisResult == null || analysisResult?.is_wearable == false) {
                 withContext(Dispatchers.Main) {
@@ -95,12 +111,11 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
                 }
             } else {
                 withContext(Dispatchers.Main) { processAnalysisResult(analysisResult!!) }
-                // 배경 제거 이미지 생성을 기다리고 결과를 반영
                 val processed = processedImageJob?.await()
                 withContext(Dispatchers.Main) {
                     _processedBitmap.value = processed
                     _segmentationSucceeded.value = (processed != null)
-                    isImageProcessing = false // 모든 이미지 생성 작업 완료
+                    isImageProcessing = false
                 }
             }
         }
@@ -124,7 +139,7 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
                 _isSaving.value = false
             }
             _useProcessedImage.value = isChecked
-            hasChanges.value = true
+            // [수정] 배경제거 스위치 토글은 hasChanges 상태에 영향을 주지 않습니다.
         }
     }
 
@@ -136,7 +151,6 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
             }
             _isSaving.value = true
             try {
-                // 원본과 처리된 비트맵 생성을 기다림
                 val original = originalImageJob?.await()
                 val processed = processedImageJob?.await()
 
@@ -144,7 +158,6 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
                     throw IOException("원본 이미지가 없습니다.")
                 }
 
-                // 파일 저장 작업을 병렬로 실행하고 기다림
                 val originalPathJob = async(Dispatchers.IO) { saveBitmapToInternalStorage(original, "original_", getApplication<Application>().filesDir) }
                 val processedPathJob = async(Dispatchers.IO) { processed?.let { savePngToInternalStorage(it, "processed_", getApplication<Application>().filesDir) } }
 
@@ -155,10 +168,11 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
                     throw IOException("원본 이미지 저장 실패")
                 }
 
-                val finalTemperature = if (analysisResult!!.category == "아우터") {
-                    analysisResult!!.suitable_temperature!! - 3.0
-                } else {
-                    analysisResult!!.suitable_temperature!!
+                val baseTemp = analysisResult!!.suitable_temperature!!
+                val finalTemp = when (analysisResult!!.category) {
+                    "아우터" -> baseTemp - 3.0
+                    "상의", "하의" -> baseTemp + 2.0
+                    else -> baseTemp
                 }
 
                 val newClothingItem = ClothingItem(
@@ -167,7 +181,8 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
                     processedImageUri = processedPath,
                     useProcessedImage = _useProcessedImage.value ?: false,
                     category = analysisResult!!.category!!,
-                    suitableTemperature = finalTemperature,
+                    suitableTemperature = finalTemp,
+                    baseTemperature = baseTemp, // 기본 온도 저장
                     colorHex = analysisResult!!.color_hex!!
                 )
                 withContext(Dispatchers.IO) {
@@ -216,10 +231,15 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
         val category = result.category ?: "기타"
         val temp = result.suitable_temperature
         if (category in listOf("상의", "하의", "아우터") && temp != null) {
-            val baseTemp = if (category == "아우터") temp - 3.0 else temp
+            val baseTemp = temp
+            val finalTemp = when (category) {
+                "아우터" -> baseTemp - 3.0
+                "상의", "하의" -> baseTemp + 2.0
+                else -> baseTemp
+            }
             val tolerance = settingsManager.getTemperatureTolerance()
             val constitutionAdjustment = settingsManager.getConstitutionAdjustment()
-            val adjustedTemp = baseTemp + constitutionAdjustment
+            val adjustedTemp = finalTemp + constitutionAdjustment // 최종 온도에 보정 적용
             val minTemp = adjustedTemp - tolerance
             val maxTemp = adjustedTemp + tolerance
             updateAnalysisResultText(category, minTemp, maxTemp)
@@ -241,7 +261,7 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
     fun setClothingName(name: String) {
         if (clothingName.value != name) {
             clothingName.value = name
-            hasChanges.value = true
+            // [수정] MediatorLiveData가 hasChanges를 자동으로 업데이트합니다.
         }
     }
 
@@ -266,9 +286,9 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
         _isAiAnalyzing.value = false
         _isSaving.value = false
         _isSaveCompleted.value = false
-        hasChanges.value = false
-        _segmentationSucceeded.value = false
+        // [수정] MediatorLiveData의 소스 값을 변경하여 hasChanges를 false로 만듭니다.
         clothingName.value = ""
+        _segmentationSucceeded.value = false
         _analysisResultText.value = ""
         _viewColor.value = null
     }

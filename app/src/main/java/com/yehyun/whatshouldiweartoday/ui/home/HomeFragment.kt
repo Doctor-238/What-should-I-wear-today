@@ -19,9 +19,6 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
-import com.google.android.gms.location.LocationServices
-import com.google.android.gms.location.Priority
-import com.google.android.gms.tasks.CancellationTokenSource
 import com.google.android.material.tabs.TabLayoutMediator
 import com.yehyun.whatshouldiweartoday.R
 import com.yehyun.whatshouldiweartoday.databinding.FragmentHomeBinding
@@ -42,13 +39,13 @@ class HomeFragment : Fragment(), OnTabReselectedListener {
     ) { isGranted: Boolean ->
         homeViewModel.permissionRequestedThisSession = false
         if (isGranted) {
-            getCurrentLocation()
+            checkAndRefresh()
         } else {
-            homeViewModel.stopLoading() // 권한 거부 시 로딩 중단
+            homeViewModel.stopLoading()
             if (shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_COARSE_LOCATION)) {
-                showToast("위치 권한이 거부되어 날씨 정보를 자동으로 가져올 수 없습니다.")
+                showToast("위치 권한이 거부되어 날씨 정보를 가져올 수 없습니다.")
             } else {
-                showAppTerminationDialog()
+                showGoToSettingsDialog("이 앱은 위치 권한이 반드시 필요합니다. 앱을 사용하려면 '설정'으로 이동하여 위치 권한을 허용해주세요.")
             }
         }
     }
@@ -67,15 +64,18 @@ class HomeFragment : Fragment(), OnTabReselectedListener {
         setupViewPager()
 
         binding.swipeRefreshLayout.setOnRefreshListener {
-            checkLocationPermission()
+            checkAndRefresh()
         }
 
         if (args.targetTab != 0) { homeViewModel.requestTabSwitch(args.targetTab) }
 
         observeViewModel()
 
-        checkLocationPermission()
+        if (savedInstanceState == null) {
+            checkAndRefresh()
+        }
     }
+
 
     override fun onDestroyView() {
         super.onDestroyView()
@@ -84,9 +84,13 @@ class HomeFragment : Fragment(), OnTabReselectedListener {
     }
 
     private fun observeViewModel() {
-        homeViewModel.error.observe(viewLifecycleOwner) {
-            Toast.makeText(requireContext(), it, Toast.LENGTH_LONG).show()
+        homeViewModel.error.observe(viewLifecycleOwner) { errorMessage ->
+            errorMessage?.let {
+                showToast(it)
+                homeViewModel.onErrorShown()
+            }
         }
+
         homeViewModel.isLoading.observe(viewLifecycleOwner) {
             binding.swipeRefreshLayout.isRefreshing = it
         }
@@ -101,35 +105,50 @@ class HomeFragment : Fragment(), OnTabReselectedListener {
         }
     }
 
-    private fun checkLocationPermission() {
-        if (ContextCompat.checkSelfPermission(
-                requireContext(),
-                Manifest.permission.ACCESS_COARSE_LOCATION
-            ) == PackageManager.PERMISSION_GRANTED
-        ) {
-            getCurrentLocation()
+    private fun checkAndRefresh() {
+        if (!isAdded) return
+
+        if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            requestLocationPermission()
             return
         }
 
+        val locationManager = requireContext().getSystemService(Context.LOCATION_SERVICE) as LocationManager
+        if (!locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) && !locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
+            homeViewModel.stopLoading()
+            showTurnOnLocationDialog()
+            return
+        }
+
+        val apiKey = getString(R.string.openweathermap_api_key)
+        if (apiKey.isBlank() || apiKey == "YOUR_OPENWEATHERMAP_API_KEY") {
+            showToast("날씨 API 키가 설정되지 않았습니다.")
+            homeViewModel.stopLoading()
+            return
+        }
+
+        homeViewModel.refreshWeatherData(apiKey)
+    }
+
+    private fun requestLocationPermission() {
         if (homeViewModel.permissionRequestedThisSession) {
-            homeViewModel.stopLoading() // 요청이 이미 진행중일 때 새로고침을 시도하면 로딩 중단
+            homeViewModel.stopLoading()
             return
         }
 
         if (shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_COARSE_LOCATION)) {
             AlertDialog.Builder(requireContext())
                 .setTitle("위치 권한 안내")
-                .setMessage("현재 위치의 날씨 정보를 가져오기 위해 위치 권한이 필요합니다. 권한을 허용해주시겠습니까?")
+                .setMessage("현재 위치의 날씨 정보를 가져오기 위해 위치 권한이 필요합니다.")
                 .setPositiveButton("권한 허용") { _, _ ->
                     homeViewModel.permissionRequestedThisSession = true
                     locationPermissionRequest.launch(Manifest.permission.ACCESS_COARSE_LOCATION)
                 }
                 .setNegativeButton("거부") { _, _ ->
+                    homeViewModel.stopLoading()
                     showToast("위치 권한이 거부되어 날씨 정보를 자동으로 가져올 수 없습니다.")
-                    homeViewModel.stopLoading() // '거부' 시 로딩 중단
                 }
                 .setOnDismissListener {
-                    // 다이얼로그가 어떤 이유로든 닫힐 때도 로딩 상태를 확인하고 필요시 중단
                     if (binding.swipeRefreshLayout.isRefreshing){
                         homeViewModel.stopLoading()
                     }
@@ -141,19 +160,19 @@ class HomeFragment : Fragment(), OnTabReselectedListener {
         }
     }
 
-    private fun showAppTerminationDialog() {
+    private fun showGoToSettingsDialog(message: String) {
         AlertDialog.Builder(requireContext())
             .setTitle("권한 필요")
-            .setMessage("이 앱은 위치 권한이 반드시 필요합니다. 앱을 사용하려면 '설정'으로 이동하여 위치 권한을 허용해주세요.")
+            .setMessage(message)
             .setPositiveButton("설정으로 이동") { _, _ ->
+                homeViewModel.stopLoading()
                 val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
                     data = Uri.fromParts("package", requireContext().packageName, null)
                 }
                 startActivity(intent)
-                requireActivity().finish()
             }
-            .setNegativeButton("앱 종료") { _, _ ->
-                requireActivity().finish()
+            .setNegativeButton("닫기") { _, _ ->
+                homeViewModel.stopLoading()
             }
             .setCancelable(false)
             .show()
@@ -175,48 +194,6 @@ class HomeFragment : Fragment(), OnTabReselectedListener {
                 }
             }
             .show()
-    }
-
-
-    private fun getCurrentLocation() {
-        if (!isAdded) return
-
-        if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            showToast("위치 권한이 없어 날씨를 조회할 수 없습니다.")
-            homeViewModel.stopLoading()
-            return
-        }
-
-        val locationManager = requireContext().getSystemService(Context.LOCATION_SERVICE) as LocationManager
-        if (!locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) && !locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
-            showTurnOnLocationDialog()
-            // showTurnOnLocationDialog의 Dismiss 리스너에서 stopLoading을 호출하므로 여기선 return만 함
-            return
-        }
-
-        homeViewModel.startLoading()
-        val fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireActivity())
-
-        fusedLocationClient.getCurrentLocation(Priority.PRIORITY_BALANCED_POWER_ACCURACY, CancellationTokenSource().token)
-            .addOnSuccessListener { location ->
-                if (!isAdded) return@addOnSuccessListener
-                if (location != null) {
-                    val apiKey = getString(R.string.openweathermap_api_key)
-                    if (apiKey.isBlank() || apiKey == "YOUR_OPENWEATHERMAP_API_KEY") {
-                        showToast("secrets.xml 파일에 날씨 API 키를 입력해주세요.")
-                        homeViewModel.stopLoading()
-                        return@addOnSuccessListener
-                    }
-                    homeViewModel.fetchWeatherData(location.latitude, location.longitude, apiKey)
-                } else {
-                    showToast("위치 정보를 가져올 수 없습니다. 잠시 후 다시 시도해주세요.")
-                    homeViewModel.stopLoading()
-                }
-            }.addOnFailureListener {
-                if (!isAdded) return@addOnFailureListener
-                showToast("위치 정보를 가져오는 데 실패했습니다.")
-                homeViewModel.stopLoading()
-            }
     }
 
     private fun showToast(message: String) {

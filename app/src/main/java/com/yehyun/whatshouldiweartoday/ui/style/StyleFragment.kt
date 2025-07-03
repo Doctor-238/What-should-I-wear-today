@@ -1,3 +1,5 @@
+// 파일 경로: app/src/main/java/com/yehyun/whatshouldiweartoday/ui/style/StyleFragment.kt
+
 package com.yehyun.whatshouldiweartoday.ui.style
 
 import android.os.Bundle
@@ -47,12 +49,7 @@ class StyleFragment : Fragment(), OnTabReselectedListener {
         val seasons = listOf("전체", "봄", "여름", "가을", "겨울")
         val adapter = StyleViewPagerAdapter(this, seasons)
         binding.viewPagerStyle.adapter = adapter
-
-        // ▼▼▼▼▼ 핵심 수정 부분 ▼▼▼▼▼
-        // isUserInputEnabled를 false로 설정하여 사용자가 직접 스와이프하는 것을 막습니다.
-        // 이제 계절 탭은 상단의 TabLayout을 통해서만 전환할 수 있습니다.
         binding.viewPagerStyle.isUserInputEnabled = false
-        // ▲▲▲▲▲ 핵심 수정 부분 ▲▲▲▲▲
 
         TabLayoutMediator(binding.tabLayoutStyleSeason, binding.viewPagerStyle) { tab, position ->
             tab.text = seasons[position]
@@ -69,12 +66,21 @@ class StyleFragment : Fragment(), OnTabReselectedListener {
         })
     }
 
+    // ▼▼▼▼▼ 핵심 수정 부분 ▼▼▼▼▼
     private fun setupSortSpinner() {
         val spinner: Spinner = binding.spinnerSortStyle
         val sortOptions = listOf("최신순", "오래된 순", "이름 오름차순", "이름 내림차순")
         val adapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, sortOptions)
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         spinner.adapter = adapter
+
+        // ViewModel에서 현재 저장된 정렬 값을 가져와 스피너의 초기 선택 값으로 설정
+        val currentSortType = viewModel.getCurrentSortType()
+        val currentPosition = sortOptions.indexOf(currentSortType)
+        if (currentPosition >= 0) {
+            spinner.setSelection(currentPosition)
+        }
+
         spinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
                 viewModel.setSortType(sortOptions[position])
@@ -82,6 +88,7 @@ class StyleFragment : Fragment(), OnTabReselectedListener {
             override fun onNothingSelected(parent: AdapterView<*>?) {}
         }
     }
+    // ▲▲▲▲▲ 핵심 수정 부분 ▲▲▲▲▲
 
     override fun onTabReselected() {
         val navController = findNavController()
@@ -93,7 +100,8 @@ class StyleFragment : Fragment(), OnTabReselectedListener {
         if (binding.viewPagerStyle.currentItem != 0) {
             binding.viewPagerStyle.currentItem = 0
         } else {
-            val currentFragment = childFragmentManager.findFragmentByTag("f0")
+            // 현재 화면에 표시된 프래그먼트를 찾아 스크롤을 최상단으로 이동
+            val currentFragment = childFragmentManager.fragments.getOrNull(binding.viewPagerStyle.currentItem)
             (currentFragment as? StyleListFragment)?.scrollToTop()
         }
     }

@@ -1,3 +1,5 @@
+// 파일 경로: app/src/main/java/com/yehyun/whatshouldiweartoday/ui/closet/ClothingListFragment.kt
+
 package com.yehyun.whatshouldiweartoday.ui.closet
 
 import android.os.Bundle
@@ -56,16 +58,7 @@ class ClothingListFragment : Fragment() {
             } else {
                 items.filter { it.category == category }
             }
-            // ▼▼▼▼▼ 핵심 수정 부분 ▼▼▼▼▼
-            // 어댑터에 새 리스트를 전달하고, UI 업데이트가 완료된 후 실행될 콜백을 추가합니다.
-            // 이 콜백에서 리스트의 스크롤을 맨 위(0번 위치)로 이동시킵니다.
-            // 이렇게 하면 정렬 순서를 바꿀 때마다 항상 스크롤이 최상단으로 이동합니다.
-            adapter.submitList(filteredList) {
-                if (filteredList.isNotEmpty()) {
-                    binding.recyclerViewClothingList.scrollToPosition(0)
-                }
-            }
-            // ▲▲▲▲▲ 핵심 수정 부분 ▲▲▲▲▲
+            adapter.submitList(filteredList)
         }
     }
 

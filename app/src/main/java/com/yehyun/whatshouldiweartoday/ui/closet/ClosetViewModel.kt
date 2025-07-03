@@ -1,3 +1,5 @@
+// 파일 경로: app/src/main/java/com/yehyun/whatshouldiweartoday/ui/closet/ClosetViewModel.kt
+
 package com.yehyun.whatshouldiweartoday.ui.closet
 
 import android.app.Application
@@ -9,20 +11,24 @@ import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import com.yehyun.whatshouldiweartoday.data.database.AppDatabase
 import com.yehyun.whatshouldiweartoday.data.database.ClothingItem
+import com.yehyun.whatshouldiweartoday.data.preference.SettingsManager
 import com.yehyun.whatshouldiweartoday.data.repository.ClothingRepository
+import java.util.UUID
 
 class ClosetViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository: ClothingRepository
+    private val settingsManager = SettingsManager(application)
     private val _searchQuery = MutableLiveData("")
-    private val _sortType = MutableLiveData("최신순")
+    private val _sortType = MutableLiveData(settingsManager.closetSortType)
 
     val clothes = MediatorLiveData<List<ClothingItem>>()
     private var currentSource: LiveData<List<ClothingItem>>? = null
 
-    // WorkManager 인스턴스와 작업 상태 LiveData
     val workManager = WorkManager.getInstance(application)
     val batchAddWorkInfo: LiveData<List<WorkInfo>> = workManager.getWorkInfosForUniqueWorkLiveData("batch_add")
+
+    val processedWorkIds = mutableSetOf<UUID>()
 
     init {
         val clothingDao = AppDatabase.getDatabase(application).clothingDao()
@@ -48,7 +54,15 @@ class ClosetViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun setSearchQuery(query: String) { if (_searchQuery.value != query) _searchQuery.value = query }
-    fun setSortType(sortType: String) { if (_sortType.value != sortType) _sortType.value = sortType }
+
+    fun setSortType(sortType: String) {
+        if (_sortType.value != sortType) {
+            _sortType.value = sortType
+            settingsManager.closetSortType = sortType
+        }
+    }
+
+    fun getCurrentSortType(): String? = _sortType.value
 
     fun resetState() {
         _searchQuery.value = ""

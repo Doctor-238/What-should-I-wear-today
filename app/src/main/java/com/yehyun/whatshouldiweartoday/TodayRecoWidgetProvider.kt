@@ -37,6 +37,16 @@ class TodayRecoWidgetProvider : AppWidgetProvider() {
 
     override fun onReceive(context: Context, intent: Intent) {
         super.onReceive(context, intent)
+        // ▼▼▼▼▼ 핵심 수정 부분 ▼▼▼▼▼
+        // 알림의 '취소' 버튼을 눌렀을 때의 동작을 처리합니다.
+        if (intent.action == "ACTION_CANCEL_BATCH_ADD") {
+            val workManager = WorkManager.getInstance(context)
+            // "batch_add"라는 고유 이름을 가진 작업을 취소합니다.
+            workManager.cancelUniqueWork("batch_add")
+            return // 다른 로직은 실행하지 않고 종료
+        }
+        // ▲▲▲▲▲ 핵심 수정 부분 ▲▲▲▲▲
+
         if (intent.action == Intent.ACTION_BOOT_COMPLETED || intent.action == "android.intent.action.MY_PACKAGE_REPLACED") {
             val appWidgetManager = AppWidgetManager.getInstance(context)
             val thisAppWidget = ComponentName(context.packageName, javaClass.name)
@@ -74,12 +84,8 @@ class TodayRecoWidgetProvider : AppWidgetProvider() {
                 "IS_TODAY" to isToday
             ))
             .build()
-        // ▼▼▼▼▼ 핵심 수정 부분 ▼▼▼▼▼
-        // 작업의 고유 이름에 isToday 값을 포함시켜 오늘/내일 업데이트가 서로를 방해하지 않도록 합니다.
-        // 이렇게 하면 각 탭의 업데이트 작업이 독립적으로 실행되어 '업데이트 중...'에 멈추는 현상을 방지합니다.
         val uniqueWorkName = "one_time_widget_update_${appWidgetId}_$isToday"
         WorkManager.getInstance(context).enqueueUniqueWork(uniqueWorkName, ExistingWorkPolicy.REPLACE, workRequest)
-        // ▲▲▲▲▲ 핵심 수정 부분 ▲▲▲▲▲
     }
 
     companion object {

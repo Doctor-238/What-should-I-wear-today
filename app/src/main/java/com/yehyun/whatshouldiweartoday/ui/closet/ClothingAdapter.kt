@@ -1,3 +1,5 @@
+// 파일 경로: app/src/main/java/com/yehyun/whatshouldiweartoday/ui/closet/ClothingAdapter.kt
+
 package com.yehyun.whatshouldiweartoday.ui.closet
 
 import android.graphics.Color
@@ -40,12 +42,10 @@ class ClothingAdapter(
             nameTextView.text = item.name
 
             val settingsManager = SettingsManager(itemView.context)
-            // [추가] 체질 보정 값 가져오기
             val constitutionAdjustment = settingsManager.getConstitutionAdjustment()
 
             if (item.category in listOf("상의", "하의", "아우터")) {
                 val temperatureTolerance = settingsManager.getTemperatureTolerance()
-                // [수정] 보정 값을 적용한 최종 적정 온도 계산
                 val adjustedTemp = item.suitableTemperature + constitutionAdjustment
                 val minTemp = adjustedTemp - temperatureTolerance
                 val maxTemp = adjustedTemp + temperatureTolerance

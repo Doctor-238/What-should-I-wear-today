@@ -30,7 +30,6 @@ import java.io.File
 
 class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabReselectedListener {
 
-    // [핵심] ViewModel의 범위를 이 프래그먼트로 한정합니다.
     private val viewModel: EditClothingViewModel by viewModels()
     private val args: EditClothingFragmentArgs by navArgs()
 
@@ -115,7 +114,7 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
         if (editTextName.text.toString() != item.name) {
             editTextName.setText(item.name)
         }
-        updateTemperatureDisplay(item)
+        updateTemperatureDisplay(item) // 온도는 항상 이 함수를 통해 업데이트
 
         try {
             viewColorSwatch.setBackgroundColor(Color.parseColor(item.colorHex))
@@ -144,20 +143,24 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
         }
     }
 
+    // ▼▼▼▼▼ 핵심 수정 부분 ▼▼▼▼▼
     private fun updateTemperatureDisplay(item: ClothingItem) {
         if (item.category in listOf("상의", "하의", "아우터")) {
             val tolerance = settingsManager.getTemperatureTolerance()
             val constitutionAdjustment = settingsManager.getConstitutionAdjustment()
+            // currentClothingItem에 이미 카테고리별 가중치가 적용된 suitableTemperature를 사용
             val adjustedTemp = item.suitableTemperature + constitutionAdjustment
 
             val minTemp = adjustedTemp - tolerance
             val maxTemp = adjustedTemp + tolerance
+            // 기본 온도를 함께 표시하여 사용자에게 직관적인 정보 제공
             textViewTemperature.text = "적정 온도: %.1f°C ~ %.1f°C".format(minTemp, maxTemp)
             textViewTemperature.visibility = View.VISIBLE
         } else {
             textViewTemperature.visibility = View.GONE
         }
     }
+    // ▲▲▲▲▲ 핵심 수정 부분 ▲▲▲▲▲
 
     private fun updateImagePreview(item: ClothingItem) {
         val imageUriString = if (item.useProcessedImage && item.processedImageUri != null) {
