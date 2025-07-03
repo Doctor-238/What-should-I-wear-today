@@ -75,9 +75,9 @@ class SettingsManager(context: Context) {
 
     fun getPackableOuterTolerance(): Double {
         return when (temperatureRange) {
-            TEMP_RANGE_NARROW -> -3.5
-            TEMP_RANGE_WIDE -> -6.5
-            else -> -5.0 // NORMAL
+            TEMP_RANGE_NARROW -> -5.0
+            TEMP_RANGE_WIDE -> -7.0
+            else -> -6.0 // NORMAL
         }
     }
 
