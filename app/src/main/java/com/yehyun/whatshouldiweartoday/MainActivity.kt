@@ -9,6 +9,7 @@ import android.os.Bundle
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.navigation.NavController
 import androidx.navigation.NavOptions
 import androidx.navigation.fragment.NavHostFragment
@@ -22,6 +23,11 @@ class MainActivity : AppCompatActivity() {
     private lateinit var navView: BottomNavigationView
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // ▼▼▼▼▼ 핵심 수정 부분 ▼▼▼▼▼
+        // 스플래시 화면 API를 호출합니다. 반드시 super.onCreate() 및 setContentView() 보다 먼저 와야 합니다.
+        installSplashScreen()
+        // ▲▲▲▲▲ 핵심 수정 부분 ▲▲▲▲▲
+
         super.onCreate(savedInstanceState)
         AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
         setContentView(R.layout.activity_main)

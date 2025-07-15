@@ -1,9 +1,16 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <style name="Base.Theme.WhatshouldIweartoday" parent="Theme.Material3.Light.NoActionBar">
+        <item name="android:statusBarColor">@color/status_bar_blue</item>
+        <item name="android:windowLightStatusBar">false</item>
     </style>
 
     <style name="Theme.WhatshouldIweartoday" parent="Base.Theme.WhatshouldIweartoday" />
 
+    <style name="Theme.App.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@android:color/white</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/applogo</item>
+        <item name="postSplashScreenTheme">@style/Theme.WhatshouldIweartoday</item>
+    </style>
     <style name="Theme.Transparent" parent="Theme.AppCompat.Dialog">
         <item name="android:windowIsTranslucent">true</item>
         <item name="android:windowBackground">@android:color/transparent</item>

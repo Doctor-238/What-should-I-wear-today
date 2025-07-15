@@ -4,52 +4,101 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/app_background"
     android:orientation="vertical"
     tools:context=".ui.home.HomeFragment">
 
-    <com.google.android.material.appbar.MaterialToolbar
+    <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/toolbar_home"
         android:layout_width="match_parent"
-        android:layout_height="?attr/actionBarSize"
-        app:title="오늘 뭐 입을까?"
-        app:titleCentered="true">
+        android:layout_height="78dp">
+
+        <ImageView
+            android:id="@+id/iv_logo"
+            android:layout_width="300dp"
+            android:layout_height="120dp"
+            android:src="@drawable/applogo"
+            android:scaleType="fitCenter"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
 
         <ImageView
             android:id="@+id/iv_settings"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:src="@drawable/ic_settings"
-            android:layout_gravity="end"
-            android:layout_marginEnd="16dp"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:layout_marginEnd="24dp"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:clickable="true"
             android:focusable="true"
-            android:padding="8dp"/>
+            android:src="@drawable/settings"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
 
-    </com.google.android.material.appbar.MaterialToolbar>
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="1dp">
+
+        <LinearLayout
+            android:id="@+id/tabs_container"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerHorizontal="true"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/tv_tab_today"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:paddingHorizontal="16dp"
+                android:paddingBottom="8dp"
+                android:text="오늘"
+                android:textColor="@color/tab_selected_text"
+                android:textSize="20sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tv_tab_tomorrow"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="80dp"
+                android:paddingHorizontal="16dp"
+                android:paddingBottom="8dp"
+                android:text="내일"
+                android:textColor="@color/tab_unselected_text"
+                android:textSize="20sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <View
+            android:id="@+id/view_tab_indicator"
+            android:layout_width="0dp"
+            android:layout_height="4dp"
+            android:layout_below="@id/tabs_container"
+            android:background="@color/tab_selected_text" />
+
+    </RelativeLayout>
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/bottom_nav_background" />
+
 
     <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
         android:id="@+id/swipe_refresh_layout"
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="match_parent"
+        android:layout_marginTop="8dp">
 
-        <LinearLayout
+        <androidx.viewpager2.widget.ViewPager2
+            android:id="@+id/view_pager_home"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:orientation="vertical">
+            android:layout_height="match_parent" />
 
-            <com.google.android.material.tabs.TabLayout
-                android:id="@+id/tab_layout_home"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                app:tabGravity="fill"
-                app:tabMode="fixed" />
-
-            <androidx.viewpager2.widget.ViewPager2
-                android:id="@+id/view_pager_home"
-                android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_weight="1" />
-        </LinearLayout>
     </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
 </LinearLayout>
