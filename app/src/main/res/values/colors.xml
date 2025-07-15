@@ -23,4 +23,5 @@
     <color name="settings_reset_button_text">#FF4646</color>
     <color name="slider_track_inactive_color">#E0E0E0</color>
     <color name="slider_thumb_color">#FFFFFF</color>
+    <color name="clothing_item_border">#b2cbe6</color>
 </resources>

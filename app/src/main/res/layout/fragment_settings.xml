@@ -142,35 +142,55 @@
                     app:layout_constraintTop_toTopOf="@id/tv_constitution_label"
                     tools:text="보통" />
 
-                <View
-                    android:id="@+id/view_gradient_track"
-                    android:layout_width="0dp"
-                    android:layout_height="8dp"
-                    android:background="@drawable/bg_slider_track_gradient"
-                    app:layout_constraintBottom_toBottomOf="@id/slider_constitution"
-                    app:layout_constraintEnd_toEndOf="@id/slider_constitution"
-                    app:layout_constraintStart_toStartOf="@id/slider_constitution"
-                    app:layout_constraintTop_toTopOf="@id/slider_constitution" />
-
-                <com.google.android.material.slider.Slider
-                    android:id="@+id/slider_constitution"
+                <androidx.constraintlayout.widget.ConstraintLayout
+                    android:id="@+id/constitution_slider_container"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
-                    android:stepSize="1.0"
-                    android:value="3.0"
-                    android:valueFrom="1.0"
-                    android:valueTo="5.0"
-                    app:labelBehavior="gone"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@id/tv_constitution_label"
-                    app:thumbColor="@color/slider_thumb_color"
-                    app:thumbElevation="4dp"
-                    app:thumbRadius="10dp"
-                    app:trackColorActive="@android:color/transparent"
-                    app:trackColorInactive="@android:color/transparent"
-                    app:trackHeight="8dp" />
+                    app:layout_constraintTop_toBottomOf="@id/tv_constitution_label">
+
+                    <View
+                        android:id="@+id/view_gradient_track"
+                        android:layout_width="0dp"
+                        android:layout_height="8dp"
+                        android:background="@drawable/bg_slider_track_gradient"
+                        app:layout_constraintBottom_toBottomOf="parent"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="parent" />
+
+                    <com.google.android.material.slider.Slider
+                        android:id="@+id/slider_constitution"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:stepSize="1.0"
+                        android:value="3.0"
+                        android:valueFrom="1.0"
+                        android:valueTo="5.0"
+                        app:labelBehavior="gone"
+                        app:layout_constraintBottom_toBottomOf="parent"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="parent"
+                        app:thumbColor="@android:color/transparent"
+                        app:thumbElevation="0dp"
+                        app:trackColorActive="@android:color/transparent"
+                        app:trackColorInactive="@android:color/transparent"
+                        app:trackHeight="8dp" />
+
+                    <ImageView
+                        android:id="@+id/thumb_constitution_fake"
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@drawable/slider_thumb_circle"
+                        android:elevation="6dp"
+                        app:layout_constraintBottom_toBottomOf="parent"
+                        app:layout_constraintTop_toTopOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"/>
+                </androidx.constraintlayout.widget.ConstraintLayout>
+
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -178,8 +198,8 @@
                     android:text="더위 많이 탐"
                     android:textColor="@color/text_secondary"
                     android:textSize="12sp"
-                    app:layout_constraintStart_toStartOf="@id/slider_constitution"
-                    app:layout_constraintTop_toBottomOf="@id/slider_constitution" />
+                    app:layout_constraintStart_toStartOf="@id/constitution_slider_container"
+                    app:layout_constraintTop_toBottomOf="@id/constitution_slider_container" />
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -187,8 +207,8 @@
                     android:text="추위 많이 탐"
                     android:textColor="@color/text_secondary"
                     android:textSize="12sp"
-                    app:layout_constraintEnd_toEndOf="@id/slider_constitution"
-                    app:layout_constraintTop_toBottomOf="@id/slider_constitution" />
+                    app:layout_constraintEnd_toEndOf="@id/constitution_slider_container"
+                    app:layout_constraintTop_toBottomOf="@id/constitution_slider_container" />
 
             </androidx.constraintlayout.widget.ConstraintLayout>
         </com.google.android.material.card.MaterialCardView>
@@ -327,25 +347,45 @@
                     app:layout_constraintTop_toTopOf="@id/tv_sensitivity_label"
                     tools:text="보통" />
 
-                <com.google.android.material.slider.Slider
-                    android:id="@+id/slider_sensitivity"
+
+                <androidx.constraintlayout.widget.ConstraintLayout
+                    android:id="@+id/sensitivity_slider_container"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
-                    android:stepSize="1.0"
-                    android:value="3.0"
-                    android:valueFrom="1.0"
-                    android:valueTo="5.0"
-                    app:labelBehavior="gone"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@id/tv_sensitivity_label"
-                    app:thumbColor="@color/slider_thumb_color"
-                    app:thumbElevation="4dp"
-                    app:thumbRadius="10dp"
-                    app:trackColorActive="@color/settings_spinner_blue"
-                    app:trackColorInactive="@color/slider_track_inactive_color"
-                    app:trackHeight="8dp" />
+                    app:layout_constraintTop_toBottomOf="@id/tv_sensitivity_label">
+
+                    <com.google.android.material.slider.Slider
+                        android:id="@+id/slider_sensitivity"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:stepSize="1.0"
+                        android:value="3.0"
+                        android:valueFrom="1.0"
+                        android:valueTo="5.0"
+                        app:labelBehavior="gone"
+                        app:layout_constraintBottom_toBottomOf="parent"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="parent"
+                        app:thumbColor="@android:color/transparent"
+                        app:thumbElevation="0dp"
+                        app:trackColorActive="@color/settings_spinner_blue"
+                        app:trackColorInactive="@color/slider_track_inactive_color"
+                        app:trackHeight="8dp" />
+
+                    <ImageView
+                        android:id="@+id/thumb_sensitivity_fake"
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:elevation="6dp"
+                        android:src="@drawable/slider_thumb_circle"
+                        app:layout_constraintBottom_toBottomOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="parent" />
+                </androidx.constraintlayout.widget.ConstraintLayout>
 
                 <TextView
                     android:id="@+id/tv_sensitivity_min_label"
@@ -354,8 +394,8 @@
                     android:text="둔감"
                     android:textColor="@color/text_secondary"
                     android:textSize="12sp"
-                    app:layout_constraintStart_toStartOf="@id/slider_sensitivity"
-                    app:layout_constraintTop_toBottomOf="@id/slider_sensitivity" />
+                    app:layout_constraintStart_toStartOf="@id/sensitivity_slider_container"
+                    app:layout_constraintTop_toBottomOf="@id/sensitivity_slider_container" />
 
                 <TextView
                     android:id="@+id/tv_sensitivity_max_label"
@@ -364,8 +404,8 @@
                     android:text="민감"
                     android:textColor="@color/text_secondary"
                     android:textSize="12sp"
-                    app:layout_constraintEnd_toEndOf="@id/slider_sensitivity"
-                    app:layout_constraintTop_toBottomOf="@id/slider_sensitivity" />
+                    app:layout_constraintEnd_toEndOf="@id/sensitivity_slider_container"
+                    app:layout_constraintTop_toBottomOf="@id/sensitivity_slider_container" />
 
                 <TextView
                     android:id="@+id/tv_sensitivity_note"
