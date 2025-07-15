@@ -1,5 +1,3 @@
-// app/src/main/java/com/yehyun/whatshouldiweartoday/ui/settings/SettingsFragment.kt
-
 package com.yehyun.whatshouldiweartoday.ui.settings
 
 import android.content.Intent
@@ -38,8 +36,8 @@ class SettingsFragment : Fragment(), OnTabReselectedListener {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        setupToolbar()
-        setupSpinner()
+        setupTopBar()
+        setupSpinners()
         setupSliders()
         setupListeners()
         observeViewModel()
@@ -47,8 +45,8 @@ class SettingsFragment : Fragment(), OnTabReselectedListener {
 
     private fun observeViewModel() {
         viewModel.isProcessing.observe(viewLifecycleOwner) { isProcessing ->
-            binding.buttonResetAll.isEnabled = !isProcessing
-            binding.buttonResetAll.text = if (isProcessing) "초기화 중..." else "전체 초기화"
+            binding.cardReset.isEnabled = !isProcessing
+            binding.buttonResetAll.text = if (isProcessing) "초기화 중..." else "전체 초기화하기"
         }
 
         viewModel.resetComplete.observe(viewLifecycleOwner) { isComplete ->
@@ -81,20 +79,32 @@ class SettingsFragment : Fragment(), OnTabReselectedListener {
             .show()
     }
 
-    private fun setupToolbar() {
-        binding.toolbarSettings.setNavigationOnClickListener {
+    private fun setupTopBar() {
+        binding.buttonClose.setOnClickListener {
             findNavController().popBackStack()
         }
     }
 
-    private fun setupSpinner() {
+    private fun setupSpinners() {
+        // ▼▼▼▼▼ 오류 수정 부분 ▼▼▼▼▼
+        // 온도 범위 스피너 설정
         val rangeOptions = listOf(SettingsManager.TEMP_RANGE_NARROW, SettingsManager.TEMP_RANGE_NORMAL, SettingsManager.TEMP_RANGE_WIDE)
-        val adapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, rangeOptions)
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        binding.spinnerTempRange.adapter = adapter
-
+        // 안드로이드 기본 레이아웃을 사용하도록 수정
+        val tempRangeAdapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, rangeOptions)
+        tempRangeAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        binding.spinnerTempRange.adapter = tempRangeAdapter
         val currentRange = settingsManager.temperatureRange
         binding.spinnerTempRange.setSelection(rangeOptions.indexOf(currentRange))
+
+        // AI 모델 스피너 설정
+        val aiModelOptions = listOf("빠름", "느림")
+        // 안드로이드 기본 레이아웃을 사용하도록 수정
+        val aiModelAdapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, aiModelOptions)
+        aiModelAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        binding.spinnerAiModel.adapter = aiModelAdapter
+        val currentAiModel = if (settingsManager.aiModel == SettingsManager.AI_MODEL_FAST) "빠름" else "느림"
+        binding.spinnerAiModel.setSelection(aiModelOptions.indexOf(currentAiModel))
+        // ▲▲▲▲▲ 오류 수정 부분 ▲▲▲▲▲
     }
 
     private fun setupSliders() {
@@ -103,12 +113,18 @@ class SettingsFragment : Fragment(), OnTabReselectedListener {
 
         binding.sliderSensitivity.value = settingsManager.sensitivityLevel.toFloat()
         updateSensitivityLabel(settingsManager.sensitivityLevel)
-
-        binding.sliderAiModel.value = if (settingsManager.aiModel == SettingsManager.AI_MODEL_FAST) 1.0f else 2.0f
-        updateAiModelLabel(binding.sliderAiModel.value.toInt())
     }
 
     private fun setupListeners() {
+        // 스피너 컨테이너 클릭 리스너
+        binding.spinnerTempRangeContainer.setOnClickListener {
+            binding.spinnerTempRange.performClick()
+        }
+        binding.spinnerAiModelContainer.setOnClickListener {
+            binding.spinnerAiModel.performClick()
+        }
+
+        // 스피너 선택 리스너
         binding.spinnerTempRange.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
                 val rangeOptions = listOf(SettingsManager.TEMP_RANGE_NARROW, SettingsManager.TEMP_RANGE_NORMAL, SettingsManager.TEMP_RANGE_WIDE)
@@ -117,6 +133,16 @@ class SettingsFragment : Fragment(), OnTabReselectedListener {
             override fun onNothingSelected(parent: AdapterView<*>?) {}
         }
 
+        binding.spinnerAiModel.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                val model = if (position == 0) SettingsManager.AI_MODEL_FAST else SettingsManager.AI_MODEL_ACCURATE
+                settingsManager.aiModel = model
+                updateAiModelLabel(model)
+            }
+            override fun onNothingSelected(p0: AdapterView<*>?) {}
+        }
+
+        // 슬라이더 변경 리스너
         binding.sliderConstitution.addOnChangeListener { _, value, _ ->
             val level = value.toInt()
             settingsManager.constitutionLevel = level
@@ -129,18 +155,13 @@ class SettingsFragment : Fragment(), OnTabReselectedListener {
             updateSensitivityLabel(level)
         }
 
-        binding.sliderAiModel.addOnChangeListener { _, value, _ ->
-            val model = if (value == 1.0f) SettingsManager.AI_MODEL_FAST else SettingsManager.AI_MODEL_ACCURATE
-            settingsManager.aiModel = model
-            updateAiModelLabel(value.toInt())
-        }
-
+        // 기타 클릭 리스너
         binding.tvGithubLink.setOnClickListener {
             val intent = Intent(Intent.ACTION_VIEW, Uri.parse(binding.tvGithubLink.text.toString()))
             startActivity(intent)
         }
 
-        binding.buttonResetAll.setOnClickListener {
+        binding.cardReset.setOnClickListener {
             showResetConfirmDialog()
         }
     }
@@ -165,11 +186,8 @@ class SettingsFragment : Fragment(), OnTabReselectedListener {
         }
     }
 
-    private fun updateAiModelLabel(level: Int) {
-        binding.tvAiModelValue.text = when (level) {
-            1 -> "빠름, 정확성 감소"
-            else -> "느림, 정확성 증가"
-        }
+    private fun updateAiModelLabel(model: String) {
+        binding.tvAiModelValue.text = if (model == SettingsManager.AI_MODEL_FAST) "빠름, 정확성 감소" else "느림, 정확성 증가"
     }
 
     override fun onDestroyView() {
