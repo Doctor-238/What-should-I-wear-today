@@ -2,10 +2,9 @@ package com.yehyun.whatshouldiweartoday.ui.home
 
 import android.os.Bundle
 import android.view.View
-import android.widget.Button
+import android.widget.ImageView
 import android.widget.ScrollView
 import android.widget.TextView
-import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
@@ -40,7 +39,6 @@ class RecommendationFragment : Fragment(R.layout.fragment_recommendation) {
             homeViewModel.setScrollState(scrollY == 0)
         }
 
-        view.findViewById<RecyclerView>(R.id.rv_best_combo).adapter = RecommendationAdapter(onClothingItemClicked)
         view.findViewById<RecyclerView>(R.id.rv_tops).adapter = RecommendationAdapter(onClothingItemClicked)
         view.findViewById<RecyclerView>(R.id.rv_bottoms).adapter = RecommendationAdapter(onClothingItemClicked)
         view.findViewById<RecyclerView>(R.id.rv_outers).adapter = RecommendationAdapter(onClothingItemClicked)
@@ -51,33 +49,35 @@ class RecommendationFragment : Fragment(R.layout.fragment_recommendation) {
         val recommendationLiveData = if (isToday) homeViewModel.todayRecommendation else homeViewModel.tomorrowRecommendation
 
         weatherSummaryLiveData.observe(viewLifecycleOwner) { summary ->
-            val weatherSummaryTextView = view.findViewById<TextView>(R.id.tv_weather_summary)
+            val weatherCard = view.findViewById<com.google.android.material.card.MaterialCardView>(R.id.card_weather_summary)
             if (summary != null) {
-                weatherSummaryTextView.text = String.format(Locale.KOREAN,
-                    "최고:%.1f°(체감%.1f°) | 최저:%.1f°(체감%.1f°) | %s | 강수:%d%%",
-                    summary.maxTemp, summary.maxFeelsLike, summary.minTemp, summary.minFeelsLike, summary.weatherCondition, summary.precipitationProbability
-                )
+                weatherCard.isVisible = true
+                bindWeatherSummary(view, summary)
             } else {
-                weatherSummaryTextView.text = "날씨 정보가 없습니다."
+                weatherCard.isVisible = false
             }
         }
 
         recommendationLiveData.observe(viewLifecycleOwner) { result ->
-            // ▼▼▼▼▼ 핵심 수정 부분 ▼▼▼▼▼
-            // result가 null일 경우와 아닐 경우를 모두 처리합니다.
             if (result == null) {
                 setRecommendationVisibility(view, false)
             } else {
                 setRecommendationVisibility(view, true)
                 bindRecommendationData(view, result)
             }
-            // ▲▲▲▲▲ 핵심 수정 부분 ▲▲▲▲▲
         }
+    }
+
+    private fun bindWeatherSummary(view: View, summary: DailyWeatherSummary) {
+        view.findViewById<TextView>(R.id.tv_max_temp).text = String.format(Locale.KOREAN, "%.1f°", summary.maxTemp)
+        view.findViewById<TextView>(R.id.tv_max_feels_like).text = String.format(Locale.KOREAN, "체감 %.1f°", summary.maxFeelsLike)
+        view.findViewById<TextView>(R.id.tv_min_temp).text = String.format(Locale.KOREAN, "%.1f°", summary.minTemp)
+        view.findViewById<TextView>(R.id.tv_min_feels_like).text = String.format(Locale.KOREAN, "체감 %.1f°", summary.minFeelsLike)
+
     }
 
     private fun setRecommendationVisibility(view: View, show: Boolean) {
         view.findViewById<TextView>(R.id.tv_no_recommendation).isVisible = !show
-        view.findViewById<ConstraintLayout>(R.id.layout_best_combo).isVisible = show
         view.findViewById<TextView>(R.id.tv_tops_title).isVisible = show
         view.findViewById<RecyclerView>(R.id.rv_tops).isVisible = show
         view.findViewById<TextView>(R.id.tv_bottoms_title).isVisible = show
@@ -85,7 +85,6 @@ class RecommendationFragment : Fragment(R.layout.fragment_recommendation) {
         view.findViewById<TextView>(R.id.tv_outers_title).isVisible = show
         view.findViewById<RecyclerView>(R.id.rv_outers).isVisible = show
         view.findViewById<TextView>(R.id.tv_temp_difference_notice).isVisible = false
-        view.findViewById<TextView>(R.id.tv_umbrella_recommendation).isVisible = false
     }
 
     private fun bindRecommendationData(view: View, result: RecommendationResult) {
@@ -95,32 +94,29 @@ class RecommendationFragment : Fragment(R.layout.fragment_recommendation) {
             return
         }
 
-        val rvBestCombo = view.findViewById<RecyclerView>(R.id.rv_best_combo)
         val rvTops = view.findViewById<RecyclerView>(R.id.rv_tops)
         val rvBottoms = view.findViewById<RecyclerView>(R.id.rv_bottoms)
         val rvOuters = view.findViewById<RecyclerView>(R.id.rv_outers)
 
-        (rvBestCombo.adapter as RecommendationAdapter).submitList(result.bestCombination, result.packableOuter?.id)
-        (rvTops.adapter as RecommendationAdapter).submitList(result.recommendedTops)
+        (rvTops.adapter as RecommendationAdapter).submitList(result.recommendedTops, result.packableOuter?.id)
         (rvBottoms.adapter as RecommendationAdapter).submitList(result.recommendedBottoms)
         (rvOuters.adapter as RecommendationAdapter).submitList(result.recommendedOuters, result.packableOuter?.id)
 
-        view.findViewById<TextView>(R.id.tv_no_best_combo).isVisible = result.bestCombination.isEmpty()
         view.findViewById<TextView>(R.id.tv_no_tops).isVisible = result.recommendedTops.isEmpty()
         view.findViewById<TextView>(R.id.tv_no_bottoms).isVisible = result.recommendedBottoms.isEmpty()
         view.findViewById<TextView>(R.id.tv_no_outers).isVisible = result.recommendedOuters.isEmpty()
 
-        view.findViewById<TextView>(R.id.tv_temp_difference_notice).isVisible = result.isTempDifferenceSignificant
-        view.findViewById<TextView>(R.id.tv_umbrella_recommendation).apply {
-            isVisible = result.umbrellaRecommendation.isNotBlank()
-            text = result.umbrellaRecommendation
-        }
-
-        view.findViewById<Button>(R.id.button_save_style).setOnClickListener {
-            val preselectedIds = result.bestCombination.map { it.id }.toIntArray()
-            parentFragment?.findNavController()?.navigate(
-                HomeFragmentDirections.actionNavigationHomeToSaveStyleFragment(preselectedIds)
-            )
+        view.findViewById<TextView>(R.id.tv_temp_difference_notice).apply {
+            isVisible = result.isTempDifferenceSignificant || result.umbrellaRecommendation.isNotBlank()
+            text = when {
+                result.isTempDifferenceSignificant && result.umbrellaRecommendation.isNotBlank() ->
+                    "오늘은 일교차가 큰 날이에요! 아우터를 챙겨가세요.\n${result.umbrellaRecommendation}"
+                result.isTempDifferenceSignificant ->
+                    "오늘은 일교차가 큰 날이에요!\n아우터를 따로 챙겨가는 것을 추천드립니다"
+                result.umbrellaRecommendation.isNotBlank() ->
+                    result.umbrellaRecommendation
+                else -> ""
+            }
         }
     }
 

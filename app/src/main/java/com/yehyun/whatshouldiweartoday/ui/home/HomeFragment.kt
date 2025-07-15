@@ -19,7 +19,7 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
-import com.google.android.material.tabs.TabLayoutMediator
+import androidx.viewpager2.widget.ViewPager2
 import com.yehyun.whatshouldiweartoday.R
 import com.yehyun.whatshouldiweartoday.databinding.FragmentHomeBinding
 import com.yehyun.whatshouldiweartoday.ui.OnTabReselectedListener
@@ -61,6 +61,7 @@ class HomeFragment : Fragment(), OnTabReselectedListener {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         binding.ivSettings.setOnClickListener { findNavController().navigate(R.id.action_navigation_home_to_settingsFragment) }
+        setupCustomTabs()
         setupViewPager()
 
         binding.swipeRefreshLayout.setOnRefreshListener {
@@ -204,10 +205,53 @@ class HomeFragment : Fragment(), OnTabReselectedListener {
 
     private fun setupViewPager() {
         binding.viewPagerHome.adapter = HomeViewPagerAdapter(this)
-        binding.viewPagerHome.isUserInputEnabled = false
-        TabLayoutMediator(binding.tabLayoutHome, binding.viewPagerHome) { tab, position ->
-            tab.text = if (position == 0) "오늘" else "내일"
-        }.attach()
+        binding.viewPagerHome.isUserInputEnabled = true
+    }
+
+    private fun setupCustomTabs() {
+        binding.tvTabToday.setOnClickListener {
+            binding.viewPagerHome.currentItem = 0
+        }
+        binding.tvTabTomorrow.setOnClickListener {
+            binding.viewPagerHome.currentItem = 1
+        }
+
+        binding.viewPagerHome.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
+            override fun onPageSelected(position: Int) {
+                super.onPageSelected(position)
+                updateTabAppearance(position)
+            }
+        })
+    }
+
+    private fun updateTabAppearance(selectedPosition: Int) {
+        if (_binding == null) return
+
+        val todayColor = if (selectedPosition == 0) R.color.tab_selected_text else R.color.tab_unselected_text
+        val tomorrowColor = if (selectedPosition == 1) R.color.tab_selected_text else R.color.tab_unselected_text
+
+        binding.tvTabToday.setTextColor(ContextCompat.getColor(requireContext(), todayColor))
+        binding.tvTabTomorrow.setTextColor(ContextCompat.getColor(requireContext(), tomorrowColor))
+
+        val indicatorTarget = if (selectedPosition == 0) binding.tvTabToday else binding.tvTabTomorrow
+
+        indicatorTarget.post {
+            // ▼▼▼▼▼ 핵심 수정 부분 ▼▼▼▼▼
+            val indicatorWidth = indicatorTarget.width / 2
+            val targetCenter = binding.tabsContainer.left + indicatorTarget.left + (indicatorTarget.width / 2)
+            val indicatorStart = targetCenter - (indicatorWidth / 2)
+            // ▲▲▲▲▲ 핵심 수정 부분 ▲▲▲▲▲
+
+            binding.viewTabIndicator.animate()
+                .x(indicatorStart.toFloat())
+                .setDuration(250)
+                .withStartAction {
+                    val params = binding.viewTabIndicator.layoutParams
+                    params.width = indicatorWidth
+                    binding.viewTabIndicator.layoutParams = params
+                }
+                .start()
+        }
     }
 
     override fun onTabReselected() {

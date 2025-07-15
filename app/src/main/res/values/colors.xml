@@ -3,4 +3,17 @@
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
     <color name="dark_purple">#FF6200EE</color>
+
+    <color name="status_bar_blue">#7ac2e9</color>
+    <color name="app_background">#F9FAFB</color>
+    <color name="weather_card_background">#FFFFFF</color>
+    <color name="weather_card_stroke">#E5E7EB</color>
+    <color name="text_primary">#111827</color>
+    <color name="text_secondary">#6B7281</color>
+    <color name="text_tertiary">#4B5563</color>
+    <color name="tab_selected_text">#000000</color>
+    <color name="tab_unselected_text">#9CA3AF</color>
+    <color name="weather_card_blue_bg">#b2cbe6</color>
+
+    <color name="bottom_nav_background">#e3e3e3</color>
 </resources>
