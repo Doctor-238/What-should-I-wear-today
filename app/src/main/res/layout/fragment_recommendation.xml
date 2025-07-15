@@ -17,19 +17,6 @@
         android:paddingTop="8dp"
         android:paddingBottom="32dp">
 
-        <TextView
-            android:id="@+id/tv_no_recommendation"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="center"
-            android:lineSpacingExtra="6sp"
-            android:paddingVertical="48dp"
-            android:text="날씨에 어울리는 옷이 부족합니다.\n'옷' 탭에서 옷을 더 등록해주세요!"
-            android:textColor="@color/text_secondary"
-            android:textSize="16sp"
-            android:visibility="gone"
-            tools:visibility="visible" />
-
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/card_weather_summary"
             android:layout_width="match_parent"
@@ -191,6 +178,18 @@
             </androidx.constraintlayout.widget.ConstraintLayout>
 
         </com.google.android.material.card.MaterialCardView>
+        <TextView
+            android:id="@+id/tv_no_recommendation"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:lineSpacingExtra="6sp"
+            android:paddingVertical="48dp"
+            android:text="날씨에 어울리는 옷이 부족합니다.\n'옷' 탭에서 옷을 더 등록해주세요!"
+            android:textColor="@color/text_secondary"
+            android:textSize="16sp"
+            android:visibility="gone"
+            tools:visibility="visible" />
 
         <TextView
             android:id="@+id/tv_tops_title"
