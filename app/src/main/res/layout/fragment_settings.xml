@@ -193,6 +193,7 @@
 
 
                 <TextView
+                    android:id="@+id/tv_constitution_min_label"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="더위 많이 탐"
@@ -209,6 +210,17 @@
                     android:textSize="12sp"
                     app:layout_constraintEnd_toEndOf="@id/constitution_slider_container"
                     app:layout_constraintTop_toBottomOf="@id/constitution_slider_container" />
+                <TextView
+                    android:id="@+id/tv_recommendation_note"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:text="※ 적정온도 범위/체질 변경시 추천범위도 변경됩니다."
+                    android:textColor="@color/text_tertiary"
+                    android:textSize="12sp"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/tv_constitution_min_label" />
 
             </androidx.constraintlayout.widget.ConstraintLayout>
         </com.google.android.material.card.MaterialCardView>
@@ -419,17 +431,6 @@
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toBottomOf="@id/tv_sensitivity_max_label" />
 
-                <TextView
-                    android:id="@+id/tv_recommendation_note"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:text="※ 적정온도 범위/체질 변경시 추천범위도 변경됩니다."
-                    android:textColor="@color/text_tertiary"
-                    android:textSize="12sp"
-                    app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@id/tv_sensitivity_note" />
             </androidx.constraintlayout.widget.ConstraintLayout>
         </com.google.android.material.card.MaterialCardView>
 
