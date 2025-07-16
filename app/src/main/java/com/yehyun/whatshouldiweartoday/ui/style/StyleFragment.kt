@@ -13,6 +13,8 @@ import androidx.appcompat.widget.SearchView
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
+import androidx.viewpager2.widget.ViewPager2
+import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
 import com.yehyun.whatshouldiweartoday.R
 import com.yehyun.whatshouldiweartoday.databinding.FragmentStyleBinding
@@ -24,6 +26,9 @@ class StyleFragment : Fragment(), OnTabReselectedListener {
     private val binding get() = _binding!!
 
     private val viewModel: StyleViewModel by viewModels()
+    // ▼▼▼▼▼ 핵심 수정 부분 ▼▼▼▼▼
+    private var isInitialStyleTabSetup = true
+    // ▲▲▲▲▲ 핵심 수정 부분 ▲▲▲▲▲
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -49,11 +54,52 @@ class StyleFragment : Fragment(), OnTabReselectedListener {
         val seasons = listOf("전체", "봄", "여름", "가을", "겨울")
         val adapter = StyleViewPagerAdapter(this, seasons)
         binding.viewPagerStyle.adapter = adapter
-        binding.viewPagerStyle.isUserInputEnabled = false
+        binding.viewPagerStyle.isUserInputEnabled = true
 
         TabLayoutMediator(binding.tabLayoutStyleSeason, binding.viewPagerStyle) { tab, position ->
             tab.text = seasons[position]
         }.attach()
+
+        // ▼▼▼▼▼ 핵심 수정 부분 ▼▼▼▼▼
+        binding.viewPagerStyle.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
+            override fun onPageSelected(position: Int) {
+                super.onPageSelected(position)
+                binding.tabLayoutStyleSeason.getTabAt(position)?.let {
+                    animateIndicator(it, !isInitialStyleTabSetup)
+                }
+            }
+        })
+
+        binding.tabLayoutStyleSeason.post {
+            val initialTab = binding.tabLayoutStyleSeason.getTabAt(binding.tabLayoutStyleSeason.selectedTabPosition)
+            initialTab?.let {
+                animateIndicator(it, animate = false)
+                isInitialStyleTabSetup = false
+            }
+        }
+        // ▲▲▲▲▲ 핵심 수정 부분 ▲▲▲▲▲
+    }
+
+    private fun animateIndicator(tab: TabLayout.Tab, animate: Boolean = true) {
+        if (_binding == null) return
+        val tabView = tab.view
+        val indicator = binding.viewTabIndicator
+
+        val indicatorWidth = tabView.width / 2
+        val targetCenter = tabView.left + (tabView.width / 2)
+        val indicatorStart = (targetCenter - (indicatorWidth / 2)).toFloat()
+
+        val layoutParams = indicator.layoutParams
+        if (layoutParams.width != indicatorWidth) {
+            layoutParams.width = indicatorWidth
+            indicator.layoutParams = layoutParams
+        }
+
+        if (animate) {
+            indicator.animate().x(indicatorStart).setDuration(250).start()
+        } else {
+            indicator.x = indicatorStart
+        }
     }
 
     private fun setupSearch() {
@@ -66,7 +112,6 @@ class StyleFragment : Fragment(), OnTabReselectedListener {
         })
     }
 
-    // ▼▼▼▼▼ 핵심 수정 부분 ▼▼▼▼▼
     private fun setupSortSpinner() {
         val spinner: Spinner = binding.spinnerSortStyle
         val sortOptions = listOf("최신순", "오래된 순", "이름 오름차순", "이름 내림차순")
@@ -74,7 +119,6 @@ class StyleFragment : Fragment(), OnTabReselectedListener {
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         spinner.adapter = adapter
 
-        // ViewModel에서 현재 저장된 정렬 값을 가져와 스피너의 초기 선택 값으로 설정
         val currentSortType = viewModel.getCurrentSortType()
         val currentPosition = sortOptions.indexOf(currentSortType)
         if (currentPosition >= 0) {
@@ -88,7 +132,6 @@ class StyleFragment : Fragment(), OnTabReselectedListener {
             override fun onNothingSelected(parent: AdapterView<*>?) {}
         }
     }
-    // ▲▲▲▲▲ 핵심 수정 부분 ▲▲▲▲▲
 
     override fun onTabReselected() {
         val navController = findNavController()
@@ -100,7 +143,6 @@ class StyleFragment : Fragment(), OnTabReselectedListener {
         if (binding.viewPagerStyle.currentItem != 0) {
             binding.viewPagerStyle.currentItem = 0
         } else {
-            // 현재 화면에 표시된 프래그먼트를 찾아 스크롤을 최상단으로 이동
             val currentFragment = childFragmentManager.fragments.getOrNull(binding.viewPagerStyle.currentItem)
             (currentFragment as? StyleListFragment)?.scrollToTop()
         }

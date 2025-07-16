@@ -4,41 +4,91 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@android:color/white"
     tools:context=".ui.style.StyleFragment">
 
     <androidx.appcompat.widget.SearchView
         android:id="@+id/search_view_style"
         android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="8dp"
-        android:layout_marginTop="8dp"
+        android:layout_height="48dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="16dp"
         android:layout_marginEnd="8dp"
-        android:background="@drawable/bg_dotted_border"
+        android:background="@drawable/bg_search_spinner"
         app:iconifiedByDefault="false"
-        app:layout_constraintEnd_toStartOf="@+id/spinner_sort_style"
+        app:layout_constraintEnd_toStartOf="@+id/spinner_container_style"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:queryHint="스타일 이름을 검색하세요" />
+        app:queryBackground="@android:color/transparent"
+        app:queryHint="스타일 이름을 검색하세요"
+        app:searchIcon="@android:drawable/ic_menu_search" />
 
-    <Spinner
-        android:id="@+id/spinner_sort_style"
+    <FrameLayout
+        android:id="@+id/spinner_container_style"
         android:layout_width="wrap_content"
-        android:layout_height="0dp"
-        android:layout_marginEnd="8dp"
-        android:background="@drawable/bg_dotted_border"
-        android:paddingHorizontal="8dp"
+        android:layout_height="48dp"
+        android:layout_marginEnd="16dp"
+        android:background="@drawable/bg_search_spinner"
         app:layout_constraintBottom_toBottomOf="@id/search_view_style"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="@id/search_view_style" />
+        app:layout_constraintTop_toTopOf="@id/search_view_style">
 
-    <com.google.android.material.tabs.TabLayout
-        android:id="@+id/tab_layout_style_season"
+        <Spinner
+            android:id="@+id/spinner_sort_style"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:background="@android:color/transparent"
+            android:paddingStart="16dp"
+            android:paddingEnd="32dp" />
+
+        <ImageView
+            android:layout_width="16dp"
+            android:layout_height="16dp"
+            android:layout_gravity="end|center_vertical"
+            android:layout_marginEnd="12dp"
+            android:src="@drawable/ic_dropdown_arrow"
+            app:tint="@color/text_secondary" />
+    </FrameLayout>
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/tabs_container"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/search_view_style"
-        app:tabMode="scrollable"/>
+        app:layout_constraintTop_toBottomOf="@id/search_view_style">
+
+        <com.google.android.material.tabs.TabLayout
+            android:id="@+id/tab_layout_style_season"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:tabBackground="@android:color/white"
+            app:tabGravity="fill"
+            app:tabIndicatorHeight="0dp"
+            app:tabMode="fixed"
+            app:tabSelectedTextColor="@color/tab_selected_text"
+            app:tabTextColor="@color/tab_unselected_text" />
+
+        <View
+            android:id="@+id/view_tab_indicator"
+            android:layout_width="0dp"
+            android:layout_height="4dp"
+            android:background="@color/tab_selected_text"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <View
+        android:id="@+id/separator"
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/bottom_nav_background"
+        app:layout_constraintTop_toBottomOf="@id/tabs_container" />
 
     <androidx.viewpager2.widget.ViewPager2
         android:id="@+id/view_pager_style"
@@ -47,15 +97,20 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/tab_layout_style_season" />
+        app:layout_constraintTop_toBottomOf="@+id/separator" />
 
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/fab_add_style"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_margin="16dp"
-        android:src="@android:drawable/ic_input_add"
+        android:layout_margin="24dp"
+        android:src="@drawable/plus"
+        app:backgroundTint="@color/fab_color_style_tab"
+        app:elevation="4dp"
+        app:fabSize="normal"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
+        app:layout_constraintEnd_toEndOf="parent"
+        app:tint="@android:color/white"
+        tools:ignore="ContentDescription" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
