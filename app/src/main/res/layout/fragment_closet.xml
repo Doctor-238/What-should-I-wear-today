@@ -9,32 +9,52 @@
     <androidx.appcompat.widget.SearchView
         android:id="@+id/search_view_closet"
         android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="8dp"
-        android:layout_marginTop="8dp"
+        android:layout_height="48dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="16dp"
         android:layout_marginEnd="8dp"
-        android:background="@drawable/bg_dotted_border"
+        android:background="@drawable/bg_search_spinner"
         app:iconifiedByDefault="false"
-        app:layout_constraintEnd_toStartOf="@+id/spinner_sort"
+        app:layout_constraintEnd_toStartOf="@+id/spinner_container_closet"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:queryHint="옷 이름을 검색하세요" />
+        app:queryBackground="@android:color/transparent"
+        app:queryHint="옷 이름을 검색하세요"
+        app:searchIcon="@drawable/search" />
 
-    <Spinner
-        android:id="@+id/spinner_sort"
+    <FrameLayout
+        android:id="@+id/spinner_container_closet"
         android:layout_width="wrap_content"
-        android:layout_height="0dp"
-        android:layout_marginEnd="8dp"
-        android:background="@drawable/bg_dotted_border"
-        android:paddingHorizontal="8dp"
+        android:layout_height="48dp"
+        android:layout_marginEnd="16dp"
+        android:background="@drawable/bg_search_spinner"
         app:layout_constraintBottom_toBottomOf="@id/search_view_closet"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="@id/search_view_closet" />
+        app:layout_constraintTop_toTopOf="@id/search_view_closet">
+
+        <Spinner
+            android:id="@+id/spinner_sort"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:background="@android:color/transparent"
+            android:paddingStart="16dp"
+            android:paddingEnd="32dp" />
+
+        <ImageView
+            android:layout_width="16dp"
+            android:layout_height="16dp"
+            android:layout_gravity="end|center_vertical"
+            android:layout_marginEnd="12dp"
+            android:src="@drawable/ic_dropdown_arrow"
+            app:tint="@color/text_secondary" />
+    </FrameLayout>
+
 
     <com.google.android.material.tabs.TabLayout
         android:id="@+id/tab_layout_category"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/search_view_closet"
@@ -64,8 +84,9 @@
             android:layout_height="wrap_content"
             android:layout_marginBottom="16dp"
             android:src="@drawable/infinite"
+            app:backgroundTint="#eaddff"
             app:fabSize="normal"
-            app:backgroundTint="#eaddff"  tools:ignore="ContentDescription" />
+            tools:ignore="ContentDescription" />
 
         <com.google.android.material.floatingactionbutton.FloatingActionButton
             android:id="@+id/fab_add_clothing"

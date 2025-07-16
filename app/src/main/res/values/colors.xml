@@ -5,7 +5,7 @@
     <color name="dark_purple">#FF6200EE</color>
 
     <color name="status_bar_blue">#7ac2e9</color>
-    <color name="app_background">#F9FAFB</color>
+    <color name="app_background">#FFFFFF</color>
     <color name="weather_card_background">#FFFFFF</color>
     <color name="weather_card_stroke">#E5E7EB</color>
     <color name="text_primary">#111827</color>
@@ -23,5 +23,9 @@
     <color name="settings_reset_button_text">#FF4646</color>
     <color name="slider_track_inactive_color">#E0E0E0</color>
     <color name="slider_thumb_color">#FFFFFF</color>
-    <color name="clothing_item_border">#b2cbe6</color>
+    <color name="clothing_item_border">#7ac2e9</color>
+
+    <color name="style_card_background">#e4f4fe</color>
+    <color name="search_view_stroke_color">#EAEAEA</color>
+    <color name="fab_color_style_tab">#88CCFD</color>
 </resources>

@@ -10,7 +10,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         app:cardCornerRadius="8dp"
-        app:strokeColor="@color/clothing_item_border"
+        app:strokeColor="@color/weather_card_blue_bg"
         app:strokeWidth="1.5dp">
 
         <ImageView
