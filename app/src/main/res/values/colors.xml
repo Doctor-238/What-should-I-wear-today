@@ -23,9 +23,9 @@
     <color name="settings_reset_button_text">#FF4646</color>
     <color name="slider_track_inactive_color">#E0E0E0</color>
     <color name="slider_thumb_color">#FFFFFF</color>
-    <color name="clothing_item_border">#b2cbe6</color>
+    <color name="clothing_item_border">#7ac2e9</color>
 
-    <color name="style_card_background">#E7F5FF</color>
+    <color name="style_card_background">#e4f4fe</color>
     <color name="search_view_stroke_color">#EAEAEA</color>
     <color name="fab_color_style_tab">#88CCFD</color>
 </resources>

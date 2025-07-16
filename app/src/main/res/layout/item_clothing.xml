@@ -7,7 +7,7 @@
     android:layout_margin="4dp"
     app:cardCornerRadius="8dp"
     app:cardElevation="2dp"
-    app:strokeColor="@color/clothing_item_border"
+    app:strokeColor="@color/weather_card_blue_bg"
     app:strokeWidth="1.5dp">
 
     <FrameLayout
