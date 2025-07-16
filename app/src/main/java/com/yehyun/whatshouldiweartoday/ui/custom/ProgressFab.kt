@@ -19,14 +19,14 @@ class ProgressFab @JvmOverloads constructor(
         style = Paint.Style.STROKE
         strokeWidth = 12f
         // ▼▼▼▼▼ 핵심 수정 부분 ▼▼▼▼▼
-        color = ContextCompat.getColor(context, R.color.clothing_item_border) // 진한 하늘색으로 변경
+        color = Color.parseColor("#2196F3")
         // ▲▲▲▲▲ 핵심 수정 부분 ▲▲▲▲▲
     }
 
     private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         textAlign = Paint.Align.CENTER
         typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-        color = Color.BLACK
+        color = Color.parseColor("#424242")
         textSize = TypedValue.applyDimension(
             TypedValue.COMPLEX_UNIT_SP, 16f, resources.displayMetrics
         )

@@ -20,7 +20,7 @@
         app:layout_constraintTop_toTopOf="parent"
         app:queryBackground="@android:color/transparent"
         app:queryHint="옷 이름을 검색하세요"
-        app:searchIcon="@android:drawable/ic_menu_search" />
+        app:searchIcon="@drawable/search" />
 
     <FrameLayout
         android:id="@+id/spinner_container_closet"
