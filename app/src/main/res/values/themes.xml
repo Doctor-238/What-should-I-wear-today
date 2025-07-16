@@ -6,6 +6,11 @@
 
     <style name="Theme.WhatshouldIweartoday" parent="Base.Theme.WhatshouldIweartoday" />
 
+    <style name="FabCircle" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">50%</item>
+    </style>
+
     <style name="Theme.App.Starting" parent="Theme.SplashScreen">
         <item name="windowSplashScreenBackground">@android:color/white</item>
         <item name="windowSplashScreenAnimatedIcon">@drawable/splash_icon_wrapper</item>

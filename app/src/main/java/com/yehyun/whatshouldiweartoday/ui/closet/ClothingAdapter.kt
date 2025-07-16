@@ -3,6 +3,7 @@
 package com.yehyun.whatshouldiweartoday.ui.closet
 
 import android.graphics.Color
+import android.graphics.drawable.GradientDrawable
 import android.net.Uri
 import android.view.LayoutInflater
 import android.view.View
@@ -63,9 +64,14 @@ class ClothingAdapter(
             Glide.with(itemView.context).load(Uri.fromFile(File(imageToShow))).into(imageView)
 
             try {
-                colorView.setBackgroundColor(Color.parseColor(item.colorHex))
+                val colorDrawable = GradientDrawable().apply {
+                    shape = GradientDrawable.RECTANGLE
+                    setColor(Color.parseColor(item.colorHex))
+                    setStroke(3, Color.BLACK) // [수정] 테두리 굵기 2 -> 3
+                }
+                colorView.background = colorDrawable
                 colorView.visibility = View.VISIBLE
-            } catch (e: IllegalArgumentException) {
+            } catch (e: Exception) {
                 colorView.visibility = View.GONE
             }
 
