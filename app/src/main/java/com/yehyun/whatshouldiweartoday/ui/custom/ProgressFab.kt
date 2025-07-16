@@ -19,7 +19,7 @@ class ProgressFab @JvmOverloads constructor(
         style = Paint.Style.STROKE
         strokeWidth = 12f
         // ▼▼▼▼▼ 핵심 수정 부분 ▼▼▼▼▼
-        color = Color.parseColor("#2196F3")
+        color = Color.parseColor("#009600")
         // ▲▲▲▲▲ 핵심 수정 부분 ▲▲▲▲▲
     }
 
