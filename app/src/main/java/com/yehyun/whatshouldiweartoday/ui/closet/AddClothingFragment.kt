@@ -31,6 +31,7 @@ import com.yehyun.whatshouldiweartoday.R
 import com.yehyun.whatshouldiweartoday.ui.OnTabReselectedListener
 import kotlinx.serialization.Serializable
 import android.graphics.Matrix
+import android.graphics.drawable.GradientDrawable
 import androidx.exifinterface.media.ExifInterface
 import java.io.InputStream
 
@@ -196,7 +197,14 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabResel
 
         viewModel.viewColor.observe(viewLifecycleOwner) { color ->
             if (color != null) {
-                viewInfoColorSwatch.setBackgroundColor(color)
+                // ▼▼▼▼▼ 핵심 수정 부분 ▼▼▼▼▼
+                val colorDrawable = GradientDrawable().apply {
+                    shape = GradientDrawable.RECTANGLE
+                    setColor(color)
+                    setStroke(3, Color.BLACK) // 3px 두께의 검은색 테두리
+                }
+                viewInfoColorSwatch.background = colorDrawable
+                // ▲▲▲▲▲ 핵심 수정 부분 ▲▲▲▲▲
                 viewInfoColorSwatch.isVisible = true
             } else {
                 viewInfoColorSwatch.isVisible = false

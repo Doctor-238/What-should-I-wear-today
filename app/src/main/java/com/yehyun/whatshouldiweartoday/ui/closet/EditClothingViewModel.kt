@@ -1,8 +1,10 @@
+// 파일 경로: app/src/main/java/com/yehyun/whatshouldiweartoday/ui/closet/EditClothingViewModel.kt
 package com.yehyun.whatshouldiweartoday.ui.closet
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
+import androidx.lifecycle.MediatorLiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.switchMap
 import androidx.lifecycle.viewModelScope
@@ -27,6 +29,13 @@ class EditClothingViewModel(application: Application) : AndroidViewModel(applica
     private val _isChanged = MutableLiveData<Boolean>(false)
     val isChanged: LiveData<Boolean> = _isChanged
 
+    // '저장 가능' 상태를 관리하는 LiveData
+    val canBeSaved = MediatorLiveData<Boolean>().apply {
+        // isChanged나 currentClothingItem이 변경될 때마다 저장 가능 여부를 다시 계산
+        addSource(_isChanged) { value = checkCanBeSaved() }
+        addSource(_currentClothingItem) { value = checkCanBeSaved() }
+    }
+
     private val _isProcessing = MutableLiveData(false)
     val isProcessing: LiveData<Boolean> = _isProcessing
 
@@ -46,6 +55,13 @@ class EditClothingViewModel(application: Application) : AndroidViewModel(applica
         }
     }
 
+    // 저장 가능 조건을 확인하는 함수
+    private fun checkCanBeSaved(): Boolean {
+        val hasChanges = _isChanged.value ?: false
+        val isNameValid = !_currentClothingItem.value?.name.isNullOrBlank()
+        return hasChanges && isNameValid
+    }
+
     fun loadClothingItem(id: Int) {
         if (_itemId.value == id) return
         _itemId.value = id
@@ -63,32 +79,27 @@ class EditClothingViewModel(application: Application) : AndroidViewModel(applica
         _currentClothingItem.value?.let {
             if (it.name != name) {
                 it.name = name
+                _currentClothingItem.postValue(it) // LiveData를 업데이트하여 옵저버가 알 수 있도록 함
                 checkForChanges()
             }
         }
     }
 
-    // ▼▼▼▼▼ 핵심 수정 부분 ▼▼▼▼▼
     fun updateCategory(category: String) {
         _currentClothingItem.value?.let {
             if (it.category != category) {
                 it.category = category
-
-                // 카테고리 변경 시, baseTemperature를 기준으로 suitableTemperature를 다시 계산
                 val baseTemp = it.baseTemperature
                 it.suitableTemperature = when (category) {
                     "아우터" -> baseTemp - 3.0
                     "상의", "하의" -> baseTemp + 2.0
                     else -> baseTemp
                 }
-
-                _currentClothingItem.postValue(it) // LiveData 업데이트하여 UI에 즉시 반영
+                _currentClothingItem.postValue(it)
                 checkForChanges()
             }
         }
     }
-    // ▲▲▲▲▲ 핵심 수정 부분 ▲▲▲▲▲
-
 
     fun updateUseProcessedImage(use: Boolean) {
         _currentClothingItem.value?.let {
@@ -105,15 +116,17 @@ class EditClothingViewModel(application: Application) : AndroidViewModel(applica
     }
 
     fun saveChanges() {
-        if (_isProcessing.value == true) return
+        // 저장하기 전, ViewModel에서도 한 번 더 저장 가능 여부 확인
+        if (_isProcessing.value == true || canBeSaved.value != true) return
+
         _currentClothingItem.value?.let {
             _isProcessing.value = true
             viewModelScope.launch {
                 try {
                     repository.update(it)
-                    _isSaveComplete.value = true
+                    _isSaveComplete.postValue(true)
                 } finally {
-                    _isProcessing.value = false
+                    _isProcessing.postValue(false)
                 }
             }
         }
@@ -127,9 +140,9 @@ class EditClothingViewModel(application: Application) : AndroidViewModel(applica
                 try {
                     repository.delete(itemToDelete)
                     styleDao.deleteOrphanedStyles()
-                    _isDeleteComplete.value = true
+                    _isDeleteComplete.postValue(true)
                 } finally {
-                    _isProcessing.value = false
+                    _isProcessing.postValue(false)
                 }
             }
         }

@@ -11,28 +11,13 @@
         android:id="@+id/toolbar_edit"
         android:layout_width="0dp"
         android:layout_height="?attr/actionBarSize"
-        android:textAlignment="center"
         android:textStyle="bold"
-        android:background="@color/status_bar_blue"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         app:navigationIcon="@drawable/ic_arrow_back"
-        app:title="옷 추가하기"
-        app:titleCentered="true">
-
-        <Button
-            android:id="@+id/button_menu_save"
-            style="@style/Widget.MaterialComponents.Button.TextButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="end"
-            android:layout_marginEnd="16dp"
-            android:text="저장하기"
-            android:textColor="@color/text_secondary"
-            android:textSize="16sp" />
-
-    </com.google.android.material.appbar.MaterialToolbar>
+        app:title="옷 수정"
+        app:titleCentered="true" />
 
     <ScrollView
         android:layout_width="0dp"
@@ -194,7 +179,7 @@
                 android:id="@+id/textView_edit_category_label"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
+                android:layout_marginTop="4dp"
                 android:text="종류"
                 android:textColor="@color/text_primary"
                 android:textSize="16sp"
@@ -206,7 +191,7 @@
                 android:id="@+id/chipGroup_edit_category"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
+
                 app:chipSpacingHorizontal="8dp"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
@@ -227,10 +212,11 @@
                 style="@style/Widget.Material3.Button.OutlinedButton"
                 android:layout_width="wrap_content"
                 android:layout_height="60dp"
-                android:layout_marginTop="32dp"
+                android:layout_marginTop="20dp"
                 android:paddingHorizontal="48dp"
                 android:text="삭제하기"
                 android:textColor="?attr/colorError"
+                android:textStyle="bold"
                 app:cornerRadius="24dp"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
