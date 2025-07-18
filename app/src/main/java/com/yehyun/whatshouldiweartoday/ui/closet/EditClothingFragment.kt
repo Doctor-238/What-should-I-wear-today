@@ -8,10 +8,12 @@ import android.text.TextWatcher
 import android.view.View
 import android.widget.Button
 import android.widget.ImageView
+import android.widget.RelativeLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
@@ -43,8 +45,14 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
     private lateinit var buttonDelete: Button
     private lateinit var toolbar: MaterialToolbar
     private lateinit var viewColorSwatch: View
-    private lateinit var textColorLabel: TextView
+    private lateinit var layoutBackgroundRemoval: RelativeLayout
     private lateinit var settingsManager: SettingsManager
+
+    override fun onResume() {
+        super.onResume()
+        // 설정 변경 후 돌아왔을 때 온도 표시를 업데이트하기 위해
+        viewModel.currentClothingItem.value?.let { updateTemperatureDisplay(it) }
+    }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -66,7 +74,7 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
         buttonDelete = view.findViewById(R.id.button_delete)
         toolbar = view.findViewById(R.id.toolbar_edit)
         viewColorSwatch = view.findViewById(R.id.view_color_swatch_edit)
-        textColorLabel = view.findViewById(R.id.textView_color_label_edit)
+        layoutBackgroundRemoval = view.findViewById(R.id.layout_background_removal)
     }
 
     private fun observeViewModel() {
@@ -81,6 +89,8 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
         }
 
         viewModel.isChanged.observe(viewLifecycleOwner) { hasChanges ->
+            val saveButtonTextColor = if (hasChanges) R.color.text_primary else R.color.text_secondary
+            buttonSave.setTextColor(resources.getColor(saveButtonTextColor, null))
             buttonSave.isEnabled = hasChanges
             onBackPressedCallback.isEnabled = hasChanges
         }
@@ -91,7 +101,7 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
             if (isProcessing) {
                 toolbar.navigationIcon = null
             } else {
-                toolbar.setNavigationIcon(R.drawable.ic_arrow_back)
+                toolbar.setNavigationIcon(R.drawable.backarrow)
             }
         }
 
@@ -110,19 +120,16 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
     }
 
     private fun bindDataToViews(item: ClothingItem) {
-        toolbar.title = "'${item.name}' 수정"
         if (editTextName.text.toString() != item.name) {
             editTextName.setText(item.name)
         }
-        updateTemperatureDisplay(item) // 온도는 항상 이 함수를 통해 업데이트
+        updateTemperatureDisplay(item)
 
         try {
             viewColorSwatch.setBackgroundColor(Color.parseColor(item.colorHex))
             viewColorSwatch.visibility = View.VISIBLE
-            textColorLabel.visibility = View.VISIBLE
         } catch (e: Exception) {
             viewColorSwatch.visibility = View.GONE
-            textColorLabel.visibility = View.GONE
         }
 
         for (i in 0 until chipGroupCategory.childCount) {
@@ -133,34 +140,26 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
             }
         }
 
-        switchRemoveBackground.visibility = if (item.processedImageUri != null) View.VISIBLE else View.GONE
+        layoutBackgroundRemoval.isVisible = item.processedImageUri != null
         switchRemoveBackground.isChecked = item.useProcessedImage
 
         updateImagePreview(item)
-
-        if (imageViewPreview.visibility != View.VISIBLE) {
-            imageViewPreview.visibility = View.VISIBLE
-        }
     }
 
-    // ▼▼▼▼▼ 핵심 수정 부분 ▼▼▼▼▼
     private fun updateTemperatureDisplay(item: ClothingItem) {
         if (item.category in listOf("상의", "하의", "아우터")) {
             val tolerance = settingsManager.getTemperatureTolerance()
             val constitutionAdjustment = settingsManager.getConstitutionAdjustment()
-            // currentClothingItem에 이미 카테고리별 가중치가 적용된 suitableTemperature를 사용
             val adjustedTemp = item.suitableTemperature + constitutionAdjustment
 
             val minTemp = adjustedTemp - tolerance
             val maxTemp = adjustedTemp + tolerance
-            // 기본 온도를 함께 표시하여 사용자에게 직관적인 정보 제공
-            textViewTemperature.text = "적정 온도: %.1f°C ~ %.1f°C".format(minTemp, maxTemp)
+            textViewTemperature.text = "%.1f°C ~ %.1f°C".format(minTemp, maxTemp)
             textViewTemperature.visibility = View.VISIBLE
         } else {
             textViewTemperature.visibility = View.GONE
         }
     }
-    // ▲▲▲▲▲ 핵심 수정 부분 ▲▲▲▲▲
 
     private fun updateImagePreview(item: ClothingItem) {
         val imageUriString = if (item.useProcessedImage && item.processedImageUri != null) {
@@ -168,12 +167,8 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
         } else {
             item.imageUri
         }
-
-        val currentDrawable = imageViewPreview.drawable
-
         Glide.with(this)
             .load(Uri.fromFile(File(imageUriString)))
-            .placeholder(currentDrawable)
             .into(imageViewPreview)
     }
 
