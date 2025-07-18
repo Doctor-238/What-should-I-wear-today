@@ -1,17 +1,26 @@
+// 파일 경로: app/src/main/java/com/yehyun/whatshouldiweartoday/ui/closet/EditClothingFragment.kt
 package com.yehyun.whatshouldiweartoday.ui.closet
 
 import android.graphics.Color
+import android.graphics.Typeface
+import android.graphics.drawable.GradientDrawable
 import android.net.Uri
 import android.os.Bundle
 import android.text.Editable
+import android.text.SpannableString
 import android.text.TextWatcher
+import android.text.style.ForegroundColorSpan
+import android.text.style.StyleSpan
 import android.view.View
 import android.widget.Button
 import android.widget.ImageView
+import android.widget.RelativeLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
+import androidx.core.content.ContextCompat
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
@@ -39,12 +48,16 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
     private lateinit var textViewTemperature: TextView
     private lateinit var editTextName: TextInputEditText
     private lateinit var chipGroupCategory: ChipGroup
-    private lateinit var buttonSave: Button
     private lateinit var buttonDelete: Button
     private lateinit var toolbar: MaterialToolbar
     private lateinit var viewColorSwatch: View
-    private lateinit var textColorLabel: TextView
+    private lateinit var layoutBackgroundRemoval: RelativeLayout
     private lateinit var settingsManager: SettingsManager
+
+    override fun onResume() {
+        super.onResume()
+        viewModel.currentClothingItem.value?.let { updateTemperatureDisplay(it) }
+    }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -62,11 +75,13 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
         textViewTemperature = view.findViewById(R.id.textView_edit_temperature)
         editTextName = view.findViewById(R.id.editText_edit_name)
         chipGroupCategory = view.findViewById(R.id.chipGroup_edit_category)
-        buttonSave = view.findViewById(R.id.button_menu_save)
         buttonDelete = view.findViewById(R.id.button_delete)
         toolbar = view.findViewById(R.id.toolbar_edit)
         viewColorSwatch = view.findViewById(R.id.view_color_swatch_edit)
-        textColorLabel = view.findViewById(R.id.textView_color_label_edit)
+        layoutBackgroundRemoval = view.findViewById(R.id.layout_background_removal)
+
+        // 툴바에 메뉴를 설정하고, 아이콘 색상을 흰색으로 변경
+        toolbar.inflateMenu(R.menu.edit_clothing_menu)
     }
 
     private fun observeViewModel() {
@@ -80,14 +95,28 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
             editingItem?.let { bindDataToViews(it) }
         }
 
+        // '저장 가능' 상태를 관찰하여 메뉴 아이템의 활성화/비활성화 및 색상 변경
+        viewModel.canBeSaved.observe(viewLifecycleOwner) { canBeSaved ->
+            val saveMenuItem = toolbar.menu.findItem(R.id.menu_save)
+            saveMenuItem?.isEnabled = canBeSaved
+
+            val title = saveMenuItem.title.toString()
+            val spannable = SpannableString(title)
+            val color = if (canBeSaved) Color.parseColor("#88bfec") else Color.GRAY
+            spannable.setSpan(ForegroundColorSpan(color), 0, spannable.length, 0)
+            spannable.setSpan(StyleSpan(Typeface.BOLD), 0, spannable.length, 0)
+            saveMenuItem.title = spannable
+        }
+
         viewModel.isChanged.observe(viewLifecycleOwner) { hasChanges ->
-            buttonSave.isEnabled = hasChanges
             onBackPressedCallback.isEnabled = hasChanges
         }
 
         viewModel.isProcessing.observe(viewLifecycleOwner) { isProcessing ->
-            buttonSave.isEnabled = !isProcessing && viewModel.isChanged.value == true
+            val isSavable = !isProcessing && (viewModel.canBeSaved.value == true)
+            toolbar.menu.findItem(R.id.menu_save)?.isEnabled = isSavable
             buttonDelete.isEnabled = !isProcessing
+
             if (isProcessing) {
                 toolbar.navigationIcon = null
             } else {
@@ -96,13 +125,13 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
         }
 
         viewModel.isSaveComplete.observe(viewLifecycleOwner) { isComplete ->
-            if(isComplete) {
+            if (isComplete) {
                 findNavController().popBackStack()
             }
         }
 
         viewModel.isDeleteComplete.observe(viewLifecycleOwner) { isComplete ->
-            if(isComplete) {
+            if (isComplete) {
                 Toast.makeText(context, "삭제되었습니다.", Toast.LENGTH_SHORT).show()
                 findNavController().popBackStack()
             }
@@ -110,19 +139,23 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
     }
 
     private fun bindDataToViews(item: ClothingItem) {
-        toolbar.title = "'${item.name}' 수정"
         if (editTextName.text.toString() != item.name) {
             editTextName.setText(item.name)
         }
-        updateTemperatureDisplay(item) // 온도는 항상 이 함수를 통해 업데이트
+        updateTemperatureDisplay(item)
 
         try {
-            viewColorSwatch.setBackgroundColor(Color.parseColor(item.colorHex))
+            // ▼▼▼▼▼ 핵심 수정 부분 ▼▼▼▼▼
+            val colorDrawable = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                setColor(Color.parseColor(item.colorHex))
+                setStroke(3, Color.BLACK) // 3px 두께의 검은색 테두리
+            }
+            viewColorSwatch.background = colorDrawable
+            // ▲▲▲▲▲ 핵심 수정 부분 ▲▲▲▲▲
             viewColorSwatch.visibility = View.VISIBLE
-            textColorLabel.visibility = View.VISIBLE
         } catch (e: Exception) {
             viewColorSwatch.visibility = View.GONE
-            textColorLabel.visibility = View.GONE
         }
 
         for (i in 0 until chipGroupCategory.childCount) {
@@ -133,34 +166,26 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
             }
         }
 
-        switchRemoveBackground.visibility = if (item.processedImageUri != null) View.VISIBLE else View.GONE
+        layoutBackgroundRemoval.isVisible = item.processedImageUri != null
         switchRemoveBackground.isChecked = item.useProcessedImage
 
         updateImagePreview(item)
-
-        if (imageViewPreview.visibility != View.VISIBLE) {
-            imageViewPreview.visibility = View.VISIBLE
-        }
     }
 
-    // ▼▼▼▼▼ 핵심 수정 부분 ▼▼▼▼▼
     private fun updateTemperatureDisplay(item: ClothingItem) {
         if (item.category in listOf("상의", "하의", "아우터")) {
             val tolerance = settingsManager.getTemperatureTolerance()
             val constitutionAdjustment = settingsManager.getConstitutionAdjustment()
-            // currentClothingItem에 이미 카테고리별 가중치가 적용된 suitableTemperature를 사용
             val adjustedTemp = item.suitableTemperature + constitutionAdjustment
 
             val minTemp = adjustedTemp - tolerance
             val maxTemp = adjustedTemp + tolerance
-            // 기본 온도를 함께 표시하여 사용자에게 직관적인 정보 제공
-            textViewTemperature.text = "적정 온도: %.1f°C ~ %.1f°C".format(minTemp, maxTemp)
+            textViewTemperature.text = "%.1f°C ~ %.1f°C".format(minTemp, maxTemp)
             textViewTemperature.visibility = View.VISIBLE
         } else {
             textViewTemperature.visibility = View.GONE
         }
     }
-    // ▲▲▲▲▲ 핵심 수정 부분 ▲▲▲▲▲
 
     private fun updateImagePreview(item: ClothingItem) {
         val imageUriString = if (item.useProcessedImage && item.processedImageUri != null) {
@@ -168,18 +193,25 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
         } else {
             item.imageUri
         }
-
-        val currentDrawable = imageViewPreview.drawable
-
         Glide.with(this)
             .load(Uri.fromFile(File(imageUriString)))
-            .placeholder(currentDrawable)
             .into(imageViewPreview)
     }
 
     private fun setupListeners(view: View) {
         toolbar.setNavigationOnClickListener { handleBackButton() }
-        buttonSave.setOnClickListener { viewModel.saveChanges() }
+
+        // 툴바의 메뉴 아이템 클릭 리스너 설정
+        toolbar.setOnMenuItemClickListener { menuItem ->
+            when (menuItem.itemId) {
+                R.id.menu_save -> {
+                    trySaveChanges()
+                    true
+                }
+                else -> false
+            }
+        }
+
         buttonDelete.setOnClickListener { showDeleteConfirmDialog() }
 
         editTextName.addTextChangedListener(object : TextWatcher {
@@ -213,7 +245,8 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
     private fun handleBackButton() {
         if(viewModel.isProcessing.value == true) return
 
-        if (onBackPressedCallback.isEnabled) {
+        // isChanged LiveData를 사용
+        if (viewModel.isChanged.value == true) {
             showSaveChangesDialog()
         } else {
             findNavController().popBackStack()
@@ -223,12 +256,21 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
     private fun showSaveChangesDialog() {
         AlertDialog.Builder(requireContext())
             .setMessage("변경사항을 저장하시겠습니까?")
-            .setPositiveButton("예") { _, _ -> viewModel.saveChanges() }
+            .setPositiveButton("예") { _, _ -> trySaveChanges() }
             .setNegativeButton("아니오") { _, _ ->
                 findNavController().popBackStack()
             }
             .setCancelable(true)
             .show()
+    }
+
+    // 저장 시도 시 이름 유효성 검사
+    private fun trySaveChanges() {
+        if (viewModel.currentClothingItem.value?.name.isNullOrBlank()) {
+            Toast.makeText(context, "옷 이름을 입력해주세요.", Toast.LENGTH_SHORT).show()
+        } else {
+            viewModel.saveChanges()
+        }
     }
 
     private fun showDeleteConfirmDialog() {

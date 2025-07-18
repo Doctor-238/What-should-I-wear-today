@@ -220,7 +220,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             val adjustedTemp = it.suitableTemperature + constitutionAdjustment
             val itemMinTemp = adjustedTemp - temperatureTolerance
             val itemMaxTemp = adjustedTemp + temperatureTolerance
-            val isFitForMaxTemp = maxTempCriteria in itemMinTemp+0.5..itemMaxTemp+3
+            val isFitForMaxTemp = maxTempCriteria in itemMinTemp+1..itemMaxTemp+2.5
             val isFitForHotDay = maxTempCriteria > 31 && itemMaxTemp >= 31
             val isFitForFreezingDay = minTempCriteria < -1 && itemMinTemp <= -1
             isFitForMaxTemp || isFitForHotDay || isFitForFreezingDay
