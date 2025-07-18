@@ -4,11 +4,11 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_margin="4dp"
-    app:cardCornerRadius="8dp"
-    app:cardElevation="2dp"
-    app:strokeColor="@color/weather_card_blue_bg"
-    app:strokeWidth="1.5dp">
+    android:layout_margin="10dp"
+    app:cardBackgroundColor="@color/style_card_background"
+    app:cardCornerRadius="15dp"
+    app:cardElevation="0dp"
+    app:strokeWidth="0dp">
 
     <FrameLayout
         android:layout_width="match_parent"
@@ -17,18 +17,30 @@
         <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:paddingBottom="8dp">
+            android:padding="15dp"
+            android:paddingBottom="0dp">
 
-            <ImageView
-                android:id="@+id/iv_clothing_item"
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/image_container"
                 android:layout_width="0dp"
                 android:layout_height="0dp"
-                android:scaleType="centerCrop"
+                app:cardCornerRadius="20dp"
+                app:cardElevation="0dp"
                 app:layout_constraintDimensionRatio="1:1"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent"
-                tools:src="@tools:sample/backgrounds/scenic" />
+                app:strokeColor="@color/weather_card_blue_bg"
+                app:strokeWidth="1.5dp">
+
+                <ImageView
+                    android:id="@+id/iv_clothing_item"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:scaleType="centerCrop"
+                    tools:src="@tools:sample/backgrounds/scenic" />
+
+            </com.google.android.material.card.MaterialCardView>
 
             <TextView
                 android:id="@+id/tv_clothing_name"
@@ -36,23 +48,24 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
                 android:gravity="center"
+                android:paddingHorizontal="4dp"
                 android:textColor="@android:color/black"
                 android:textSize="14sp"
                 android:textStyle="bold"
-                android:paddingHorizontal="4dp"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/iv_clothing_item"
+                app:layout_constraintTop_toBottomOf="@id/image_container"
                 tools:text="멋진 검은 티셔츠" />
 
             <TextView
                 android:id="@+id/tv_clothing_temp"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
                 android:gravity="center"
                 android:textSize="12sp"
-                app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/tv_clothing_name"
                 tools:text="15.0°C ~ 25.0°C" />
 
@@ -61,10 +74,11 @@
                 android:layout_width="16dp"
                 android:layout_height="16dp"
                 android:layout_marginTop="4dp"
-                app:layout_constraintTop_toBottomOf="@id/tv_clothing_temp"
-                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
-                tools:background="#4A6E8A"/>
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/tv_clothing_temp"
+                tools:background="#4A6E8A" />
 
         </androidx.constraintlayout.widget.ConstraintLayout>
 

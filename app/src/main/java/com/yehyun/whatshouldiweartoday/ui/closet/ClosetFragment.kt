@@ -20,13 +20,16 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.SearchView
 import androidx.core.content.ContextCompat
+import androidx.core.view.doOnPreDraw
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
+import androidx.viewpager2.widget.ViewPager2
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.workDataOf
+import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
 import com.yehyun.whatshouldiweartoday.R
 import com.yehyun.whatshouldiweartoday.databinding.FragmentClosetBinding
@@ -210,7 +213,46 @@ class ClosetFragment : Fragment(), OnTabReselectedListener {
         TabLayoutMediator(binding.tabLayoutCategory, binding.viewPagerCloset) { tab, position ->
             tab.text = categories[position]
         }.attach()
+
+        binding.viewPagerCloset.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
+            override fun onPageSelected(position: Int) {
+                super.onPageSelected(position)
+                binding.tabLayoutCategory.getTabAt(position)?.let {
+                    animateIndicator(it, true)
+                }
+            }
+        })
+
+        binding.tabLayoutCategory.doOnPreDraw {
+            binding.tabLayoutCategory.getTabAt(binding.tabLayoutCategory.selectedTabPosition)?.let {
+                animateIndicator(it, false)
+            }
+        }
     }
+
+    // ▼▼▼▼▼ 핵심 수정 부분 ▼▼▼▼▼
+    private fun animateIndicator(tab: TabLayout.Tab, animate: Boolean) {
+        if (_binding == null) return
+        val tabView = tab.view
+        val indicator = binding.viewTabIndicator
+
+        val indicatorWidth = tabView.width / 2
+        val targetCenter = tabView.left + (tabView.width / 2)
+        val indicatorStart = (targetCenter - (indicatorWidth / 2)).toFloat()
+
+        val layoutParams = indicator.layoutParams
+        if (layoutParams.width != indicatorWidth) {
+            layoutParams.width = indicatorWidth
+            indicator.layoutParams = layoutParams
+        }
+
+        if (animate) {
+            indicator.animate().x(indicatorStart).setDuration(250).start()
+        } else {
+            indicator.x = indicatorStart
+        }
+    }
+    // ▲▲▲▲▲ 핵심 수정 부분 ▲▲▲▲▲
 
     private fun setupSearch() {
         binding.searchViewCloset.setOnQueryTextListener(object : SearchView.OnQueryTextListener {

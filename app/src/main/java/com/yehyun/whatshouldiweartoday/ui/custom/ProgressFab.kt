@@ -18,13 +18,15 @@ class ProgressFab @JvmOverloads constructor(
     private val progressPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         strokeWidth = 12f
-        color = ContextCompat.getColor(context, R.color.dark_purple) // 진한 보라색
+        // ▼▼▼▼▼ 핵심 수정 부분 ▼▼▼▼▼
+        color = Color.parseColor("#009600")
+        // ▲▲▲▲▲ 핵심 수정 부분 ▲▲▲▲▲
     }
 
     private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         textAlign = Paint.Align.CENTER
         typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-        color = Color.BLACK
+        color = Color.parseColor("#424242")
         textSize = TypedValue.applyDimension(
             TypedValue.COMPLEX_UNIT_SP, 16f, resources.displayMetrics
         )
@@ -65,7 +67,7 @@ class ProgressFab @JvmOverloads constructor(
         if (isProgressMode) {
             this.isProgressMode = false
             this.isEnabled = true
-            setImageResource(R.drawable.infinite) // 원래 아이콘으로 복구
+            setImageResource(R.drawable.multiple) // [수정] 아이콘을 multiple로 복구
             invalidate()
         }
     }
