@@ -55,20 +55,15 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
 
     val clothingName = MutableLiveData<String>()
 
-    // ▼▼▼▼▼ 핵심 수정 부분 ▼▼▼▼▼
-    // hasChanges를 MediatorLiveData로 변경하여, 이미지나 이름에 실제 변경이 있을 때만 true가 되도록 합니다.
     val hasChanges = MediatorLiveData<Boolean>().apply {
         value = false
-        // 소스 1: 원본 이미지 비트맵
         addSource(_originalBitmap) { bitmap ->
             value = bitmap != null || !clothingName.value.isNullOrEmpty()
         }
-        // 소스 2: 옷 이름
         addSource(clothingName) { name ->
             value = _originalBitmap.value != null || !name.isNullOrEmpty()
         }
     }
-    // ▲▲▲▲▲ 핵심 수정 부분 ▲▲▲▲▲
 
     private val _analysisResultText = MutableLiveData<String>()
     val analysisResultText: LiveData<String> = _analysisResultText
@@ -82,14 +77,30 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
     private val settingsManager = SettingsManager(application)
     private var generativeModel: GenerativeModel? = null
 
-    private var analysisResult: ClothingAnalysis? = null
+    // ▼▼▼▼▼ 핵심 수정 부분 1: AI 분석 결과를 LiveData로 관리 ▼▼▼▼▼
+    private val _analysisResult = MutableLiveData<ClothingAnalysis?>()
+    // ▲▲▲▲▲ 핵심 수정 부분 1 ▲▲▲▲▲
+
     private var processedImageJob: Deferred<Bitmap?>? = null
     private var originalImageJob: Deferred<Bitmap>? = null
     private var isImageProcessing = false
 
+    init {
+        // AI 분석 결과가 변경될 때마다 화면 표시를 업데이트하는 관찰자 설정
+        _analysisResult.observeForever { result ->
+            processAnalysisResult(result)
+        }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        // 메모리 누수 방지를 위해 observeForever 사용 시 반드시 제거
+        _analysisResult.removeObserver { }
+    }
+
+
     fun onImageSelected(bitmap: Bitmap, apiKey: String) {
         resetAllState()
-        // [수정] hasChanges를 직접 설정하는 대신, _originalBitmap 값이 변경되면 MediatorLiveData가 자동으로 계산합니다.
         _originalBitmap.value = bitmap
         generativeModel = AiModelProvider.getModel(getApplication(), apiKey)
         isImageProcessing = true
@@ -101,16 +112,18 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
             processedImageJob = async(Dispatchers.IO) { createProcessedBitmap(bitmap) }
             originalImageJob = async(Dispatchers.Default) { bitmap }
 
-            analysisResult = analysisJob.await()
+            val result = analysisJob.await()
             _isAiAnalyzing.postValue(false)
 
-            if (analysisResult == null || analysisResult?.is_wearable == false) {
+            if (result == null || !result.is_wearable) {
                 withContext(Dispatchers.Main) {
                     _errorMessage.value = "올바른 사진을 입력해주세요."
                     resetAllState()
                 }
             } else {
-                withContext(Dispatchers.Main) { processAnalysisResult(analysisResult!!) }
+                // ▼▼▼▼▼ 핵심 수정 부분 2: 분석 결과를 LiveData에 저장 ▼▼▼▼▼
+                _analysisResult.postValue(result)
+                // ▲▲▲▲▲ 핵심 수정 부분 2 ▲▲▲▲▲
                 val processed = processedImageJob?.await()
                 withContext(Dispatchers.Main) {
                     _processedBitmap.value = processed
@@ -139,13 +152,12 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
                 _isSaving.value = false
             }
             _useProcessedImage.value = isChecked
-            // [수정] 배경제거 스위치 토글은 hasChanges 상태에 영향을 주지 않습니다.
         }
     }
 
     fun saveClothingItem(name: String) {
         viewModelScope.launch {
-            if (analysisResult == null) {
+            if (_analysisResult.value == null) {
                 _errorMessage.value = "AI 분석 결과가 없습니다."
                 return@launch
             }
@@ -168,8 +180,9 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
                     throw IOException("원본 이미지 저장 실패")
                 }
 
-                val baseTemp = analysisResult!!.suitable_temperature!!
-                val finalTemp = when (analysisResult!!.category) {
+                val analysis = _analysisResult.value!!
+                val baseTemp = analysis.suitable_temperature!!
+                val finalTemp = when (analysis.category) {
                     "아우터" -> baseTemp - 3.0
                     "상의", "하의" -> baseTemp + 2.0
                     else -> baseTemp
@@ -180,10 +193,10 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
                     imageUri = originalPath,
                     processedImageUri = processedPath,
                     useProcessedImage = _useProcessedImage.value ?: false,
-                    category = analysisResult!!.category!!,
+                    category = analysis.category!!,
                     suitableTemperature = finalTemp,
-                    baseTemperature = baseTemp, // 기본 온도 저장
-                    colorHex = analysisResult!!.color_hex!!
+                    baseTemperature = baseTemp,
+                    colorHex = analysis.color_hex!!
                 )
                 withContext(Dispatchers.IO) {
                     AppDatabase.getDatabase(getApplication()).clothingDao().insert(newClothingItem)
@@ -227,7 +240,13 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
         return successfulAnalysis
     }
 
-    fun processAnalysisResult(result: ClothingAnalysis) {
+    fun processAnalysisResult(result: ClothingAnalysis?) {
+        if (result == null) {
+            updateAnalysisResultText(null, null, null)
+            setViewColor(null)
+            return
+        }
+
         val category = result.category ?: "기타"
         val temp = result.suitable_temperature
         if (category in listOf("상의", "하의", "아우터") && temp != null) {
@@ -239,7 +258,7 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
             }
             val tolerance = settingsManager.getTemperatureTolerance()
             val constitutionAdjustment = settingsManager.getConstitutionAdjustment()
-            val adjustedTemp = finalTemp + constitutionAdjustment // 최종 온도에 보정 적용
+            val adjustedTemp = finalTemp + constitutionAdjustment
             val minTemp = adjustedTemp - tolerance
             val maxTemp = adjustedTemp + tolerance
             updateAnalysisResultText(category, minTemp, maxTemp)
@@ -261,11 +280,14 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
     fun setClothingName(name: String) {
         if (clothingName.value != name) {
             clothingName.value = name
-            // [수정] MediatorLiveData가 hasChanges를 자동으로 업데이트합니다.
         }
     }
 
-    private fun updateAnalysisResultText(category: String, minTemp: Double?, maxTemp: Double?) {
+    private fun updateAnalysisResultText(category: String?, minTemp: Double?, maxTemp: Double?) {
+        if (category == null) {
+            _analysisResultText.value = ""
+            return
+        }
         val temperatureText = if (minTemp != null && maxTemp != null) ", 적정 온도:%.1f°C ~ %.1f°C".format(minTemp, maxTemp) else ""
         _analysisResultText.value = "분류:$category$temperatureText"
     }
@@ -280,18 +302,27 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
 
         _originalBitmap.value = null
         _processedBitmap.value = null
-        analysisResult = null
+        _analysisResult.value = null
         processedImageJob = null
         originalImageJob = null
         _isAiAnalyzing.value = false
         _isSaving.value = false
         _isSaveCompleted.value = false
-        // [수정] MediatorLiveData의 소스 값을 변경하여 hasChanges를 false로 만듭니다.
         clothingName.value = ""
         _segmentationSucceeded.value = false
         _analysisResultText.value = ""
         _viewColor.value = null
     }
+
+    // ▼▼▼▼▼ 핵심 수정 부분 3: 외부에서 호출할 새로고침 함수 추가 ▼▼▼▼▼
+    fun refreshDisplayWithNewSettings() {
+        // 현재 저장된 분석 결과가 있을 때만 온도 표시를 다시 계산하고 업데이트
+        if (_analysisResult.value != null) {
+            processAnalysisResult(_analysisResult.value)
+        }
+    }
+    // ▲▲▲▲▲ 핵심 수정 부분 3 ▲▲▲▲▲
+
 
     private fun resizeBitmap(bitmap: Bitmap, maxDimension: Int = 512): Bitmap {
         val originalWidth = bitmap.width; val originalHeight = bitmap.height

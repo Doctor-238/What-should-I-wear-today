@@ -18,6 +18,7 @@ import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
+import androidx.cardview.widget.CardView
 import androidx.core.view.isVisible
 import androidx.core.widget.addTextChangedListener
 import androidx.fragment.app.Fragment
@@ -47,16 +48,21 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabResel
     private val viewModel: AddClothingViewModel by viewModels()
 
     private lateinit var imageViewPreview: ImageView
-    private lateinit var imageViewPlaceholder: ImageView
+    private lateinit var textViewPlaceholder: TextView
     private lateinit var editTextName: TextInputEditText
     private lateinit var buttonSave: Button
     private lateinit var toolbar: MaterialToolbar
-    private lateinit var textViewAiResult: TextView
     private lateinit var progressBar: ProgressBar
     private lateinit var savingOverlay: FrameLayout
     private lateinit var switchRemoveBackground: SwitchMaterial
-    private lateinit var viewColorSwatch: View
-    private lateinit var textColorLabel: TextView
+    private lateinit var frameLayoutPreview: FrameLayout
+
+    // AI Info Card Views
+    private lateinit var cardAiInfo: CardView
+    private lateinit var tvInfoCategory: TextView
+    private lateinit var tvInfoTemperature: TextView
+    private lateinit var viewInfoColorSwatch: View
+
 
     private lateinit var onBackPressedCallback: OnBackPressedCallback
 
@@ -98,6 +104,11 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabResel
             inputStream?.close()
         }
     }
+    override fun onResume() {
+        super.onResume()
+        // 화면이 다시 보일 때마다 ViewModel에 온도 표시를 새로고침하도록 요청
+        viewModel.refreshDisplayWithNewSettings()
+    }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -114,16 +125,19 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabResel
 
     private fun setupViews(view: View) {
         imageViewPreview = view.findViewById(R.id.imageView_clothing_preview)
-        imageViewPlaceholder = view.findViewById(R.id.imageView_placeholder)
+        textViewPlaceholder = view.findViewById(R.id.textView_placeholder)
         editTextName = view.findViewById(R.id.editText_clothing_name)
         buttonSave = view.findViewById(R.id.button_save)
         toolbar = view.findViewById(R.id.toolbar)
-        textViewAiResult = view.findViewById(R.id.textView_ai_result)
         progressBar = view.findViewById(R.id.progressBar)
         savingOverlay = view.findViewById(R.id.saving_overlay)
         switchRemoveBackground = view.findViewById(R.id.switch_remove_background)
-        viewColorSwatch = view.findViewById(R.id.view_color_swatch)
-        textColorLabel = view.findViewById(R.id.textView_color_label_add)
+        frameLayoutPreview = view.findViewById(R.id.frameLayout_preview)
+
+        cardAiInfo = view.findViewById(R.id.card_ai_info)
+        tvInfoCategory = view.findViewById(R.id.tv_info_category)
+        tvInfoTemperature = view.findViewById(R.id.tv_info_temperature)
+        viewInfoColorSwatch = view.findViewById(R.id.view_info_color_swatch)
     }
 
     private fun observeViewModel() {
@@ -131,11 +145,8 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabResel
             progressBar.isVisible = isAnalyzing
             buttonSave.isEnabled = !isAnalyzing && viewModel.originalBitmap.value != null && !editTextName.text.isNullOrBlank()
 
-            // [수정] AI 분석이 끝나고, 세그멘테이션(배경제거)이 성공했을 때만 스위치를 보여줌
             if (isAnalyzing) {
-                switchRemoveBackground.isVisible = false
-            } else {
-                switchRemoveBackground.isVisible = viewModel.segmentationSucceeded.value == true
+                cardAiInfo.isVisible = false
             }
         }
 
@@ -145,11 +156,14 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabResel
 
         viewModel.originalBitmap.observe(viewLifecycleOwner) { bitmap ->
             if (bitmap != null) {
-                imageViewPlaceholder.isVisible = false
+                textViewPlaceholder.isVisible = false
+                imageViewPreview.isVisible = true
                 imageViewPreview.setImageBitmap(bitmap)
             } else {
-                imageViewPlaceholder.isVisible = true
+                textViewPlaceholder.isVisible = true
+                imageViewPreview.isVisible = false
                 imageViewPreview.setImageDrawable(null)
+                cardAiInfo.isVisible = false
             }
         }
 
@@ -159,22 +173,34 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabResel
         }
 
         viewModel.segmentationSucceeded.observe(viewLifecycleOwner) { succeeded ->
-            // [수정] AI 분석 상태와 함께 고려하여 스위치 가시성 결정
             if (viewModel.isAiAnalyzing.value == false) {
-                switchRemoveBackground.isVisible = succeeded
+                switchRemoveBackground.isEnabled = succeeded
             }
         }
 
         viewModel.analysisResultText.observe(viewLifecycleOwner) { text ->
-            textViewAiResult.text = text
-            textViewAiResult.isVisible = text.isNotEmpty()
+            if (text.isNotEmpty()) {
+                // "분류:상의, 적정 온도:18.5°C ~ 22.5°C"
+                val parts = text.split(", ")
+                val categoryPart = parts.find { it.startsWith("분류:") }?.substringAfter(":")
+                val tempPart = parts.find { it.startsWith("적정 온도:") }?.substringAfter(":")
+
+                tvInfoCategory.text = categoryPart
+                tvInfoTemperature.text = tempPart
+
+                cardAiInfo.isVisible = true
+            } else {
+                cardAiInfo.isVisible = false
+            }
         }
 
         viewModel.viewColor.observe(viewLifecycleOwner) { color ->
-            val hasColor = color != null
-            viewColorSwatch.isVisible = hasColor
-            textColorLabel.isVisible = hasColor
-            if (hasColor) viewColorSwatch.setBackgroundColor(color!!)
+            if (color != null) {
+                viewInfoColorSwatch.setBackgroundColor(color)
+                viewInfoColorSwatch.isVisible = true
+            } else {
+                viewInfoColorSwatch.isVisible = false
+            }
         }
 
         viewModel.isSaveCompleted.observe(viewLifecycleOwner) { isCompleted ->
@@ -203,11 +229,9 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabResel
 
     private fun setupListeners() {
         toolbar.setNavigationOnClickListener { handleBackButton() }
-        imageViewPreview.setOnClickListener { if (viewModel.isAiAnalyzing.value == false) openGallery() }
-        imageViewPlaceholder.setOnClickListener { if (viewModel.isAiAnalyzing.value == false) openGallery() }
+        frameLayoutPreview.setOnClickListener { if (viewModel.isAiAnalyzing.value == false) openGallery() }
         buttonSave.setOnClickListener { saveClothingItem() }
 
-        // [핵심 수정] 스위치 클릭 시 ViewModel의 새 함수를 호출
         switchRemoveBackground.setOnCheckedChangeListener { _, isChecked ->
             viewModel.onUseProcessedImageToggled(isChecked)
         }

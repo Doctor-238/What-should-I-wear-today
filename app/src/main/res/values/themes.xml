@@ -1,5 +1,6 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <style name="Base.Theme.WhatshouldIweartoday" parent="Theme.Material3.Light.NoActionBar">
+        <item name="colorPrimary">@color/settings_spinner_blue</item>
         <item name="android:statusBarColor">@color/status_bar_blue</item>
         <item name="android:windowLightStatusBar">false</item>
     </style>

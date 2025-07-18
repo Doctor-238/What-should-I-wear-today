@@ -4,7 +4,6 @@ import android.app.Application
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.os.Build
-import com.yehyun.whatshouldiweartoday.util.CrashLogger
 
 class WhatShouldIWearTodayApplication : Application() {
 
@@ -15,7 +14,6 @@ class WhatShouldIWearTodayApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        Thread.setDefaultUncaughtExceptionHandler(CrashLogger(this))
         createNotificationChannels()
     }
 
