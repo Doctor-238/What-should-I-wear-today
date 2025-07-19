@@ -205,7 +205,7 @@ class HomeFragment : Fragment(), OnTabReselectedListener {
 
     private fun setupViewPager() {
         binding.viewPagerHome.adapter = HomeViewPagerAdapter(this)
-        binding.viewPagerHome.isUserInputEnabled = true
+        binding.viewPagerHome.isUserInputEnabled = false
     }
 
     private fun setupCustomTabs() {
@@ -216,15 +216,28 @@ class HomeFragment : Fragment(), OnTabReselectedListener {
             binding.viewPagerHome.currentItem = 1
         }
 
+        // ▼▼▼▼▼ 핵심 수정 부분 ▼▼▼▼▼
         binding.viewPagerHome.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
+            // isInitialSelection 플래그는 콜백 객체 내에 있어,
+            // 뷰가 재생성될 때마다(다른 탭에 갔다가 돌아올 때) 자동으로 초기화됩니다.
+            private var isInitialSelection = true
+
             override fun onPageSelected(position: Int) {
                 super.onPageSelected(position)
-                updateTabAppearance(position)
+                // 처음 페이지가 선택될 때는 애니메이션 없이 밑줄 위치를 설정하고,
+                // 그 이후 사용자의 스와이프나 클릭에 의해서는 애니메이션을 적용합니다.
+                if (isInitialSelection) {
+                    updateTabAppearance(position, animate = false)
+                    isInitialSelection = false
+                } else {
+                    updateTabAppearance(position, animate = true)
+                }
             }
         })
+        // ▲▲▲▲▲ 핵심 수정 부분 ▲▲▲▲▲
     }
 
-    private fun updateTabAppearance(selectedPosition: Int) {
+    private fun updateTabAppearance(selectedPosition: Int, animate: Boolean) {
         if (_binding == null) return
 
         val todayColor = if (selectedPosition == 0) R.color.tab_selected_text else R.color.tab_unselected_text
@@ -235,24 +248,30 @@ class HomeFragment : Fragment(), OnTabReselectedListener {
 
         val indicatorTarget = if (selectedPosition == 0) binding.tvTabToday else binding.tvTabTomorrow
 
+        // post를 사용하여 뷰가 그려진 후 위치 계산을 하도록 보장합니다.
         indicatorTarget.post {
-            // ▼▼▼▼▼ 핵심 수정 부분 ▼▼▼▼▼
+            if (_binding == null) return@post
+
             val indicatorWidth = indicatorTarget.width / 2
             val targetCenter = binding.tabsContainer.left + indicatorTarget.left + (indicatorTarget.width / 2)
             val indicatorStart = targetCenter - (indicatorWidth / 2)
-            // ▲▲▲▲▲ 핵심 수정 부분 ▲▲▲▲▲
 
-            binding.viewTabIndicator.animate()
-                .x(indicatorStart.toFloat())
-                .setDuration(250)
-                .withStartAction {
-                    val params = binding.viewTabIndicator.layoutParams
-                    params.width = indicatorWidth
-                    binding.viewTabIndicator.layoutParams = params
-                }
-                .start()
+            val params = binding.viewTabIndicator.layoutParams
+            params.width = indicatorWidth
+            binding.viewTabIndicator.layoutParams = params
+
+            if (animate) {
+                binding.viewTabIndicator.animate()
+                    .x(indicatorStart.toFloat())
+                    .setDuration(250)
+                    .start()
+            } else {
+                // 애니메이션 없이 즉시 위치 설정
+                binding.viewTabIndicator.x = indicatorStart.toFloat()
+            }
         }
     }
+
 
     override fun onTabReselected() {
         val navController = findNavController()

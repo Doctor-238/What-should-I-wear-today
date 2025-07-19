@@ -52,7 +52,7 @@ class StyleFragment : Fragment(), OnTabReselectedListener {
         val seasons = listOf("전체", "봄", "여름", "가을", "겨울")
         val adapter = StyleViewPagerAdapter(this, seasons)
         binding.viewPagerStyle.adapter = adapter
-        binding.viewPagerStyle.isUserInputEnabled = true
+        binding.viewPagerStyle.isUserInputEnabled = false
 
         TabLayoutMediator(binding.tabLayoutStyleSeason, binding.viewPagerStyle) { tab, position ->
             tab.text = seasons[position]
