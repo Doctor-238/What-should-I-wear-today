@@ -50,6 +50,8 @@ class ClosetFragment : Fragment(), OnTabReselectedListener {
 
     private val viewModel: ClosetViewModel by viewModels()
 
+    private var lastFabClickTime = 0L
+
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted: Boolean ->
@@ -124,6 +126,11 @@ class ClosetFragment : Fragment(), OnTabReselectedListener {
         }
 
         binding.fabBatchAdd.setOnClickListener {
+            if (System.currentTimeMillis() - lastFabClickTime < 700) {
+                return@setOnClickListener
+            }
+            lastFabClickTime = System.currentTimeMillis()
+
             checkNotificationPermission()
         }
 
