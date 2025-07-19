@@ -67,6 +67,8 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabResel
 
     private lateinit var onBackPressedCallback: OnBackPressedCallback
 
+    private var lastClickTime = 0L
+
     private val pickImageLauncher = registerForActivityResult(
         ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
@@ -253,9 +255,14 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabResel
     }
 
     private fun openGallery() {
+        // 현재 시간과 마지막 클릭 시간의 차이가 1초 미만이면 함수를 종료합니다.
+        if (System.currentTimeMillis() - lastClickTime < 700) {
+            return
+        }
+        // 마지막 클릭 시간을 현재 시간으로 업데이트합니다.
+        lastClickTime = System.currentTimeMillis()
         pickImageLauncher.launch("image/*")
     }
-
     private fun saveClothingItem() {
         val name = editTextName.text.toString().trim()
         if (name.isEmpty()) {
