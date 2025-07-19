@@ -68,18 +68,14 @@
             app:layout_constraintTop_toTopOf="parent"
             app:tabBackground="@android:color/white"
             app:tabGravity="fill"
-            app:tabIndicatorHeight="0dp"
             app:tabMode="fixed"
             app:tabSelectedTextColor="@color/tab_selected_text"
-            app:tabTextColor="@color/tab_unselected_text" />
-
-        <View
-            android:id="@+id/view_tab_indicator"
-            android:layout_width="0dp"
-            android:layout_height="4dp"
-            android:background="@color/tab_selected_text"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintStart_toStartOf="parent" />
+            app:tabTextColor="@color/tab_unselected_text"
+            app:tabIndicator="@drawable/tab_indicator_custom"
+            app:tabIndicatorAnimationMode="linear"
+            app:tabIndicatorColor="@color/tab_selected_text"
+            app:tabIndicatorFullWidth="false"
+            app:tabIndicatorGravity="bottom" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 

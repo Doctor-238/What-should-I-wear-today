@@ -26,9 +26,7 @@ class StyleFragment : Fragment(), OnTabReselectedListener {
     private val binding get() = _binding!!
 
     private val viewModel: StyleViewModel by viewModels()
-    // ▼▼▼▼▼ 핵심 수정 부분 ▼▼▼▼▼
     private var isInitialStyleTabSetup = true
-    // ▲▲▲▲▲ 핵심 수정 부분 ▲▲▲▲▲
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -59,47 +57,6 @@ class StyleFragment : Fragment(), OnTabReselectedListener {
         TabLayoutMediator(binding.tabLayoutStyleSeason, binding.viewPagerStyle) { tab, position ->
             tab.text = seasons[position]
         }.attach()
-
-        // ▼▼▼▼▼ 핵심 수정 부분 ▼▼▼▼▼
-        binding.viewPagerStyle.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
-            override fun onPageSelected(position: Int) {
-                super.onPageSelected(position)
-                binding.tabLayoutStyleSeason.getTabAt(position)?.let {
-                    animateIndicator(it, !isInitialStyleTabSetup)
-                }
-            }
-        })
-
-        binding.tabLayoutStyleSeason.post {
-            val initialTab = binding.tabLayoutStyleSeason.getTabAt(binding.tabLayoutStyleSeason.selectedTabPosition)
-            initialTab?.let {
-                animateIndicator(it, animate = false)
-                isInitialStyleTabSetup = false
-            }
-        }
-        // ▲▲▲▲▲ 핵심 수정 부분 ▲▲▲▲▲
-    }
-
-    private fun animateIndicator(tab: TabLayout.Tab, animate: Boolean = true) {
-        if (_binding == null) return
-        val tabView = tab.view
-        val indicator = binding.viewTabIndicator
-
-        val indicatorWidth = tabView.width / 2
-        val targetCenter = tabView.left + (tabView.width / 2)
-        val indicatorStart = (targetCenter - (indicatorWidth / 2)).toFloat()
-
-        val layoutParams = indicator.layoutParams
-        if (layoutParams.width != indicatorWidth) {
-            layoutParams.width = indicatorWidth
-            indicator.layoutParams = layoutParams
-        }
-
-        if (animate) {
-            indicator.animate().x(indicatorStart).setDuration(250).start()
-        } else {
-            indicator.x = indicatorStart
-        }
     }
 
     private fun setupSearch() {
