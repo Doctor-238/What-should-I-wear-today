@@ -1,5 +1,3 @@
-// app/src/main/java/com/yehyun/whatshouldiweartoday/data/database/StyleDao.kt
-
 package com.yehyun.whatshouldiweartoday.data.database
 
 import androidx.lifecycle.LiveData
@@ -38,6 +36,12 @@ interface StyleDao {
     @Query("SELECT * FROM saved_styles WHERE styleName LIKE '%' || :query || '%' ORDER BY styleName DESC")
     fun getStylesOrderByNameDesc(query: String): LiveData<List<StyleWithItems>>
 
+    // ▼▼▼▼▼ 핵심 수정: ViewModel에서 사용할 함수 추가 ▼▼▼▼▼
+    @Transaction
+    @Query("SELECT * FROM saved_styles")
+    fun getAllStylesWithItems(): LiveData<List<StyleWithItems>>
+    // ▲▲▲▲▲ 핵심 수정 ▲▲▲▲▲
+
     @Update
     suspend fun updateStyle(style: SavedStyle)
 
@@ -71,7 +75,6 @@ interface StyleDao {
     @Query("SELECT * FROM saved_styles WHERE styleId = :styleId")
     fun getStyleById(styleId: Long): LiveData<StyleWithItems?>
 
-    // [추가] suspend 함수 버전의 getStyleById
     @Transaction
     @Query("SELECT * FROM saved_styles WHERE styleId = :styleId")
     suspend fun getStyleByIdSuspend(styleId: Long): StyleWithItems?

@@ -189,8 +189,9 @@ class ClosetFragment : Fragment(), OnTabReselectedListener {
                 binding.fabBatchAdd.showProgress(percentage)
             }
         }
-
-        viewModel.clothes.observe(viewLifecycleOwner) {}
+        // ▼▼▼▼▼ 핵심 수정: 불필요한 코드 라인 삭제 ▼▼▼▼▼
+        // viewModel.clothes.observe(viewLifecycleOwner) {}
+        // ▲▲▲▲▲ 핵심 수정 ▲▲▲▲▲
     }
 
     private fun startBatchAddWorker(imagePaths: Array<String>) {
@@ -265,7 +266,6 @@ class ClosetFragment : Fragment(), OnTabReselectedListener {
             navController.popBackStack(R.id.navigation_closet, false)
             return
         }
-        // ▼▼▼▼▼ 핵심 수정: '전체' 탭으로 이동하고 맨 위로 스크롤 ▼▼▼▼▼
         if (_binding == null) return
         binding.viewPagerCloset.currentItem = 0
         binding.viewPagerCloset.post {
@@ -273,7 +273,6 @@ class ClosetFragment : Fragment(), OnTabReselectedListener {
                 (childFragmentManager.findFragmentByTag("f0") as? ClothingListFragment)?.scrollToTop()
             }
         }
-        // ▲▲▲▲▲ 핵심 수정 ▲▲▲▲▲
     }
 
     override fun onDestroyView() {

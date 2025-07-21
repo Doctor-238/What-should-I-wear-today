@@ -28,8 +28,11 @@ class EditStyleViewModel(application: Application) : AndroidViewModel(applicatio
 
     val currentStyleName = MutableLiveData<String>()
     val currentSeason = MutableLiveData<String>()
-    private val _selectedItems = MutableLiveData<List<ClothingItem>>(emptyList())
-    val selectedItems: LiveData<List<ClothingItem>> = _selectedItems
+
+    // ▼▼▼▼▼ 핵심 수정 1: 선택 순서를 기억하기 위해 List로 변경 ▼▼▼▼▼
+    private val _selectedItems = MutableLiveData<MutableList<ClothingItem>>(mutableListOf())
+    val selectedItems: LiveData<MutableList<ClothingItem>> = _selectedItems
+    // ▲▲▲▲▲ 핵심 수정 1 ▲▲▲▲▲
 
     val toolbarTitle = MutableLiveData<String>()
     val saveButtonEnabled = MutableLiveData(false)
@@ -53,18 +56,33 @@ class EditStyleViewModel(application: Application) : AndroidViewModel(applicatio
 
         filteredClothes.addSource(allClothes) { filter() }
         filteredClothes.addSource(_clothingCategory) { filter() }
+        // ▼▼▼▼▼ 핵심 수정 2: 선택된 아이템이 변경되어도 정렬 재실행 ▼▼▼▼▼
+        filteredClothes.addSource(selectedItems) { filter() }
+        // ▲▲▲▲▲ 핵심 수정 2 ▲▲▲▲▲
     }
 
+    // ▼▼▼▼▼ 핵심 수정 3: 요청하신 정렬 로직 적용 ▼▼▼▼▼
     private fun filter() {
         val category = _clothingCategory.value ?: "전체"
         val clothes = allClothes.value ?: emptyList()
 
-        filteredClothes.value = if (category == "전체") {
+        val categoryFiltered = if (category == "전체") {
             clothes
         } else {
             clothes.filter { it.category == category }
         }
+
+        val selectedIdsSet = selectedItems.value?.map { it.id }?.toSet() ?: emptySet()
+        val selectionOrderMap = selectedItems.value?.mapIndexed { index, item -> item.id to index }?.toMap() ?: emptyMap()
+
+        val sortedList = categoryFiltered.sortedWith(
+            compareByDescending<ClothingItem> { it.id in selectedIdsSet }
+                .thenBy { selectionOrderMap[it.id] }
+        )
+
+        filteredClothes.value = sortedList
     }
+    // ▲▲▲▲▲ 핵심 수정 3 ▲▲▲▲▲
 
     fun loadStyleIfNeeded(styleId: Long) {
         if (originalStyle != null && currentStyleId == styleId) return
@@ -80,7 +98,7 @@ class EditStyleViewModel(application: Application) : AndroidViewModel(applicatio
                 originalStyle = styleWithItems.style
                 initialItemIds = styleWithItems.items.map { it.id }.toSet()
 
-                _selectedItems.postValue(styleWithItems.items)
+                _selectedItems.postValue(styleWithItems.items.toMutableList())
                 currentStyleName.postValue(styleWithItems.style.styleName)
                 currentSeason.postValue(styleWithItems.style.season)
                 toolbarTitle.postValue("'${styleWithItems.style.styleName}' 수정")
@@ -98,8 +116,9 @@ class EditStyleViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
+    // ▼▼▼▼▼ 핵심 수정 4: List 자료구조에 맞게 로직 수정 ▼▼▼▼▼
     fun toggleItemSelection(item: ClothingItem) {
-        val currentList = _selectedItems.value?.toMutableList() ?: mutableListOf()
+        val currentList = _selectedItems.value ?: mutableListOf()
         val isSelected = currentList.any { it.id == item.id }
 
         if (isSelected) {
@@ -114,11 +133,12 @@ class EditStyleViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     fun removeSelectedItem(item: ClothingItem) {
-        val currentList = _selectedItems.value?.toMutableList() ?: mutableListOf()
+        val currentList = _selectedItems.value ?: mutableListOf()
         currentList.remove(item)
         _selectedItems.value = currentList
         checkForChanges()
     }
+    // ▲▲▲▲▲ 핵심 수정 4 ▲▲▲▲▲
 
     private fun checkForChanges() {
         if (originalStyle == null || initialItemIds == null) return

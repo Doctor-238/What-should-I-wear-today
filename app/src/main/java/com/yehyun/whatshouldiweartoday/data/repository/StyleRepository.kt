@@ -1,5 +1,3 @@
-// app/src/main/java/com/yehyun/whatshouldiweartoday/data/repository/StyleRepository.kt
-
 package com.yehyun.whatshouldiweartoday.data.repository
 
 import androidx.lifecycle.LiveData
@@ -14,6 +12,12 @@ class StyleRepository(private val styleDao: StyleDao) {
         styleDao.insertStyleWithItems(style, items)
     }
 
+    // ▼▼▼▼▼ 핵심 수정: ViewModel에서 사용할 함수 추가 ▼▼▼▼▼
+    fun getAllStylesWithItems(): LiveData<List<StyleWithItems>> {
+        return styleDao.getAllStylesWithItems()
+    }
+    // ▲▲▲▲▲ 핵심 수정 ▲▲▲▲▲
+
     fun getStyles(query: String, sortType: String): LiveData<List<StyleWithItems>> {
         return when (sortType) {
             "오래된 순" -> styleDao.getStylesOrderByOldest(query)
@@ -27,7 +31,6 @@ class StyleRepository(private val styleDao: StyleDao) {
         return styleDao.getStyleById(styleId)
     }
 
-    // [추가] suspend 함수 버전
     suspend fun getStyleByIdSuspend(styleId: Long): StyleWithItems? {
         return styleDao.getStyleByIdSuspend(styleId)
     }
@@ -39,5 +42,4 @@ class StyleRepository(private val styleDao: StyleDao) {
     suspend fun deleteStyleAndRefs(style: SavedStyle) {
         styleDao.deleteStyleAndRefs(style)
     }
-
 }
