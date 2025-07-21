@@ -1,5 +1,3 @@
-// app/src/main/java/com/yehyun/whatshouldiweartoday/ui/style/SaveStyleFragment.kt
-
 package com.yehyun.whatshouldiweartoday.ui.style
 
 import android.os.Bundle
@@ -38,17 +36,22 @@ class SaveStyleFragment : Fragment(R.layout.fragment_save_style), OnTabReselecte
     private lateinit var editTextName: TextInputEditText
     private lateinit var buttonSave: Button
     private lateinit var onBackPressedCallback: OnBackPressedCallback
-    private lateinit var loadingOverlay: FrameLayout // 로딩 오버레이 추가
+    private lateinit var loadingOverlay: FrameLayout
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        // '새 스타일 만들기' 모드로 진입할 때마다 이전 상태를 초기화합니다.
+        if (args.preselectedIds == null) {
+            viewModel.resetAllState()
+        }
 
         tabLayout = view.findViewById(R.id.tab_layout_save_style_category)
         tvSelectionGuide = view.findViewById(R.id.tv_selection_guide)
         chipGroupSeason = view.findViewById(R.id.chip_group_season_save)
         editTextName = view.findViewById(R.id.editText_style_name)
         buttonSave = view.findViewById(R.id.button_save_style_final)
-        loadingOverlay = view.findViewById(R.id.loading_overlay) // 로딩 오버레이 초기화
+        loadingOverlay = view.findViewById(R.id.loading_overlay)
 
         setupRecyclerView(view)
         setupListeners(view)
@@ -124,10 +127,9 @@ class SaveStyleFragment : Fragment(R.layout.fragment_save_style), OnTabReselecte
             onBackPressedCallback.isEnabled = it
         }
 
-        // 로딩 상태 관찰
         viewModel.isLoading.observe(viewLifecycleOwner) { isLoading ->
             loadingOverlay.isVisible = isLoading
-            buttonSave.isEnabled = !isLoading // 로딩 중에는 버튼 비활성화
+            buttonSave.isEnabled = !isLoading
         }
     }
 

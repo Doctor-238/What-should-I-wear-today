@@ -4,6 +4,7 @@ import android.os.Bundle
 import android.view.View
 import android.widget.ScrollView
 import android.widget.TextView
+import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
@@ -44,6 +45,7 @@ class RecommendationFragment : Fragment(R.layout.fragment_recommendation) {
         view.findViewById<RecyclerView>(R.id.rv_tops).adapter = RecommendationAdapter(onClothingItemClicked)
         view.findViewById<RecyclerView>(R.id.rv_bottoms).adapter = RecommendationAdapter(onClothingItemClicked)
         view.findViewById<RecyclerView>(R.id.rv_outers).adapter = RecommendationAdapter(onClothingItemClicked)
+        view.findViewById<RecyclerView>(R.id.rv_best_combination).adapter = RecommendationAdapter(onClothingItemClicked)
     }
 
     private fun observeViewModel(view: View) {
@@ -62,7 +64,7 @@ class RecommendationFragment : Fragment(R.layout.fragment_recommendation) {
 
         recommendationLiveData.observe(viewLifecycleOwner) { result ->
             // 추천 아이템이 하나라도 있는지 확인
-            val hasRecommendations = result != null && (result.recommendedTops.isNotEmpty() || result.recommendedBottoms.isNotEmpty() || result.recommendedOuters.isNotEmpty())
+            val hasRecommendations = result != null && (result.recommendedTops.isNotEmpty() || result.recommendedBottoms.isNotEmpty() || result.recommendedOuters.isNotEmpty() || result.bestCombination.isNotEmpty())
 
             if (hasRecommendations) {
                 // 추천 아이템이 있으면: 관련 UI를 보여주고 데이터를 바인딩
@@ -76,15 +78,27 @@ class RecommendationFragment : Fragment(R.layout.fragment_recommendation) {
     }
 
     private fun bindWeatherSummary(view: View, summary: DailyWeatherSummary) {
-        view.findViewById<TextView>(R.id.tv_max_temp).text = String.format(Locale.KOREAN, "%.1f°", summary.maxTemp)
+        // ▼▼▼▼▼ 핵심 수정 부분 ▼▼▼▼▼
+        val maxTempTextView = view.findViewById<TextView>(R.id.tv_max_temp)
+        maxTempTextView.text = String.format(Locale.KOREAN, "%.1f°", summary.maxTemp)
+        // 최고 기온 텍스트에 빨간색 적용
+        maxTempTextView.setTextColor(ContextCompat.getColor(requireContext(), R.color.temp_high_red))
+
+        val minTempTextView = view.findViewById<TextView>(R.id.tv_min_temp)
+        minTempTextView.text = String.format(Locale.KOREAN, "%.1f°", summary.minTemp)
+        // 최저 기온 텍스트에 파란색 적용
+        minTempTextView.setTextColor(ContextCompat.getColor(requireContext(), R.color.temp_low_blue))
+        // ▲▲▲▲▲ 핵심 수정 부분 ▲▲▲▲▲
+
+        // 나머지 코드는 그대로 둡니다.
         view.findViewById<TextView>(R.id.tv_max_feels_like).text = String.format(Locale.KOREAN, "체감 %.1f°", summary.maxFeelsLike)
-        view.findViewById<TextView>(R.id.tv_min_temp).text = String.format(Locale.KOREAN, "%.1f°", summary.minTemp)
         view.findViewById<TextView>(R.id.tv_min_feels_like).text = String.format(Locale.KOREAN, "체감 %.1f°", summary.minFeelsLike)
     }
 
     private fun setRecommendationVisibility(view: View, show: Boolean) {
         // 전체 추천 영역과 "옷 부족" 메시지의 보이기/숨기기 상태를 전환
         view.findViewById<TextView>(R.id.tv_no_recommendation).isVisible = !show
+        view.findViewById<com.google.android.material.card.MaterialCardView>(R.id.card_best_combination).isVisible = show
         view.findViewById<TextView>(R.id.tv_tops_title).isVisible = show
         view.findViewById<RecyclerView>(R.id.rv_tops).isVisible = show
         view.findViewById<TextView>(R.id.tv_bottoms_title).isVisible = show
@@ -109,6 +123,22 @@ class RecommendationFragment : Fragment(R.layout.fragment_recommendation) {
         (rvTops.adapter as RecommendationAdapter).submitList(result.recommendedTops, result.packableOuter?.id)
         (rvBottoms.adapter as RecommendationAdapter).submitList(result.recommendedBottoms)
         (rvOuters.adapter as RecommendationAdapter).submitList(result.recommendedOuters, result.packableOuter?.id)
+
+        val cardBestCombination = view.findViewById<com.google.android.material.card.MaterialCardView>(R.id.card_best_combination)
+        if (result.bestCombination.isNotEmpty()) {
+            cardBestCombination.isVisible = true
+            val rvBestCombination = view.findViewById<RecyclerView>(R.id.rv_best_combination)
+            (rvBestCombination.adapter as RecommendationAdapter).submitList(result.bestCombination)
+
+            view.findViewById<android.widget.Button>(R.id.btn_save_combination).setOnClickListener {
+                val ids = result.bestCombination.map { it.id }.toIntArray()
+                val action = HomeFragmentDirections.actionNavigationHomeToSaveStyleFragment(ids)
+                parentFragment?.findNavController()?.navigate(action)
+            }
+        } else {
+            cardBestCombination.isVisible = false
+        }
+
 
         // 각 카테고리별로 옷이 없으면 "옷 없음" 메시지를 표시하고, 있으면 숨김
         view.findViewById<TextView>(R.id.tv_no_tops).isVisible = result.recommendedTops.isEmpty()
