@@ -4,6 +4,7 @@ import android.os.Bundle
 import android.view.View
 import android.widget.ScrollView
 import android.widget.TextView
+import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
@@ -77,9 +78,20 @@ class RecommendationFragment : Fragment(R.layout.fragment_recommendation) {
     }
 
     private fun bindWeatherSummary(view: View, summary: DailyWeatherSummary) {
-        view.findViewById<TextView>(R.id.tv_max_temp).text = String.format(Locale.KOREAN, "%.1f°", summary.maxTemp)
+        // ▼▼▼▼▼ 핵심 수정 부분 ▼▼▼▼▼
+        val maxTempTextView = view.findViewById<TextView>(R.id.tv_max_temp)
+        maxTempTextView.text = String.format(Locale.KOREAN, "%.1f°", summary.maxTemp)
+        // 최고 기온 텍스트에 빨간색 적용
+        maxTempTextView.setTextColor(ContextCompat.getColor(requireContext(), R.color.temp_high_red))
+
+        val minTempTextView = view.findViewById<TextView>(R.id.tv_min_temp)
+        minTempTextView.text = String.format(Locale.KOREAN, "%.1f°", summary.minTemp)
+        // 최저 기온 텍스트에 파란색 적용
+        minTempTextView.setTextColor(ContextCompat.getColor(requireContext(), R.color.temp_low_blue))
+        // ▲▲▲▲▲ 핵심 수정 부분 ▲▲▲▲▲
+
+        // 나머지 코드는 그대로 둡니다.
         view.findViewById<TextView>(R.id.tv_max_feels_like).text = String.format(Locale.KOREAN, "체감 %.1f°", summary.maxFeelsLike)
-        view.findViewById<TextView>(R.id.tv_min_temp).text = String.format(Locale.KOREAN, "%.1f°", summary.minTemp)
         view.findViewById<TextView>(R.id.tv_min_feels_like).text = String.format(Locale.KOREAN, "체감 %.1f°", summary.minFeelsLike)
     }
 

@@ -28,4 +28,6 @@
     <color name="style_card_background">#e4f4fe</color>
     <color name="search_view_stroke_color">#EAEAEA</color>
     <color name="fab_color_style_tab">#88CCFD</color>
+    <color name="temp_high_red">#FF6B6B</color>
+    <color name="temp_low_blue">#54A0FF</color>
 </resources>

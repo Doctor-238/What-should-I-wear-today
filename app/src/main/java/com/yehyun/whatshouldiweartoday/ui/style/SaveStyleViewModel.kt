@@ -150,4 +150,5 @@ class SaveStyleViewModel(application: Application) : AndroidViewModel(applicatio
         initialSeason = null
         _isLoading.value = false
     }
+
 }
