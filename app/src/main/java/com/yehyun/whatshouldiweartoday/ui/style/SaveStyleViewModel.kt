@@ -1,5 +1,3 @@
-// app/src/main/java/com/yehyun/whatshouldiweartoday/ui/style/SaveStyleViewModel.kt
-
 package com.yehyun.whatshouldiweartoday.ui.style
 
 import android.app.Application
@@ -67,6 +65,9 @@ class SaveStyleViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     fun toggleItemSelected(item: ClothingItem) {
+        if (initialItemIds == null) {
+            initialItemIds = selectedItems.value?.map { it.id }?.toSet() ?: emptySet()
+        }
         val currentSet = selectedItems.value ?: mutableSetOf()
         if (currentSet.any { it.id == item.id }) {
             currentSet.removeAll { it.id == item.id }
@@ -91,30 +92,24 @@ class SaveStyleViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     fun setStyleName(name: String) {
-        if(initialName == null) initialName = styleName.value
+        if (initialName == null) initialName = styleName.value ?: ""
         styleName.value = name
         checkForChanges()
     }
 
     fun setSeason(season: String?) {
-        if(initialSeason == null) initialSeason = selectedSeason.value
+        if (initialSeason == null) initialSeason = selectedSeason.value
         selectedSeason.value = season
         checkForChanges()
     }
 
     private fun checkForChanges() {
-        if(initialItemIds == null && styleName.value.isNullOrEmpty() && selectedSeason.value.isNullOrEmpty()) {
-            hasChanges.value = false
-            return
-        }
-
-        val itemsChanged = initialItemIds != selectedItems.value?.map { it.id }?.toSet()
-        val nameChanged = initialName != styleName.value
-        val seasonChanged = initialSeason != selectedSeason.value
+        val itemsChanged = initialItemIds != null && initialItemIds != selectedItems.value?.map { it.id }?.toSet()
+        val nameChanged = initialName != null && initialName != styleName.value
+        val seasonChanged = initialSeason != null && initialSeason != selectedSeason.value
 
         hasChanges.value = itemsChanged || nameChanged || seasonChanged
     }
-
 
     fun saveStyle() {
         if (_isLoading.value == true) return
