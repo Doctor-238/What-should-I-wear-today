@@ -12,7 +12,7 @@ import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
-import androidx.fragment.app.activityViewModels
+import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import androidx.recyclerview.widget.RecyclerView
@@ -22,12 +22,11 @@ import com.google.android.material.chip.ChipGroup
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.textfield.TextInputEditText
 import com.yehyun.whatshouldiweartoday.R
-import com.yehyun.whatshouldiweartoday.data.database.ClothingItem
 import com.yehyun.whatshouldiweartoday.ui.OnTabReselectedListener
 
 class SaveStyleFragment : Fragment(R.layout.fragment_save_style), OnTabReselectedListener {
 
-    private val viewModel: SaveStyleViewModel by activityViewModels()
+    private val viewModel: SaveStyleViewModel by viewModels() // ViewModel 범위를 Fragment로 한정
     private val args: SaveStyleFragmentArgs by navArgs()
     private lateinit var adapter: SaveStyleAdapter
     private lateinit var tabLayout: TabLayout
@@ -41,10 +40,11 @@ class SaveStyleFragment : Fragment(R.layout.fragment_save_style), OnTabReselecte
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // '새 스타일 만들기' 모드로 진입할 때마다 이전 상태를 초기화합니다.
-        if (args.preselectedIds == null) {
+        // ▼▼▼▼▼ 핵심 수정: 프래그먼트가 처음 생성될 때만 상태를 초기화 ▼▼▼▼▼
+        if (args.preselectedIds == null && savedInstanceState == null) {
             viewModel.resetAllState()
         }
+        // ▲▲▲▲▲ 핵심 수정 ▲▲▲▲▲
 
         tabLayout = view.findViewById(R.id.tab_layout_save_style_category)
         tvSelectionGuide = view.findViewById(R.id.tv_selection_guide)
@@ -64,6 +64,7 @@ class SaveStyleFragment : Fragment(R.layout.fragment_save_style), OnTabReselecte
         }
     }
 
+    // ... 이하 코드는 변경사항 없음 ...
     private fun setupTabs(view: View) {
         val categories = listOf("전체", "상의", "하의", "아우터", "신발", "가방", "모자", "기타")
         if (tabLayout.tabCount == 0) {

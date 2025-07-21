@@ -210,22 +210,25 @@ class HomeFragment : Fragment(), OnTabReselectedListener {
 
     private fun setupCustomTabs() {
         binding.tvTabToday.setOnClickListener {
-            binding.viewPagerHome.currentItem = 0
+            if (binding.viewPagerHome.currentItem == 0) {
+                (childFragmentManager.findFragmentByTag("f0") as? RecommendationFragment)?.scrollToTop()
+            } else {
+                binding.viewPagerHome.currentItem = 0
+            }
         }
         binding.tvTabTomorrow.setOnClickListener {
-            binding.viewPagerHome.currentItem = 1
+            if (binding.viewPagerHome.currentItem == 1) {
+                (childFragmentManager.findFragmentByTag("f1") as? RecommendationFragment)?.scrollToTop()
+            } else {
+                binding.viewPagerHome.currentItem = 1
+            }
         }
 
-        // ▼▼▼▼▼ 핵심 수정 부분 ▼▼▼▼▼
         binding.viewPagerHome.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
-            // isInitialSelection 플래그는 콜백 객체 내에 있어,
-            // 뷰가 재생성될 때마다(다른 탭에 갔다가 돌아올 때) 자동으로 초기화됩니다.
             private var isInitialSelection = true
 
             override fun onPageSelected(position: Int) {
                 super.onPageSelected(position)
-                // 처음 페이지가 선택될 때는 애니메이션 없이 밑줄 위치를 설정하고,
-                // 그 이후 사용자의 스와이프나 클릭에 의해서는 애니메이션을 적용합니다.
                 if (isInitialSelection) {
                     updateTabAppearance(position, animate = false)
                     isInitialSelection = false
@@ -234,7 +237,6 @@ class HomeFragment : Fragment(), OnTabReselectedListener {
                 }
             }
         })
-        // ▲▲▲▲▲ 핵심 수정 부분 ▲▲▲▲▲
     }
 
     private fun updateTabAppearance(selectedPosition: Int, animate: Boolean) {
@@ -248,7 +250,6 @@ class HomeFragment : Fragment(), OnTabReselectedListener {
 
         val indicatorTarget = if (selectedPosition == 0) binding.tvTabToday else binding.tvTabTomorrow
 
-        // post를 사용하여 뷰가 그려진 후 위치 계산을 하도록 보장합니다.
         indicatorTarget.post {
             if (_binding == null) return@post
 
@@ -266,7 +267,6 @@ class HomeFragment : Fragment(), OnTabReselectedListener {
                     .setDuration(250)
                     .start()
             } else {
-                // 애니메이션 없이 즉시 위치 설정
                 binding.viewTabIndicator.x = indicatorStart.toFloat()
             }
         }
@@ -279,11 +279,15 @@ class HomeFragment : Fragment(), OnTabReselectedListener {
             navController.popBackStack(R.id.navigation_home, false)
             return
         }
-        if (binding.viewPagerHome.currentItem != 0) {
-            binding.viewPagerHome.currentItem = 0
-        } else {
-            val currentFragment = childFragmentManager.findFragmentByTag("f0")
-            (currentFragment as? RecommendationFragment)?.scrollToTop()
+
+        // ▼▼▼▼▼ 핵심 수정: '오늘' 탭으로 이동하고 맨 위로 스크롤 ▼▼▼▼▼
+        if (_binding == null) return
+        binding.viewPagerHome.currentItem = 0
+        binding.viewPagerHome.post {
+            if (isAdded) {
+                (childFragmentManager.findFragmentByTag("f0") as? RecommendationFragment)?.scrollToTop()
+            }
         }
+        // ▲▲▲▲▲ 핵심 수정 ▲▲▲▲▲
     }
 }

@@ -26,7 +26,6 @@ import com.yehyun.whatshouldiweartoday.ui.home.RecommendationAdapter
 
 class EditStyleFragment : Fragment(R.layout.fragment_edit_style), OnTabReselectedListener {
 
-    // [핵심] ViewModel의 범위를 이 프래그먼트로 한정합니다.
     private val viewModel: EditStyleViewModel by viewModels()
     private val args: EditStyleFragmentArgs by navArgs()
     private lateinit var tabLayout: TabLayout
@@ -56,10 +55,15 @@ class EditStyleFragment : Fragment(R.layout.fragment_edit_style), OnTabReselecte
         viewModel.loadStyleIfNeeded(args.styleId)
     }
 
+    // ▼▼▼▼▼ 핵심 수정: onResume 콜백 제거 ▼▼▼▼▼
+    // 이 부분이 화면으로 돌아올 때마다 데이터를 덮어쓰는 버그의 원인이었습니다.
+    /*
     override fun onResume() {
         super.onResume()
         viewModel.refreshCurrentStyle()
     }
+    */
+    // ▲▲▲▲▲ 핵심 수정 ▲▲▲▲▲
 
     private fun setupViews(view: View) {
         buttonSave = view.findViewById(R.id.button_save_style_edit)
@@ -168,6 +172,7 @@ class EditStyleFragment : Fragment(R.layout.fragment_edit_style), OnTabReselecte
         view.findViewById<RecyclerView>(R.id.rv_all_items_for_edit).adapter = adapterForAll
     }
 
+    // ... 이하 코드는 변경사항 없음 ...
     private fun setupListeners(view: View) {
         toolbar.setNavigationOnClickListener { handleBackButton() }
         buttonSave.setOnClickListener { saveChangesAndExit() }

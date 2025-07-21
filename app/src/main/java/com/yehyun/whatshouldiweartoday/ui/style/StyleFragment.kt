@@ -1,5 +1,3 @@
-// 파일 경로: app/src/main/java/com/yehyun/whatshouldiweartoday/ui/style/StyleFragment.kt
-
 package com.yehyun.whatshouldiweartoday.ui.style
 
 import android.os.Bundle
@@ -13,7 +11,6 @@ import androidx.appcompat.widget.SearchView
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
-import androidx.viewpager2.widget.ViewPager2
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
 import com.yehyun.whatshouldiweartoday.R
@@ -26,7 +23,6 @@ class StyleFragment : Fragment(), OnTabReselectedListener {
     private val binding get() = _binding!!
 
     private val viewModel: StyleViewModel by viewModels()
-    private var isInitialStyleTabSetup = true
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -57,6 +53,16 @@ class StyleFragment : Fragment(), OnTabReselectedListener {
         TabLayoutMediator(binding.tabLayoutStyleSeason, binding.viewPagerStyle) { tab, position ->
             tab.text = seasons[position]
         }.attach()
+
+        binding.tabLayoutStyleSeason.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
+            override fun onTabSelected(tab: TabLayout.Tab?) {}
+            override fun onTabUnselected(tab: TabLayout.Tab?) {}
+            override fun onTabReselected(tab: TabLayout.Tab?) {
+                tab?.position?.let { position ->
+                    (childFragmentManager.findFragmentByTag("f$position") as? StyleListFragment)?.scrollToTop()
+                }
+            }
+        })
     }
 
     private fun setupSearch() {
@@ -96,13 +102,15 @@ class StyleFragment : Fragment(), OnTabReselectedListener {
             navController.popBackStack(R.id.navigation_style, false)
             return
         }
-
-        if (binding.viewPagerStyle.currentItem != 0) {
-            binding.viewPagerStyle.currentItem = 0
-        } else {
-            val currentFragment = childFragmentManager.fragments.getOrNull(binding.viewPagerStyle.currentItem)
-            (currentFragment as? StyleListFragment)?.scrollToTop()
+        // ▼▼▼▼▼ 핵심 수정: '전체' 탭으로 이동하고 맨 위로 스크롤 ▼▼▼▼▼
+        if (_binding == null) return
+        binding.viewPagerStyle.currentItem = 0
+        binding.viewPagerStyle.post {
+            if (isAdded) {
+                (childFragmentManager.findFragmentByTag("f0") as? StyleListFragment)?.scrollToTop()
+            }
         }
+        // ▲▲▲▲▲ 핵심 수정 ▲▲▲▲▲
     }
 
     override fun onDestroyView() {

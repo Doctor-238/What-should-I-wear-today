@@ -1,5 +1,3 @@
-// 파일 경로: app/src/main/java/com/yehyun/whatshouldiweartoday/ui/closet/ClothingListFragment.kt
-
 package com.yehyun.whatshouldiweartoday.ui.closet
 
 import android.os.Bundle
@@ -52,24 +50,21 @@ class ClothingListFragment : Fragment() {
     }
 
     private fun observeViewModel() {
-        viewModel.clothes.observe(viewLifecycleOwner) { items ->
-            val filteredList = if (category == "전체") {
-                items
-            } else {
-                items.filter { it.category == category }
-            }
-            adapter.submitList(filteredList)
+        val categoryToObserve = category ?: "전체"
+        viewModel.getClothesForCategory(categoryToObserve).observe(viewLifecycleOwner) { items ->
+            adapter.submitList(items)
         }
     }
 
     fun scrollToTop() {
-        if (::adapter.isInitialized && adapter.itemCount > 0) {
+        if (isAdded && _binding != null) {
             binding.recyclerViewClothingList.smoothScrollToPosition(0)
         }
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
+        binding.recyclerViewClothingList.adapter = null
         _binding = null
     }
 

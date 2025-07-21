@@ -21,7 +21,9 @@ class SaveStyleViewModel(application: Application) : AndroidViewModel(applicatio
     val filteredClothes = MediatorLiveData<List<ClothingItem>>()
     private val allClothes: LiveData<List<ClothingItem>>
 
-    val selectedItems = MutableLiveData<MutableSet<ClothingItem>>(mutableSetOf())
+    // ▼▼▼▼▼ 핵심 수정 1: 선택 순서를 기억하기 위해 Set -> List로 변경 ▼▼▼▼▼
+    val selectedItems = MutableLiveData<MutableList<ClothingItem>>(mutableListOf())
+    // ▲▲▲▲▲ 핵심 수정 1 ▲▲▲▲▲
     val styleName = MutableLiveData<String>()
     val selectedSeason = MutableLiveData<String?>()
 
@@ -45,18 +47,34 @@ class SaveStyleViewModel(application: Application) : AndroidViewModel(applicatio
 
         filteredClothes.addSource(allClothes) { filter() }
         filteredClothes.addSource(_clothingCategory) { filter() }
+        // ▼▼▼▼▼ 핵심 수정 2: 선택된 아이템 목록이 바뀔 때도 정렬이 다시 실행되도록 추가 ▼▼▼▼▼
+        filteredClothes.addSource(selectedItems) { filter() }
+        // ▲▲▲▲▲ 핵심 수정 2 ▲▲▲▲▲
     }
 
+    // ▼▼▼▼▼ 핵심 수정 3: 요청하신 정렬 로직 적용 ▼▼▼▼▼
     private fun filter() {
         val category = _clothingCategory.value ?: "전체"
         val clothes = allClothes.value ?: emptyList()
 
-        filteredClothes.value = if (category == "전체") {
+        val categoryFiltered = if (category == "전체") {
             clothes
         } else {
             clothes.filter { it.category == category }
         }
+
+        // 선택된 아이템을 앞으로, 그 외에는 최신순으로 정렬
+        val selectedIdsSet = selectedItems.value?.map { it.id }?.toSet() ?: emptySet()
+        val selectionOrderMap = selectedItems.value?.mapIndexed { index, item -> item.id to index }?.toMap() ?: emptyMap()
+
+        val sortedList = categoryFiltered.sortedWith(
+            compareByDescending<ClothingItem> { it.id in selectedIdsSet } // 1. 선택된 아이템을 맨 위로
+                .thenBy { selectionOrderMap[it.id] } // 2. 선택된 아이템은 선택된 순서대로
+        ) // 3. 선택되지 않은 아이템은 allClothes의 기본 정렬(최신순)을 따름
+
+        filteredClothes.value = sortedList
     }
+    // ▲▲▲▲▲ 핵심 수정 3 ▲▲▲▲▲
 
     fun setClothingFilter(category: String) {
         if (_clothingCategory.value != category) {
@@ -64,19 +82,17 @@ class SaveStyleViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
+    // ▼▼▼▼▼ 핵심 수정 4: List 자료구조에 맞게 로직 수정 ▼▼▼▼▼
     fun toggleItemSelected(item: ClothingItem) {
-        if (initialItemIds == null) {
-            initialItemIds = selectedItems.value?.map { it.id }?.toSet() ?: emptySet()
-        }
-        val currentSet = selectedItems.value ?: mutableSetOf()
-        if (currentSet.any { it.id == item.id }) {
-            currentSet.removeAll { it.id == item.id }
+        val currentList = selectedItems.value ?: mutableListOf()
+        if (currentList.any { it.id == item.id }) {
+            currentList.removeAll { it.id == item.id }
         } else {
-            if (currentSet.size < 10) {
-                currentSet.add(item)
+            if (currentList.size < 10) {
+                currentList.add(item)
             }
         }
-        selectedItems.value = currentSet
+        selectedItems.value = currentList // LiveData에 변경사항 알림
         checkForChanges()
     }
 
@@ -85,31 +101,40 @@ class SaveStyleViewModel(application: Application) : AndroidViewModel(applicatio
 
         initialItemIds = ids.toSet()
         allClothes.observeForever { all ->
-            val preselected = all.filter { it.id in ids }.toMutableSet()
+            // preselect 시에는 순서가 중요하지 않으므로 Set으로 처리 후 List로 변환
+            val preselected = all.filter { it.id in ids }.toMutableList()
             selectedItems.postValue(preselected)
             hasChanges.postValue(false)
         }
     }
+    // ▲▲▲▲▲ 핵심 수정 4 ▲▲▲▲▲
+
 
     fun setStyleName(name: String) {
-        if (initialName == null) initialName = styleName.value ?: ""
+        if(initialName == null) initialName = styleName.value ?: ""
         styleName.value = name
         checkForChanges()
     }
 
     fun setSeason(season: String?) {
-        if (initialSeason == null) initialSeason = selectedSeason.value
+        if(initialSeason == null) initialSeason = selectedSeason.value
         selectedSeason.value = season
         checkForChanges()
     }
 
     private fun checkForChanges() {
-        val itemsChanged = initialItemIds != null && initialItemIds != selectedItems.value?.map { it.id }?.toSet()
-        val nameChanged = initialName != null && initialName != styleName.value
-        val seasonChanged = initialSeason != null && initialSeason != selectedSeason.value
+        if(initialItemIds == null && styleName.value.isNullOrEmpty() && selectedSeason.value.isNullOrEmpty()) {
+            hasChanges.value = false
+            return
+        }
+
+        val itemsChanged = initialItemIds != selectedItems.value?.map { it.id }?.toSet()
+        val nameChanged = initialName != styleName.value
+        val seasonChanged = initialSeason != selectedSeason.value
 
         hasChanges.value = itemsChanged || nameChanged || seasonChanged
     }
+
 
     fun saveStyle() {
         if (_isLoading.value == true) return
@@ -135,7 +160,7 @@ class SaveStyleViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     fun resetAllState() {
-        selectedItems.value = mutableSetOf()
+        selectedItems.value = mutableListOf()
         styleName.value = ""
         selectedSeason.value = null
         _isSaveComplete.value = false
@@ -145,5 +170,4 @@ class SaveStyleViewModel(application: Application) : AndroidViewModel(applicatio
         initialSeason = null
         _isLoading.value = false
     }
-
 }

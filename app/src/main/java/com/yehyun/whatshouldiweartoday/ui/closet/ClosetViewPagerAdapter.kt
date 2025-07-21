@@ -8,6 +8,8 @@ class ClosetViewPagerAdapter(fragment: Fragment, private val categories: List<St
     override fun getItemCount(): Int = categories.size
 
     override fun createFragment(position: Int): Fragment {
+        // ▼▼▼▼▼ 핵심 수정: 프래그먼트 맵 관리 로직 제거 ▼▼▼▼▼
         return ClothingListFragment.newInstance(categories[position])
+        // ▲▲▲▲▲ 핵심 수정 ▲▲▲▲▲
     }
 }
