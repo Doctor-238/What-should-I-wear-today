@@ -1,5 +1,3 @@
-// 파일 경로: app/src/main/java/com/yehyun/whatshouldiweartoday/ui/closet/ClosetFragment.kt
-
 package com.yehyun.whatshouldiweartoday.ui.closet
 
 import android.Manifest
@@ -20,12 +18,10 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.SearchView
 import androidx.core.content.ContextCompat
-import androidx.core.view.doOnPreDraw
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
-import androidx.viewpager2.widget.ViewPager2
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.workDataOf
@@ -185,7 +181,7 @@ class ClosetFragment : Fragment(), OnTabReselectedListener {
                     _binding?.fabBatchAdd?.hideProgress()
                     viewModel.workManager.pruneWork()
                 }
-            } else { // RUNNING or ENQUEUED
+            } else {
                 val progress = workInfo.progress
                 val current = progress.getInt(BatchAddWorker.PROGRESS_CURRENT, 0)
                 val total = progress.getInt(BatchAddWorker.PROGRESS_TOTAL, 1)
@@ -220,6 +216,16 @@ class ClosetFragment : Fragment(), OnTabReselectedListener {
         TabLayoutMediator(binding.tabLayoutCategory, binding.viewPagerCloset) { tab, position ->
             tab.text = categories[position]
         }.attach()
+
+        binding.tabLayoutCategory.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
+            override fun onTabSelected(tab: TabLayout.Tab?) {}
+            override fun onTabUnselected(tab: TabLayout.Tab?) {}
+            override fun onTabReselected(tab: TabLayout.Tab?) {
+                tab?.position?.let { position ->
+                    (childFragmentManager.findFragmentByTag("f$position") as? ClothingListFragment)?.scrollToTop()
+                }
+            }
+        })
     }
 
     private fun setupSearch() {
@@ -259,13 +265,15 @@ class ClosetFragment : Fragment(), OnTabReselectedListener {
             navController.popBackStack(R.id.navigation_closet, false)
             return
         }
-
-        if (binding.viewPagerCloset.currentItem != 0) {
-            binding.viewPagerCloset.currentItem = 0
-        } else {
-            val currentFragment = childFragmentManager.findFragmentByTag("f0")
-            (currentFragment as? ClothingListFragment)?.scrollToTop()
+        // ▼▼▼▼▼ 핵심 수정: '전체' 탭으로 이동하고 맨 위로 스크롤 ▼▼▼▼▼
+        if (_binding == null) return
+        binding.viewPagerCloset.currentItem = 0
+        binding.viewPagerCloset.post {
+            if (isAdded) {
+                (childFragmentManager.findFragmentByTag("f0") as? ClothingListFragment)?.scrollToTop()
+            }
         }
+        // ▲▲▲▲▲ 핵심 수정 ▲▲▲▲▲
     }
 
     override fun onDestroyView() {

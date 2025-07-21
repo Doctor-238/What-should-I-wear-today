@@ -31,7 +31,7 @@ class ProgressFab @JvmOverloads constructor(
 
     private val progressPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
-        strokeWidth = 12f
+        strokeWidth = 18f
         color = Color.parseColor("#0059ff")
     }
 
