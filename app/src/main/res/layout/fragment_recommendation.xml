@@ -24,7 +24,7 @@
             android:visibility="gone"
             app:cardBackgroundColor="@color/weather_card_blue_bg"
             app:cardCornerRadius="16dp"
-            app:cardElevation="0dp"
+            app:cardElevation="8dp"
             app:strokeWidth="0dp"
             tools:visibility="visible">
 
@@ -186,9 +186,9 @@
             android:layout_marginTop="24dp"
             app:cardBackgroundColor="@android:color/white"
             app:cardCornerRadius="16dp"
-            app:cardElevation="0dp"
-            app:strokeColor="@color/weather_card_blue_bg"
-            app:strokeWidth="1.5dp"
+            app:cardElevation="8dp"
+            app:strokeColor="@color/bottom_nav_background"
+            app:strokeWidth="1dp"
             android:visibility="gone"
             tools:visibility="visible">
 
@@ -197,37 +197,63 @@
                 android:layout_height="wrap_content"
                 android:padding="16dp">
 
+                <ImageView
+                    android:id="@+id/iv_best_combination_icon"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/sun"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="@id/tv_best_combination_title"
+                    app:layout_constraintBottom_toBottomOf="@id/tv_best_combination_title" />
+
                 <TextView
                     android:id="@+id/tv_best_combination_title"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
                     android:text="최적의 코디"
                     android:textColor="@color/text_primary"
                     android:textSize="18sp"
                     android:textStyle="bold"
-                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintStart_toEndOf="@id/iv_best_combination_icon"
                     app:layout_constraintTop_toTopOf="parent" />
+
+                <TextView
+                    android:id="@+id/tv_best_combination_subtitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:text="AI가 추천하는 오늘의 조합"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="13sp"
+                    app:layout_constraintStart_toStartOf="@id/tv_best_combination_title"
+                    app:layout_constraintTop_toBottomOf="@id/tv_best_combination_title" />
 
                 <Button
                     android:id="@+id/btn_save_combination"
                     style="@style/Widget.Material3.Button.TextButton"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="이 코디 저장하기"
-                    app:layout_constraintBaseline_toBaselineOf="@id/tv_best_combination_title"
-                    app:layout_constraintEnd_toEndOf="parent" />
+                    android:text="이 코디 저장"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    app:icon="@drawable/plus"
+                    app:iconPadding="4dp"
+                    app:iconTint="@color/settings_spinner_blue"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintTop_toTopOf="parent" />
 
                 <androidx.recyclerview.widget.RecyclerView
                     android:id="@+id/rv_best_combination"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
+                    android:layout_marginTop="16dp"
                     android:clipToPadding="false"
                     android:orientation="horizontal"
                     app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@id/tv_best_combination_title"
+                    app:layout_constraintTop_toBottomOf="@id/tv_best_combination_subtitle"
                     tools:itemCount="3"
                     tools:listitem="@layout/item_recommendation_clothing_square" />
 
