@@ -3,6 +3,7 @@ package com.yehyun.whatshouldiweartoday.data.repository
 import androidx.lifecycle.LiveData
 import com.yehyun.whatshouldiweartoday.data.database.ClothingDao
 import com.yehyun.whatshouldiweartoday.data.database.ClothingItem
+import java.io.File
 
 class ClothingRepository(private val clothingDao: ClothingDao) {
 
@@ -19,6 +20,21 @@ class ClothingRepository(private val clothingDao: ClothingDao) {
 
     fun getItemById(id: Int): LiveData<ClothingItem> = clothingDao.getItemById(id)
     suspend fun update(item: ClothingItem) = clothingDao.update(item)
-    suspend fun delete(item: ClothingItem) = clothingDao.delete(item)
+    suspend fun delete(item: ClothingItem) {
+        try {
+            val itemuri = File(item.imageUri)
+            val itemprocessedImageUri = File(item.processedImageUri)
+            if (itemuri.exists()) {
+                itemuri.delete()
+            }
+            if (itemprocessedImageUri.exists()) {
+                itemprocessedImageUri.delete()
+            }
+        } catch (e: Exception) {
+            // 파일 삭제 중 오류가 발생할 경우를 대비한 예외 처리입니다.
+            e.printStackTrace()
+        }
+        clothingDao.delete(item)
+    }
     suspend fun getAllItemsList(): List<ClothingItem> = clothingDao.getAllItemsList()
 }

@@ -38,6 +38,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
                     android:scaleType="centerCrop"
+                    android:background="@color/white"
                     tools:src="@tools:sample/backgrounds/scenic" />
 
             </com.google.android.material.card.MaterialCardView>
