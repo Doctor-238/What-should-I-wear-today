@@ -23,7 +23,7 @@ abstract class AppDatabase : RoomDatabase() {
     suspend fun clearAllData(context: Context) {
         withContext(Dispatchers.IO) {
             // 1. DB에서 모든 옷 아이템의 정보를 가져옵니다.
-            val allItems = clothingDao().getAllItemsList()
+            val allItems = clothingDao().getAllItemsLists()
 
             // 2. 각 아이템 정보에 있는 이미지 경로(imagePath)를 이용해 실제 파일을 삭제합니다.
             allItems.forEach { item ->

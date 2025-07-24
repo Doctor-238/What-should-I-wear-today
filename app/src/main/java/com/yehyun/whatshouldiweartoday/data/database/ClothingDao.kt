@@ -34,8 +34,9 @@ interface ClothingDao {
     @Query("SELECT * FROM clothing_items WHERE (:category = '전체' OR category = :category) AND name LIKE '%' || :query || '%' ORDER BY suitableTemperature DESC")
     fun getItemsOrderByTempDesc(query: String, category: String): LiveData<List<ClothingItem>>
 
+
     @Query("SELECT * FROM clothing_items")
-    suspend fun getAllItemsList(): List<ClothingItem>
+    suspend fun getAllItemsLists(): List<ClothingItem>
 
 
     // [확인] 전체 초기화를 위한 함수

@@ -36,5 +36,5 @@ class ClothingRepository(private val clothingDao: ClothingDao) {
         }
         clothingDao.delete(item)
     }
-    suspend fun getAllItemsList(): List<ClothingItem> = clothingDao.getAllItemsList()
+    suspend fun getAllItemsList(): List<ClothingItem> = clothingDao.getAllItemsLists()
 }
