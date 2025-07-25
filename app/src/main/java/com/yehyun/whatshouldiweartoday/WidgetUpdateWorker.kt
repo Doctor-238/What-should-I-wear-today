@@ -178,14 +178,14 @@ class WidgetUpdateWorker(private val appContext: Context, workerParams: WorkerPa
         val temperatureTolerance = settingsManager.getTemperatureTolerance()
         val packableOuterTolerance = settingsManager.getPackableOuterTolerance()
         val constitutionAdjustment = settingsManager.getConstitutionAdjustment()
-        val significantTempDifference = 12.0
+        val significantTempDifference = 10.0
         val recommendedClothes = allClothes.filter {
             val adjustedTemp = it.suitableTemperature + constitutionAdjustment
             val itemMinTemp = adjustedTemp - temperatureTolerance
             val itemMaxTemp = adjustedTemp + temperatureTolerance
-            val isFitForMaxTemp = maxTempCriteria in itemMinTemp..itemMaxTemp
-            val isFitForHotDay = maxTempCriteria > 30 && itemMaxTemp >= 30
-            val isFitForFreezingDay = minTempCriteria < 0 && itemMinTemp <= 0
+            val isFitForMaxTemp = maxTempCriteria in itemMinTemp+1..itemMaxTemp+2.5
+            val isFitForHotDay = maxTempCriteria > 33 && itemMaxTemp+2.5 >= 33
+            val isFitForFreezingDay = minTempCriteria < -3 && itemMinTemp+1 <= -3
             isFitForMaxTemp || isFitForHotDay || isFitForFreezingDay
         }
         val recommendedTops = recommendedClothes.filter { it.category == "상의" }

@@ -271,6 +271,23 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
             setViewColor(null)
         }
     }
+    fun increaseTemp() {
+        _analysisResult.value?.let { currentResult ->
+            currentResult.suitable_temperature?.let { temp ->
+                val newResult = currentResult.copy(suitable_temperature = temp + 0.5)
+                _analysisResult.value = newResult
+            }
+        }
+    }
+
+    fun decreaseTemp() {
+        _analysisResult.value?.let { currentResult ->
+            currentResult.suitable_temperature?.let { temp ->
+                val newResult = currentResult.copy(suitable_temperature = temp - 0.5)
+                _analysisResult.value = newResult
+            }
+        }
+    }
 
     private fun isValidHexCode(hexCode: String?): Boolean {
         if (hexCode.isNullOrBlank()) return false

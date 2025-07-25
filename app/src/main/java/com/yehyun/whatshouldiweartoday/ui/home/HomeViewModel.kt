@@ -82,7 +82,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     var permissionRequestedThisSession = false
 
     companion object {
-        private const val SIGNIFICANT_TEMP_DIFFERENCE = 12.0
+        private const val SIGNIFICANT_TEMP_DIFFERENCE = 10.0
     }
 
     init {
@@ -221,8 +221,8 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             val itemMinTemp = adjustedTemp - temperatureTolerance
             val itemMaxTemp = adjustedTemp + temperatureTolerance
             val isFitForMaxTemp = maxTempCriteria in itemMinTemp+1..itemMaxTemp+2.5
-            val isFitForHotDay = maxTempCriteria > 31 && itemMaxTemp >= 31
-            val isFitForFreezingDay = minTempCriteria < -1 && itemMinTemp <= -1
+            val isFitForHotDay = maxTempCriteria > 33 && itemMaxTemp+2.5 >= 33
+            val isFitForFreezingDay = minTempCriteria < -3 && itemMinTemp+1 <= -3
             isFitForMaxTemp || isFitForHotDay || isFitForFreezingDay
         }
 

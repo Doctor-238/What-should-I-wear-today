@@ -32,6 +32,7 @@ import com.yehyun.whatshouldiweartoday.ui.OnTabReselectedListener
 import kotlinx.serialization.Serializable
 import android.graphics.Matrix
 import android.graphics.drawable.GradientDrawable
+import android.widget.ImageButton
 import androidx.exifinterface.media.ExifInterface
 import java.io.InputStream
 
@@ -63,6 +64,9 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabResel
     private lateinit var tvInfoCategory: TextView
     private lateinit var tvInfoTemperature: TextView
     private lateinit var viewInfoColorSwatch: View
+
+    private lateinit var buttonTempIncrease: ImageButton
+    private lateinit var buttonTempDecrease: ImageButton
 
 
     private lateinit var onBackPressedCallback: OnBackPressedCallback
@@ -141,6 +145,9 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabResel
         tvInfoCategory = view.findViewById(R.id.tv_info_category)
         tvInfoTemperature = view.findViewById(R.id.tv_info_temperature)
         viewInfoColorSwatch = view.findViewById(R.id.view_info_color_swatch)
+
+        buttonTempIncrease = view.findViewById(R.id.button_temp_increase)
+        buttonTempDecrease = view.findViewById(R.id.button_temp_decrease)
     }
 
     private fun observeViewModel() {
@@ -252,6 +259,9 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabResel
                     (viewModel.originalBitmap.value != null) &&
                     !editable.isNullOrBlank()
         }
+
+        buttonTempIncrease.setOnClickListener { viewModel.increaseTemp() }
+        buttonTempDecrease.setOnClickListener { viewModel.decreaseTemp() }
     }
 
     private fun openGallery() {

@@ -45,28 +45,46 @@ class StyleListFragment : Fragment() {
             val action = StyleFragmentDirections.actionNavigationStyleToEditStyleFragment(clickedStyle.style.styleId)
             requireParentFragment().findNavController().navigate(action)
         }
-        // ▼▼▼▼▼ 핵심 수정: 올바른 ID(rvStyleList)로 변경 ▼▼▼▼▼
-        binding.rvStyleList.layoutManager = LinearLayoutManager(context)
-        binding.rvStyleList.adapter = adapter
+        // ▼▼▼▼▼ 핵심 수정 부분 ▼▼▼▼▼
+        binding.recyclerViewStyleList.layoutManager = LinearLayoutManager(context)
+        binding.recyclerViewStyleList.adapter = adapter
+        // ▲▲▲▲▲ 핵심 수정 부분 ▲▲▲▲▲
     }
 
     private fun observeViewModel() {
+        // newInstance를 통해 전달받은 season 값 (탭 이름)
         val seasonToObserve = season ?: "전체"
+
         viewModel.getStylesForSeason(seasonToObserve).observe(viewLifecycleOwner) { styles ->
             adapter.submitList(styles)
+
+            // ▼▼▼▼▼ 핵심 수정 로직 ▼▼▼▼▼
+            // 현재 탭이 '전체' 탭이고, 스타일 목록이 비어있을 때만 말풍선을 보여줍니다.
+            if (seasonToObserve == "전체" && styles.isEmpty()) {
+                binding.emptyStyleContainer.visibility = View.VISIBLE
+                binding.recyclerViewStyleList.visibility = View.GONE
+            } else {
+                // 그 외의 경우(다른 탭이거나, 전체 탭에 스타일이 있거나)에는 말풍선을 숨깁니다.
+                binding.emptyStyleContainer.visibility = View.GONE
+                binding.recyclerViewStyleList.visibility = View.VISIBLE
+            }
+            // ▲▲▲▲▲ 핵심 수정 로직 ▲▲▲▲▲
         }
     }
 
     fun scrollToTop() {
         if (isAdded && _binding != null) {
-            binding.rvStyleList.smoothScrollToPosition(0)
+            // ▼▼▼▼▼ 핵심 수정 부분 ▼▼▼▼▼
+            binding.recyclerViewStyleList.smoothScrollToPosition(0)
+            // ▲▲▲▲▲ 핵심 수정 부분 ▲▲▲▲▲
         }
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
-        binding.rvStyleList.adapter = null
-        // ▲▲▲▲▲ 핵심 수정 ▲▲▲▲▲
+        // ▼▼▼▼▼ 핵심 수정 부분 ▼▼▼▼▼
+        binding.recyclerViewStyleList.adapter = null
+        // ▲▲▲▲▲ 핵심 수정 부분 ▲▲▲▲▲
         _binding = null
     }
 

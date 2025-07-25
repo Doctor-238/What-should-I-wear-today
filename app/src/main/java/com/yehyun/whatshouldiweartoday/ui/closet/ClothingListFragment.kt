@@ -53,6 +53,17 @@ class ClothingListFragment : Fragment() {
         val categoryToObserve = category ?: "전체"
         viewModel.getClothesForCategory(categoryToObserve).observe(viewLifecycleOwner) { items ->
             adapter.submitList(items)
+
+            // ▼▼▼▼▼ 핵심 추가 로직 ▼▼▼▼▼
+            // '전체' 탭이고, 옷 목록이 비어있을 때만 말풍선을 보여줍니다.
+            if (categoryToObserve == "전체" && items.isEmpty()) {
+                binding.emptyViewContainer.visibility = View.VISIBLE
+                binding.recyclerViewClothingList.visibility = View.GONE
+            } else {
+                binding.emptyViewContainer.visibility = View.GONE
+                binding.recyclerViewClothingList.visibility = View.VISIBLE
+            }
+            // ▲▲▲▲▲ 핵심 추가 로직 ▲▲▲▲▲
         }
     }
 
