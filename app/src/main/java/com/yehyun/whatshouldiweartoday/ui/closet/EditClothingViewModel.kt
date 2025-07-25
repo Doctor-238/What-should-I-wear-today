@@ -101,6 +101,22 @@ class EditClothingViewModel(application: Application) : AndroidViewModel(applica
         }
     }
 
+    fun increaseTemp() {
+        _currentClothingItem.value?.let {
+            it.suitableTemperature += 0.5
+            _currentClothingItem.postValue(it)
+            checkForChanges()
+        }
+    }
+
+    fun decreaseTemp() {
+        _currentClothingItem.value?.let {
+            it.suitableTemperature -= 0.5
+            _currentClothingItem.postValue(it)
+            checkForChanges()
+        }
+    }
+
     fun updateUseProcessedImage(use: Boolean) {
         _currentClothingItem.value?.let {
             if (it.useProcessedImage != use) {

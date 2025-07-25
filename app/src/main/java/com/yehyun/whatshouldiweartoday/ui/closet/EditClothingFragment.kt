@@ -1,4 +1,4 @@
-// 파일 경로: app/src/main/java/com/yehyun/whatshouldiweartoday/ui/closet/EditClothingFragment.kt
+// app/src/main/java/com/yehyun/whatshouldiweartoday/ui/closet/EditClothingFragment.kt
 package com.yehyun.whatshouldiweartoday.ui.closet
 
 import android.graphics.Color
@@ -13,6 +13,7 @@ import android.text.style.ForegroundColorSpan
 import android.text.style.StyleSpan
 import android.view.View
 import android.widget.Button
+import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.RelativeLayout
 import android.widget.TextView
@@ -53,6 +54,10 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
     private lateinit var viewColorSwatch: View
     private lateinit var layoutBackgroundRemoval: RelativeLayout
     private lateinit var settingsManager: SettingsManager
+    // ▼▼▼▼▼ 핵심 추가 ▼▼▼▼▼
+    private lateinit var buttonTempIncrease: ImageButton
+    private lateinit var buttonTempDecrease: ImageButton
+    // ▲▲▲▲▲ 핵심 추가 ▲▲▲▲▲
 
     override fun onResume() {
         super.onResume()
@@ -65,7 +70,7 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
         setupViews(view)
         viewModel.loadClothingItem(args.clothingItemId)
         setupBackButtonHandler()
-        setupListeners(view)
+        setupListeners()
         observeViewModel()
     }
 
@@ -79,8 +84,11 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
         toolbar = view.findViewById(R.id.toolbar_edit)
         viewColorSwatch = view.findViewById(R.id.view_color_swatch_edit)
         layoutBackgroundRemoval = view.findViewById(R.id.layout_background_removal)
+        // ▼▼▼▼▼ 핵심 추가 ▼▼▼▼▼
+        buttonTempIncrease = view.findViewById(R.id.button_edit_temp_increase)
+        buttonTempDecrease = view.findViewById(R.id.button_edit_temp_decrease)
+        // ▲▲▲▲▲ 핵심 추가 ▲▲▲▲▲
 
-        // 툴바에 메뉴를 설정하고, 아이콘 색상을 흰색으로 변경
         toolbar.inflateMenu(R.menu.edit_clothing_menu)
     }
 
@@ -95,7 +103,6 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
             editingItem?.let { bindDataToViews(it) }
         }
 
-        // '저장 가능' 상태를 관찰하여 메뉴 아이템의 활성화/비활성화 및 색상 변경
         viewModel.canBeSaved.observe(viewLifecycleOwner) { canBeSaved ->
             val saveMenuItem = toolbar.menu.findItem(R.id.menu_save)
             saveMenuItem?.isEnabled = canBeSaved
@@ -145,14 +152,12 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
         updateTemperatureDisplay(item)
 
         try {
-            // ▼▼▼▼▼ 핵심 수정 부분 ▼▼▼▼▼
             val colorDrawable = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
                 setColor(Color.parseColor(item.colorHex))
-                setStroke(3, Color.BLACK) // 3px 두께의 검은색 테두리
+                setStroke(3, Color.BLACK)
             }
             viewColorSwatch.background = colorDrawable
-            // ▲▲▲▲▲ 핵심 수정 부분 ▲▲▲▲▲
             viewColorSwatch.visibility = View.VISIBLE
         } catch (e: Exception) {
             viewColorSwatch.visibility = View.GONE
@@ -198,10 +203,9 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
             .into(imageViewPreview)
     }
 
-    private fun setupListeners(view: View) {
+    private fun setupListeners() {
         toolbar.setNavigationOnClickListener { handleBackButton() }
 
-        // 툴바의 메뉴 아이템 클릭 리스너 설정
         toolbar.setOnMenuItemClickListener { menuItem ->
             when (menuItem.itemId) {
                 R.id.menu_save -> {
@@ -223,7 +227,7 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
         })
 
         chipGroupCategory.setOnCheckedChangeListener { _, checkedId ->
-            view.findViewById<Chip>(checkedId)?.let {
+            view?.findViewById<Chip>(checkedId)?.let {
                 viewModel.updateCategory(it.text.toString())
             }
         }
@@ -231,6 +235,11 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
         switchRemoveBackground.setOnCheckedChangeListener { _, isChecked ->
             viewModel.updateUseProcessedImage(isChecked)
         }
+
+        // ▼▼▼▼▼ 핵심 추가: 버튼 리스너 연결 ▼▼▼▼▼
+        buttonTempIncrease.setOnClickListener { viewModel.increaseTemp() }
+        buttonTempDecrease.setOnClickListener { viewModel.decreaseTemp() }
+        // ▲▲▲▲▲ 핵심 추가 ▲▲▲▲▲
     }
 
     private fun setupBackButtonHandler() {
@@ -245,7 +254,6 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
     private fun handleBackButton() {
         if(viewModel.isProcessing.value == true) return
 
-        // isChanged LiveData를 사용
         if (viewModel.isChanged.value == true) {
             showSaveChangesDialog()
         } else {
@@ -264,7 +272,6 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
             .show()
     }
 
-    // 저장 시도 시 이름 유효성 검사
     private fun trySaveChanges() {
         if (viewModel.currentClothingItem.value?.name.isNullOrBlank()) {
             Toast.makeText(context, "옷 이름을 입력해주세요.", Toast.LENGTH_SHORT).show()

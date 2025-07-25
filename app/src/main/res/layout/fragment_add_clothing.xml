@@ -130,30 +130,58 @@
                         android:layout_height="1dp"
                         android:background="#F0F0F0" />
 
-                    <RelativeLayout
+                    <androidx.constraintlayout.widget.ConstraintLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:paddingVertical="8dp">
+
                         <TextView
+                            android:id="@+id/tv_temp_label"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="적정 온도"
-                            android:textStyle="bold"
-                            android:layout_alignParentStart="true"
-                            android:layout_centerVertical="true"
                             android:textColor="@color/text_primary"
-                            android:textSize="16sp" />
+                            android:textSize="16sp"
+                            android:textStyle="bold"
+                            app:layout_constraintBottom_toBottomOf="parent"
+                            app:layout_constraintStart_toStartOf="parent"
+                            app:layout_constraintTop_toTopOf="parent" />
+
+                        <ImageButton
+                            android:id="@+id/button_temp_decrease"
+                            android:layout_width="26dp"
+                            android:layout_height="26dp"
+                            android:layout_marginEnd="8dp"
+                            android:background="@drawable/bg_button_minus"
+                            android:contentDescription="온도 내리기"
+                            android:src="@drawable/ic_minus"
+                            app:layout_constraintBottom_toBottomOf="parent"
+                            app:layout_constraintEnd_toStartOf="@id/tv_info_temperature"
+                            app:layout_constraintTop_toTopOf="parent" />
+
                         <TextView
                             android:id="@+id/tv_info_temperature"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_alignParentEnd="true"
-                            android:layout_centerVertical="true"
+                            android:layout_marginEnd="8dp"
                             android:textColor="@color/text_primary"
                             android:textSize="16sp"
+                            app:layout_constraintBottom_toBottomOf="parent"
+                            app:layout_constraintEnd_toStartOf="@id/button_temp_increase"
+                            app:layout_constraintTop_toTopOf="parent"
                             tools:text="16.5° ~ 23.5°" />
-                    </RelativeLayout>
 
+                        <ImageButton
+                            android:id="@+id/button_temp_increase"
+                            android:layout_width="26dp"
+                            android:layout_height="26dp"
+                            android:background="@drawable/bg_button_plus"
+                            android:contentDescription="온도 올리기"
+                            android:src="@drawable/ic_plus"
+                            app:layout_constraintBottom_toBottomOf="parent"
+                            app:layout_constraintEnd_toEndOf="parent"
+                            app:layout_constraintTop_toTopOf="parent" />
+                    </androidx.constraintlayout.widget.ConstraintLayout>
                     <View
                         android:layout_width="match_parent"
                         android:layout_height="1dp"
