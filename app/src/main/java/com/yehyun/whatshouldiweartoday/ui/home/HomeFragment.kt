@@ -34,6 +34,8 @@ class HomeFragment : Fragment(), OnTabReselectedListener {
 
     private var toast: Toast? = null
 
+    private var locationDialog: AlertDialog? = null
+
     private val locationPermissionRequest = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted: Boolean ->
@@ -41,11 +43,12 @@ class HomeFragment : Fragment(), OnTabReselectedListener {
         if (isGranted) {
             checkAndRefresh()
         } else {
-            homeViewModel.stopLoading()
             if (shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_COARSE_LOCATION)) {
                 showToast("위치 권한이 거부되어 날씨 정보를 가져올 수 없습니다.")
+                homeViewModel.stopLoading()
             } else {
                 showGoToSettingsDialog("이 앱은 위치 권한이 반드시 필요합니다. 앱을 사용하려면 '설정'으로 이동하여 위치 권한을 허용해주세요.")
+                homeViewModel.stopLoading()
             }
         }
     }
@@ -72,15 +75,23 @@ class HomeFragment : Fragment(), OnTabReselectedListener {
 
         observeViewModel()
 
-        if (savedInstanceState == null) {
-            checkAndRefresh()
-        }
+//        if (savedInstanceState == null) {
+//            checkAndRefresh()
+//        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        checkAndRefresh()
+
     }
 
 
     override fun onDestroyView() {
         super.onDestroyView()
-        toast?.cancel()
+        // Fragment의 View가 파괴될 때, 다이얼로그가 살아있으면 반드시 dismiss() 호출
+        locationDialog?.dismiss()
+        locationDialog = null // 참조 해제
         _binding = null
     }
 
@@ -132,32 +143,45 @@ class HomeFragment : Fragment(), OnTabReselectedListener {
     }
 
     private fun requestLocationPermission() {
-        if (homeViewModel.permissionRequestedThisSession) {
-            homeViewModel.stopLoading()
-            return
-        }
-
+        // 사용자가 이전에 권한을 거부했는지 확인
         if (shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_COARSE_LOCATION)) {
-            AlertDialog.Builder(requireContext())
-                .setTitle("위치 권한 안내")
-                .setMessage("현재 위치의 날씨 정보를 가져오기 위해 위치 권한이 필요합니다.")
-                .setPositiveButton("권한 허용") { _, _ ->
-                    homeViewModel.permissionRequestedThisSession = true
-                    locationPermissionRequest.launch(Manifest.permission.ACCESS_COARSE_LOCATION)
-                }
-                .setNegativeButton("거부") { _, _ ->
-                    homeViewModel.stopLoading()
-                    showToast("위치 권한이 거부되어 날씨 정보를 자동으로 가져올 수 없습니다.")
-                }
-                .setOnDismissListener {
-                    if (binding.swipeRefreshLayout.isRefreshing){
-                        homeViewModel.stopLoading()
+            // ▼▼▼ 핵심 수정 부분 ▼▼▼
+            // UI가 완전히 준비된 후 다이얼로그를 띄우도록 하여 타이밍 문제 해결
+            view?.post {
+                // 프래그먼트가 여전히 화면에 있는지 다시 한번 확인 (안정성 강화)
+                if (!isAdded) return@post
+
+                AlertDialog.Builder(requireContext())
+                    .setTitle("위치 권한 안내")
+                    .setMessage("현재 위치의 날씨 정보를 가져오기 위해 위치 권한이 필요합니다.")
+                    .setPositiveButton("권한 허용") { _, _ ->
+                        homeViewModel.permissionRequestedThisSession = true
+                        locationPermissionRequest.launch(Manifest.permission.ACCESS_COARSE_LOCATION)
                     }
-                }
-                .show()
+                    .setNegativeButton("거부") { _, _ ->
+                        homeViewModel.stopLoading()
+                        showToast("위치 권한이 거부되어 날씨 정보를 자동으로 가져올 수 없습니다.")
+                    }
+                    .setOnDismissListener {
+                        // 다이얼로그가 닫힐 때, 만약 새로고침 중이었다면 멈춤
+                        if (_binding != null && binding.swipeRefreshLayout.isRefreshing){
+                            homeViewModel.stopLoading()
+                        }
+                    }
+                    .show()
+            }
+            // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
+
         } else {
-            homeViewModel.permissionRequestedThisSession = true
-            locationPermissionRequest.launch(Manifest.permission.ACCESS_COARSE_LOCATION)
+            // 처음 권한을 요청하거나, '다시 묻지 않음'을 선택했을 경우
+            if (!homeViewModel.permissionRequestedThisSession) {
+                homeViewModel.permissionRequestedThisSession = true
+                locationPermissionRequest.launch(Manifest.permission.ACCESS_COARSE_LOCATION)
+            } else {
+                // '다시 묻지 않음' 상태에서 권한이 필요함을 안내
+                homeViewModel.stopLoading()
+                showToast("위치 권한이 거부되었습니다. 앱 설정에서 권한을 허용해주세요.")
+            }
         }
     }
 
@@ -180,21 +204,24 @@ class HomeFragment : Fragment(), OnTabReselectedListener {
     }
 
     private fun showTurnOnLocationDialog() {
-        AlertDialog.Builder(requireContext())
-            .setTitle("위치 서비스 비활성화")
-            .setMessage("날씨 정보를 가져오려면 기기의 위치 서비스를 켜야 합니다. 설정으로 이동하시겠습니까?")
-            .setPositiveButton("설정으로 이동") { _, _ ->
-                startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))
-            }
-            .setNegativeButton("취소") { _, _ ->
-                showToast("위치 서비스가 꺼져있어 날씨를 조회할 수 없습니다.")
-            }
-            .setOnDismissListener {
-                if(_binding != null && binding.swipeRefreshLayout.isRefreshing) {
-                    homeViewModel.stopLoading()
-                }
-            }
-            .show()
+        // 다이얼로그가 이미 떠 있다면 중복으로 띄우지 않음
+        if (locationDialog != null && locationDialog!!.isShowing) {
+            return
+        }
+
+        val builder = AlertDialog.Builder(requireContext())
+        builder.setTitle("위치 서비스 비활성화")
+        builder.setMessage("날씨 정보를 가져오려면 위치 서비스가 필요합니다. 설정에서 위치를 켜주세요.")
+        builder.setPositiveButton("설정으로 이동") { _, _ ->
+            val intent = Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
+            startActivity(intent)
+        }
+        builder.setNegativeButton("취소") { dialog, _ ->
+            dialog.dismiss()
+        }
+        // 생성된 다이얼로그를 멤버 변수에 할당
+        locationDialog = builder.create()
+        locationDialog?.show()
     }
 
     private fun showToast(message: String) {
