@@ -16,15 +16,14 @@
         android:id="@+id/empty_style_container"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_gravity="center_horizontal"
-        android:layout_marginTop="80dp"
+        android:layout_gravity="center"
+        android:layout_marginTop="2dp"
         android:gravity="center"
         android:orientation="vertical"
         android:visibility="gone"
         tools:visibility="visible">
 
         <ImageView
-            android:layout_marginTop="62dp"
             android:layout_width="300dp"
             android:layout_height="wrap_content"
             android:adjustViewBounds="true"
