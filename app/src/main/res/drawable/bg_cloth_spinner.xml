@@ -5,5 +5,5 @@
     <corners android:radius="30dp" />
     <stroke
         android:width="3dp"
-        android:color="@color/clothing_item_border" />
+        android:color="@color/weather_card_stroke" />
 </shape>
