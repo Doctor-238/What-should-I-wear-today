@@ -162,7 +162,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             is SecurityException -> "날씨 정보를 보려면 위치 권한을 허용해주세요."
             is IOException -> e.message
             is com.google.android.gms.tasks.RuntimeExecutionException -> "위치를 가져올 수 없습니다. GPS를 켜고 잠시 후 다시 시도해주세요."
-            else -> "데이터 로딩 중 알 수 없는 오류가 발생했습니다."
+            else -> return
         }
         _error.postValue(errorMessage)
     }

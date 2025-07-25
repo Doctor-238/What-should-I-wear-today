@@ -7,7 +7,7 @@
     android:layout_marginEnd="8dp"
     app:cardBackgroundColor="@android:color/white"
     app:cardCornerRadius="12dp"
-    app:cardElevation="0dp"
+    app:cardElevation="1dp"
     app:strokeColor="@color/weather_card_blue_bg"
     app:strokeWidth="1.5dp">
 

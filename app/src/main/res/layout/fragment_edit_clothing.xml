@@ -30,14 +30,17 @@
         <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:padding="16dp">
+            android:paddingVertical="16dp">
 
             <FrameLayout
                 android:id="@+id/frameLayout_edit_preview"
                 android:layout_width="0dp"
                 android:layout_height="0dp"
-                android:background="@drawable/bg_dotted_border"
+                android:background="@drawable/bg_cloth_spinner"
                 android:padding="16dp"
+                android:layout_marginHorizontal="16dp"
+                app:strokeColor="@color/weather_card_blue_bg"
+                app:strokeWidth="1.5dp"
                 app:layout_constraintDimensionRatio="1:1"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
@@ -56,6 +59,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="24dp"
+                android:layout_marginHorizontal="16dp"
                 app:cardBackgroundColor="@color/settings_card_background"
                 app:cardCornerRadius="16dp"
                 app:cardElevation="4dp"
@@ -183,6 +187,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="24dp"
+                android:layout_marginHorizontal="16dp"
                 app:boxCornerRadiusBottomEnd="12dp"
                 app:boxCornerRadiusBottomStart="12dp"
                 app:boxCornerRadiusTopEnd="12dp"
@@ -208,6 +213,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
+                android:layout_marginHorizontal="16dp"
                 android:text="종류"
                 android:textColor="@color/text_primary"
                 android:textSize="16sp"
@@ -219,6 +225,7 @@
                 android:id="@+id/chipGroup_edit_category"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
+                android:layout_marginHorizontal="16dp"
 
                 app:chipSpacingHorizontal="8dp"
                 app:layout_constraintEnd_toEndOf="parent"
