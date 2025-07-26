@@ -22,6 +22,7 @@
     <ScrollView
         android:layout_width="0dp"
         android:layout_height="0dp"
+        android:scrollbars="none"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -226,20 +227,90 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginHorizontal="16dp"
-
                 app:chipSpacingHorizontal="8dp"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/textView_edit_category_label"
                 app:selectionRequired="true"
                 app:singleSelection="true">
-                <com.google.android.material.chip.Chip style="@style/Widget.MaterialComponents.Chip.Choice" android:id="@+id/chip_edit_top" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="상의" />
-                <com.google.android.material.chip.Chip style="@style/Widget.MaterialComponents.Chip.Choice" android:id="@+id/chip_edit_bottom" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="하의" />
-                <com.google.android.material.chip.Chip style="@style/Widget.MaterialComponents.Chip.Choice" android:id="@+id/chip_edit_outer" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="아우터" />
-                <com.google.android.material.chip.Chip style="@style/Widget.MaterialComponents.Chip.Choice" android:id="@+id/chip_edit_shoe" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="신발" />
-                <com.google.android.material.chip.Chip style="@style/Widget.MaterialComponents.Chip.Choice" android:id="@+id/chip_edit_bag" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="가방" />
-                <com.google.android.material.chip.Chip style="@style/Widget.MaterialComponents.Chip.Choice" android:id="@+id/chip_edit_hat" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="모자" />
-                <com.google.android.material.chip.Chip style="@style/Widget.MaterialComponents.Chip.Choice" android:id="@+id/chip_edit_other" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="기타" />
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chip_edit_top"
+                    style="@style/Widget.MaterialComponents.Chip.Choice"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="상의"
+                    android:textColor="@color/chip_textcolor_selector"
+                    app:chipBackgroundColor="@color/chip_backgroundcolor_selector"
+                    app:chipStrokeColor="@color/fab_color_style_tab"
+                    app:chipStrokeWidth="2dp" />
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chip_edit_bottom"
+                    style="@style/Widget.MaterialComponents.Chip.Choice"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="하의"
+                    android:textColor="@color/chip_textcolor_selector"
+                    app:chipBackgroundColor="@color/chip_backgroundcolor_selector"
+                    app:chipStrokeColor="@color/fab_color_style_tab"
+                    app:chipStrokeWidth="2dp" />
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chip_edit_outer"
+                    style="@style/Widget.MaterialComponents.Chip.Choice"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="아우터"
+                    android:textColor="@color/chip_textcolor_selector"
+                    app:chipBackgroundColor="@color/chip_backgroundcolor_selector"
+                    app:chipStrokeColor="@color/fab_color_style_tab"
+                    app:chipStrokeWidth="2dp" />
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chip_edit_shoe"
+                    style="@style/Widget.MaterialComponents.Chip.Choice"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="신발"
+                    android:textColor="@color/chip_textcolor_selector"
+                    app:chipBackgroundColor="@color/chip_backgroundcolor_selector"
+                    app:chipStrokeColor="@color/fab_color_style_tab"
+                    app:chipStrokeWidth="2dp" />
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chip_edit_bag"
+                    style="@style/Widget.MaterialComponents.Chip.Choice"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="가방"
+                    android:textColor="@color/chip_textcolor_selector"
+                    app:chipBackgroundColor="@color/chip_backgroundcolor_selector"
+                    app:chipStrokeColor="@color/fab_color_style_tab"
+                    app:chipStrokeWidth="2dp" />
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chip_edit_hat"
+                    style="@style/Widget.MaterialComponents.Chip.Choice"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="모자"
+                    android:textColor="@color/chip_textcolor_selector"
+                    app:chipBackgroundColor="@color/chip_backgroundcolor_selector"
+                    app:chipStrokeColor="@color/fab_color_style_tab"
+                    app:chipStrokeWidth="2dp" />
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chip_edit_other"
+                    style="@style/Widget.MaterialComponents.Chip.Choice"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="기타"
+                    android:textColor="@color/chip_textcolor_selector"
+                    app:chipBackgroundColor="@color/chip_backgroundcolor_selector"
+                    app:chipStrokeColor="@color/fab_color_style_tab"
+                    app:chipStrokeWidth="2dp" />
+
             </com.google.android.material.chip.ChipGroup>
 
             <Button
