@@ -10,6 +10,9 @@ import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.GridLayoutManager
 import com.yehyun.whatshouldiweartoday.databinding.FragmentClothingListBinding
 import androidx.lifecycle.Observer
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 class ClothingListFragment : Fragment() {
 
@@ -45,7 +48,11 @@ class ClothingListFragment : Fragment() {
 
         // ▼▼▼ 정렬 변경 시 스크롤 맨 위로 이동 ▼▼▼
         viewModel.sortChangedEvent.observe(viewLifecycleOwner, Observer {
-            scrollToTop()
+            lifecycleScope.launch {
+                delay(100) // 500ms = 0.5초 대기
+                // 여기에 지연 후 실행할 코드
+                scrollToTop()
+            }
         })
     }
 

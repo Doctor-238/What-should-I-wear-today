@@ -30,6 +30,14 @@ class RecommendationFragment : Fragment(R.layout.fragment_recommendation) {
             )
         }
 
+        // ▼▼▼▼▼ 핵심 수정 부분 ▼▼▼▼▼
+        // '내일' 탭일 경우 제목 텍스트를 변경합니다.
+        if (!isToday) {
+            view.findViewById<TextView>(R.id.tv_weather_title).text = "내일의 날씨"
+            view.findViewById<TextView>(R.id.tv_best_combination_subtitle).text = "AI가 추천하는 내일의 조합"
+        }
+        // ▲▲▲▲▲ 핵심 수정 부분 ▲▲▲▲▲
+
         setupViews(view, onClothingItemClicked)
         observeViewModel(view)
     }
