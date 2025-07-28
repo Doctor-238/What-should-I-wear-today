@@ -18,8 +18,10 @@
         app:titleCentered="true" />
 
     <ScrollView
+        android:id="@+id/scroll_view_content"
         android:layout_width="0dp"
         android:layout_height="0dp"
+        android:clipToPadding="false"
         android:scrollbars="none"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
@@ -30,7 +32,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:paddingBottom="16dp">
+            android:paddingBottom="88dp">
 
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/textInputLayout_style_name"
@@ -151,25 +153,26 @@
                 app:spanCount="4"
                 tools:listitem="@layout/item_clothing_selectable" />
 
-            <Button
-                android:id="@+id/button_save_style_final"
-                style="@style/Widget.Material3.Button.UnelevatedButton"
-                android:layout_width="wrap_content"
-                android:layout_height="60dp"
-                android:layout_gravity="center"
-                android:layout_marginHorizontal="16dp"
-                android:layout_marginTop="32dp"
-                android:enabled="false"
-                android:paddingHorizontal="48dp"
-                android:text="저장하기"
-                android:textSize="16sp"
-                android:textStyle="bold"
-                app:backgroundTint="@color/fab_color_style_tab"
-                app:cornerRadius="24dp" />
-
-
         </LinearLayout>
+
     </ScrollView>
+
+    <Button
+        android:id="@+id/button_save_style_final"
+        style="@style/Widget.Material3.Button.UnelevatedButton"
+        android:layout_width="wrap_content"
+        android:layout_height="60dp"
+        android:enabled="false"
+        android:paddingHorizontal="48dp"
+        android:text="저장하기"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        app:backgroundTint="@color/fab_color_style_tab"
+        app:cornerRadius="24dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
+
 
     <FrameLayout
         android:id="@+id/loading_overlay"

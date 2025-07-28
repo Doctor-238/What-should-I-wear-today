@@ -255,6 +255,7 @@ class ClosetFragment : Fragment(), OnTabReselectedListener {
         spinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
                 viewModel.setSortType(sortOptions[position])
+                // scrollToTop() 제거! ViewModel에서 이벤트로 처리
             }
             override fun onNothingSelected(parent: AdapterView<*>?) {}
         }

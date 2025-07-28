@@ -9,6 +9,7 @@ import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.GridLayoutManager
 import com.yehyun.whatshouldiweartoday.databinding.FragmentClothingListBinding
+import androidx.lifecycle.Observer
 
 class ClothingListFragment : Fragment() {
 
@@ -17,12 +18,11 @@ class ClothingListFragment : Fragment() {
 
     private val viewModel: ClosetViewModel by viewModels({requireParentFragment()})
     private lateinit var adapter: ClothingAdapter
-    private var category: String? = null
-
+    private var category: String = "전체"
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        arguments?.let {
-            category = it.getString(ARG_CATEGORY)
+        arguments?.getString("category")?.let {
+            category = it // null 아님이 보장됨
         }
     }
 
@@ -38,6 +38,15 @@ class ClothingListFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         setupRecyclerView()
         observeViewModel()
+
+        viewModel.getClothesForCategory(category).observe(viewLifecycleOwner) {
+            adapter.submitList(it)
+        }
+
+        // ▼▼▼ 정렬 변경 시 스크롤 맨 위로 이동 ▼▼▼
+        viewModel.sortChangedEvent.observe(viewLifecycleOwner, Observer {
+            scrollToTop()
+        })
     }
 
     private fun setupRecyclerView() {
@@ -68,9 +77,7 @@ class ClothingListFragment : Fragment() {
     }
 
     fun scrollToTop() {
-        if (isAdded && _binding != null) {
-            binding.recyclerViewClothingList.smoothScrollToPosition(0)
-        }
+        binding.recyclerViewClothingList.smoothScrollToPosition(0)
     }
 
     override fun onDestroyView() {

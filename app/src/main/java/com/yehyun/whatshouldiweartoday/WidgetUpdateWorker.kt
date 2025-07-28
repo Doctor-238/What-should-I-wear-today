@@ -178,7 +178,7 @@ class WidgetUpdateWorker(private val appContext: Context, workerParams: WorkerPa
         val temperatureTolerance = settingsManager.getTemperatureTolerance()
         val packableOuterTolerance = settingsManager.getPackableOuterTolerance()
         val constitutionAdjustment = settingsManager.getConstitutionAdjustment()
-        val significantTempDifference = 10.0
+        val significantTempDifference = 12.0
         val recommendedClothes = allClothes.filter {
             val adjustedTemp = it.suitableTemperature + constitutionAdjustment
             val itemMinTemp = adjustedTemp - temperatureTolerance

@@ -82,7 +82,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     var permissionRequestedThisSession = false
 
     companion object {
-        private const val SIGNIFICANT_TEMP_DIFFERENCE = 10.0
+        private const val SIGNIFICANT_TEMP_DIFFERENCE = 12.0
     }
 
     init {

@@ -1,5 +1,4 @@
-// 파일 경로: app/src/main/java/com/yehyun/whatshouldiweartoday/ui/closet/AddClothingViewModel.kt
-
+// app/src/main/java/com/yehyun/whatshouldiweartoday/ui/closet/AddClothingViewModel.kt
 package com.yehyun.whatshouldiweartoday.ui.closet
 
 import android.app.Application
@@ -65,8 +64,9 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
         }
     }
 
-    private val _analysisResultText = MutableLiveData<String>()
-    val analysisResultText: LiveData<String> = _analysisResultText
+    val categoryText = MutableLiveData<String>()
+    val temperatureText = MutableLiveData<String>()
+    val isTemperatureVisible = MutableLiveData<Boolean>()
 
     private val _viewColor = MutableLiveData<Int?>()
     val viewColor: LiveData<Int?> = _viewColor
@@ -77,16 +77,14 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
     private val settingsManager = SettingsManager(application)
     private var generativeModel: GenerativeModel? = null
 
-    // ▼▼▼▼▼ 핵심 수정 부분 1: AI 분석 결과를 LiveData로 관리 ▼▼▼▼▼
     private val _analysisResult = MutableLiveData<ClothingAnalysis?>()
-    // ▲▲▲▲▲ 핵심 수정 부분 1 ▲▲▲▲▲
+    val analysisResult: LiveData<ClothingAnalysis?> = _analysisResult
 
     private var processedImageJob: Deferred<Bitmap?>? = null
     private var originalImageJob: Deferred<Bitmap>? = null
     private var isImageProcessing = false
 
     init {
-        // AI 분석 결과가 변경될 때마다 화면 표시를 업데이트하는 관찰자 설정
         _analysisResult.observeForever { result ->
             processAnalysisResult(result)
         }
@@ -94,7 +92,6 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
 
     override fun onCleared() {
         super.onCleared()
-        // 메모리 누수 방지를 위해 observeForever 사용 시 반드시 제거
         _analysisResult.removeObserver { }
     }
 
@@ -121,9 +118,7 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
                     resetAllState()
                 }
             } else {
-                // ▼▼▼▼▼ 핵심 수정 부분 2: 분석 결과를 LiveData에 저장 ▼▼▼▼▼
                 _analysisResult.postValue(result)
-                // ▲▲▲▲▲ 핵심 수정 부분 2 ▲▲▲▲▲
                 val processed = processedImageJob?.await()
                 withContext(Dispatchers.Main) {
                     _processedBitmap.value = processed
@@ -229,8 +224,13 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
                     """.trimIndent())
                 }
                 val response = generativeModel!!.generateContent(inputContent)
-                successfulAnalysis = Json { ignoreUnknownKeys = true }.decodeFromString<ClothingAnalysis>(response.text!!)
-                break
+                val currentAnalysis = Json { ignoreUnknownKeys = true }.decodeFromString<ClothingAnalysis>(response.text!!)
+                if (!currentAnalysis.color_hex.isNullOrBlank()) {
+                    successfulAnalysis = currentAnalysis
+                    break
+                } else {
+                    Log.w("AI_RETRY", "Attempt ${attempt + 1} succeeded but color_hex is missing. Retrying...")
+                }
             } catch (e: Exception) {
                 Log.e("AI_ERROR", "Attempt ${attempt + 1} failed", e)
                 if (attempt == maxRetries - 1) return null
@@ -242,14 +242,21 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
 
     fun processAnalysisResult(result: ClothingAnalysis?) {
         if (result == null) {
-            updateAnalysisResultText(null, null, null)
+            categoryText.postValue("")
+            temperatureText.postValue("상의, 하의, 아우터에만 표시됩니다.")
+            isTemperatureVisible.postValue(false)
             setViewColor(null)
             return
         }
 
         val category = result.category ?: "기타"
+        categoryText.postValue(category)
+
+        val isTempCategory = category in listOf("상의", "하의", "아우터")
+        isTemperatureVisible.postValue(isTempCategory)
+
         val temp = result.suitable_temperature
-        if (category in listOf("상의", "하의", "아우터") && temp != null) {
+        if (isTempCategory && temp != null) {
             val baseTemp = temp
             val finalTemp = when (category) {
                 "아우터" -> baseTemp - 3.0
@@ -261,16 +268,18 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
             val adjustedTemp = finalTemp + constitutionAdjustment
             val minTemp = adjustedTemp - tolerance
             val maxTemp = adjustedTemp + tolerance
-            updateAnalysisResultText(category, minTemp, maxTemp)
+            temperatureText.postValue("%.1f°C ~ %.1f°C".format(minTemp, maxTemp))
         } else {
-            updateAnalysisResultText(category, null, null)
+            temperatureText.postValue("상의, 하의, 아우터에만 표시됩니다.")
         }
+
         if (isValidHexCode(result.color_hex)) {
             setViewColor(Color.parseColor(result.color_hex!!))
         } else {
             setViewColor(null)
         }
     }
+
     fun increaseTemp() {
         _analysisResult.value?.let { currentResult ->
             currentResult.suitable_temperature?.let { temp ->
@@ -300,15 +309,6 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
         }
     }
 
-    private fun updateAnalysisResultText(category: String?, minTemp: Double?, maxTemp: Double?) {
-        if (category == null) {
-            _analysisResultText.value = ""
-            return
-        }
-        val temperatureText = if (minTemp != null && maxTemp != null) ", 적정 온도:%.1f°C ~ %.1f°C".format(minTemp, maxTemp) else ""
-        _analysisResultText.value = "분류:$category$temperatureText"
-    }
-
     private fun setViewColor(color: Int?) { _viewColor.value = color }
     fun clearErrorMessage() { _errorMessage.value = null }
 
@@ -327,19 +327,16 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
         _isSaveCompleted.value = false
         clothingName.value = ""
         _segmentationSucceeded.value = false
-        _analysisResultText.value = ""
+        categoryText.value = ""
+        temperatureText.value = ""
         _viewColor.value = null
     }
 
-    // ▼▼▼▼▼ 핵심 수정 부분 3: 외부에서 호출할 새로고침 함수 추가 ▼▼▼▼▼
     fun refreshDisplayWithNewSettings() {
-        // 현재 저장된 분석 결과가 있을 때만 온도 표시를 다시 계산하고 업데이트
         if (_analysisResult.value != null) {
             processAnalysisResult(_analysisResult.value)
         }
     }
-    // ▲▲▲▲▲ 핵심 수정 부분 3 ▲▲▲▲▲
-
 
     private fun resizeBitmap(bitmap: Bitmap, maxDimension: Int = 512): Bitmap {
         val originalWidth = bitmap.width; val originalHeight = bitmap.height

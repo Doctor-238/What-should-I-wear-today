@@ -54,10 +54,8 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
     private lateinit var viewColorSwatch: View
     private lateinit var layoutBackgroundRemoval: RelativeLayout
     private lateinit var settingsManager: SettingsManager
-    // ▼▼▼▼▼ 핵심 추가 ▼▼▼▼▼
     private lateinit var buttonTempIncrease: ImageButton
     private lateinit var buttonTempDecrease: ImageButton
-    // ▲▲▲▲▲ 핵심 추가 ▲▲▲▲▲
 
     override fun onResume() {
         super.onResume()
@@ -84,11 +82,8 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
         toolbar = view.findViewById(R.id.toolbar_edit)
         viewColorSwatch = view.findViewById(R.id.view_color_swatch_edit)
         layoutBackgroundRemoval = view.findViewById(R.id.layout_background_removal)
-        // ▼▼▼▼▼ 핵심 추가 ▼▼▼▼▼
         buttonTempIncrease = view.findViewById(R.id.button_edit_temp_increase)
         buttonTempDecrease = view.findViewById(R.id.button_edit_temp_decrease)
-        // ▲▲▲▲▲ 핵심 추가 ▲▲▲▲▲
-
         toolbar.inflateMenu(R.menu.edit_clothing_menu)
     }
 
@@ -178,7 +173,12 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
     }
 
     private fun updateTemperatureDisplay(item: ClothingItem) {
-        if (item.category in listOf("상의", "하의", "아우터")) {
+        val isTempCategory = item.category in listOf("상의", "하의", "아우터")
+
+        buttonTempIncrease.isVisible = isTempCategory
+        buttonTempDecrease.isVisible = isTempCategory
+
+        if (isTempCategory) {
             val tolerance = settingsManager.getTemperatureTolerance()
             val constitutionAdjustment = settingsManager.getConstitutionAdjustment()
             val adjustedTemp = item.suitableTemperature + constitutionAdjustment
@@ -186,9 +186,10 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
             val minTemp = adjustedTemp - tolerance
             val maxTemp = adjustedTemp + tolerance
             textViewTemperature.text = "%.1f°C ~ %.1f°C".format(minTemp, maxTemp)
-            textViewTemperature.visibility = View.VISIBLE
+            textViewTemperature.setTextColor(ContextCompat.getColor(requireContext(), R.color.text_primary))
         } else {
-            textViewTemperature.visibility = View.GONE
+            textViewTemperature.text = "상의, 하의, 아우터에만 표시됩니다."
+            textViewTemperature.setTextColor(ContextCompat.getColor(requireContext(), R.color.text_secondary))
         }
     }
 
@@ -236,10 +237,8 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
             viewModel.updateUseProcessedImage(isChecked)
         }
 
-        // ▼▼▼▼▼ 핵심 추가: 버튼 리스너 연결 ▼▼▼▼▼
         buttonTempIncrease.setOnClickListener { viewModel.increaseTemp() }
         buttonTempDecrease.setOnClickListener { viewModel.decreaseTemp() }
-        // ▲▲▲▲▲ 핵심 추가 ▲▲▲▲▲
     }
 
     private fun setupBackButtonHandler() {

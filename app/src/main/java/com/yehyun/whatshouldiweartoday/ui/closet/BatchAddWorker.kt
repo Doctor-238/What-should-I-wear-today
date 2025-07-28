@@ -1,4 +1,4 @@
-// 파일 경로: app/src/main/java/com/yehyun/whatshouldiweartoday/ui/closet/BatchAddWorker.kt
+// app/src/main/java/com/yehyun/whatshouldiweartoday/ui/closet/BatchAddWorker.kt
 
 package com.yehyun.whatshouldiweartoday.ui.closet
 
@@ -189,12 +189,13 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
             val processedBitmap = processedImageJob.await()
             val originalBitmap = originalImageJob.await()
 
-            if (analysisResult.category != null && analysisResult.suitable_temperature != null && analysisResult.color_hex != null) {
+            val temp = analysisResult.suitable_temperature
+            if (analysisResult.category != null && temp != null && analysisResult.color_hex != null) {
                 val originalPath = saveBitmapToInternalStorage(originalBitmap, "original_")
                 val processedPath = processedBitmap?.let { savePngToInternalStorage(it, "processed_") }
 
                 if (originalPath != null) {
-                    val baseTemp = analysisResult.suitable_temperature
+                    val baseTemp = temp
                     val finalTemp = when (analysisResult.category) {
                         "아우터" -> baseTemp - 3.0
                         "상의", "하의" -> baseTemp + 2.0
@@ -220,7 +221,6 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
     }
 
     private fun createMainActivityPendingIntent(): PendingIntent {
-        // [수정] 특정 목적지로 이동하는 'extra'를 제거하고, 단순히 앱을 여는 인텐트로 변경합니다.
         val intent = Intent(applicationContext, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
         }
@@ -274,8 +274,13 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
                     """.trimIndent())
                 }
                 val response = model.generateContent(inputContent)
-                successfulAnalysis = Json { ignoreUnknownKeys = true }.decodeFromString<ClothingAnalysis>(response.text!!)
-                break
+                val currentAnalysis = Json { ignoreUnknownKeys = true }.decodeFromString<ClothingAnalysis>(response.text!!)
+                if (!currentAnalysis.color_hex.isNullOrBlank()) {
+                    successfulAnalysis = currentAnalysis
+                    break
+                } else {
+                    Log.w("AI_RETRY_WORKER", "Attempt ${attempt + 1} succeeded but color_hex is missing. Retrying...")
+                }
             } catch (e: Exception) {
                 Log.e("AI_ERROR_WORKER", "Attempt ${attempt + 1} failed", e)
                 if (attempt == maxRetries - 1) return null

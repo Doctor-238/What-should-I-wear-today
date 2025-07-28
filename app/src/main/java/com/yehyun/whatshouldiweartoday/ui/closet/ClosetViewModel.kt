@@ -31,6 +31,8 @@ class ClosetViewModel(application: Application) : AndroidViewModel(application) 
 
     private val _categorizedClothes = mutableMapOf<String, MutableLiveData<List<ClothingItem>>>()
     private val categories = listOf("전체", "상의", "하의", "아우터", "신발", "가방", "모자", "기타")
+    private val _sortChangedEvent = MutableLiveData<Unit>()
+    val sortChangedEvent: LiveData<Unit> = _sortChangedEvent
 
     init {
         val clothingDao = AppDatabase.getDatabase(application).clothingDao()
@@ -107,6 +109,10 @@ class ClosetViewModel(application: Application) : AndroidViewModel(application) 
         if (_sortType.value != sortType) {
             _sortType.value = sortType
             settingsManager.closetSortType = sortType
+
+            // ▼▼▼ 정렬 변경 이벤트 발생 ▼▼▼
+            _sortChangedEvent.value = Unit
+            // ▲▲▲ 이벤트 발생 ▲▲▲
         }
     }
 

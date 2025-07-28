@@ -28,11 +28,12 @@ interface ClothingDao {
     @Query("SELECT * FROM clothing_items WHERE (:category = '전체' OR category = :category) AND name LIKE '%' || :query || '%' ORDER BY name DESC")
     fun getItemsOrderByNameDesc(query: String, category: String): LiveData<List<ClothingItem>>
 
-    @Query("SELECT * FROM clothing_items WHERE (:category = '전체' OR category = :category) AND name LIKE '%' || :query || '%' ORDER BY suitableTemperature ASC")
+    @Query("SELECT * FROM clothing_items WHERE (:category = '전체' OR category = :category) AND name LIKE '%' || :query || '%' ORDER BY CASE WHEN category IN ('상의', '하의', '아우터') THEN 0 ELSE 1 END, suitableTemperature ASC")
     fun getItemsOrderByTempAsc(query: String, category: String): LiveData<List<ClothingItem>>
 
-    @Query("SELECT * FROM clothing_items WHERE (:category = '전체' OR category = :category) AND name LIKE '%' || :query || '%' ORDER BY suitableTemperature DESC")
+    @Query("SELECT * FROM clothing_items WHERE (:category = '전체' OR category = :category) AND name LIKE '%' || :query || '%' ORDER BY CASE WHEN category IN ('상의', '하의', '아우터') THEN 0 ELSE 1 END, suitableTemperature ASC")
     fun getItemsOrderByTempDesc(query: String, category: String): LiveData<List<ClothingItem>>
+
 
 
     @Query("SELECT * FROM clothing_items")
