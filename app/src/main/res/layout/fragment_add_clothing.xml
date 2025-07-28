@@ -26,6 +26,7 @@
         android:layout_height="0dp"
         android:clipToPadding="false"
         android:fillViewport="true"
+        android:scrollbars="none"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -34,7 +35,7 @@
         <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:padding="16dp">
+            android:paddingVertical="16dp">
 
             <FrameLayout
                 android:id="@+id/frameLayout_preview"
@@ -44,6 +45,7 @@
                 android:clickable="true"
                 android:focusable="true"
                 android:padding="16dp"
+                android:layout_marginHorizontal="16dp"
                 app:layout_constraintDimensionRatio="1:1"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
@@ -85,6 +87,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="24dp"
+                android:layout_marginHorizontal="16dp"
                 android:visibility="gone"
                 app:cardBackgroundColor="@color/settings_card_background"
                 app:cardCornerRadius="16dp"
@@ -243,7 +246,8 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="24dp"
-                android:hint="옷 이름을 입력해주세요"
+                android:layout_marginHorizontal="16dp"
+                android:hint="옷 이름을 입력해주세요 (최대 20자)"
                 app:boxCornerRadiusBottomEnd="12dp"
                 app:boxCornerRadiusBottomStart="12dp"
                 app:boxCornerRadiusTopEnd="12dp"
@@ -271,6 +275,7 @@
                 android:layout_height="60dp"
                 android:enabled="false"
                 android:paddingHorizontal="48dp"
+                android:layout_marginHorizontal="16dp"
                 android:text="저장하기"
                 android:textSize="16sp"
                 android:textStyle="bold"

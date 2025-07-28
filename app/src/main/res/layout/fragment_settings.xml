@@ -11,7 +11,7 @@
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:paddingBottom="32dp">
+        android:paddingBottom="16dp">
 
         <TextView
             android:id="@+id/toolbar_title"
@@ -531,15 +531,17 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginHorizontal="16dp"
-            android:layout_marginTop="24dp"
+            android:layout_marginTop="48dp"
+            android:layout_marginBottom="16dp"
             android:clickable="true"
             android:focusable="true"
             app:cardBackgroundColor="@color/settings_card_background"
             app:cardCornerRadius="16dp"
-            app:cardElevation="4dp"
+            app:cardElevation="2dp"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/card_credits">
+            app:layout_constraintTop_toBottomOf="@id/card_credits"
+            app:layout_constraintBottom_toBottomOf="parent">
 
             <TextView
                 android:id="@+id/button_reset_all"
@@ -551,6 +553,7 @@
                 android:textColor="@color/settings_reset_button_text"
                 android:textSize="16sp"
                 android:textStyle="bold" />
+
 
         </com.google.android.material.card.MaterialCardView>
 
