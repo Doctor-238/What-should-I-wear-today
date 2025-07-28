@@ -8,6 +8,7 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.yehyun.whatshouldiweartoday.databinding.FragmentStyleListBinding
 
 class StyleListFragment : Fragment() {
@@ -18,6 +19,10 @@ class StyleListFragment : Fragment() {
     private val viewModel: StyleViewModel by viewModels({ requireParentFragment() })
     private lateinit var adapter: SavedStylesAdapter
     private var season: String? = null
+
+    private var scrollOnNextDataUpdate = false
+    private lateinit var dataObserver: RecyclerView.AdapterDataObserver
+    private var isViewJustCreated = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -45,6 +50,16 @@ class StyleListFragment : Fragment() {
             val action = StyleFragmentDirections.actionNavigationStyleToEditStyleFragment(clickedStyle.style.styleId)
             requireParentFragment().findNavController().navigate(action)
         }
+        dataObserver = object : RecyclerView.AdapterDataObserver() {
+            override fun onChanged() {
+                super.onChanged()
+                if (scrollOnNextDataUpdate) {
+                    scrollToTop()
+                    scrollOnNextDataUpdate = false
+                }
+            }
+        }
+        adapter.registerAdapterDataObserver(dataObserver)
         // ▼▼▼▼▼ 핵심 수정 부분 ▼▼▼▼▼
         binding.recyclerViewStyleList.layoutManager = LinearLayoutManager(context)
         binding.recyclerViewStyleList.adapter = adapter
@@ -67,6 +82,12 @@ class StyleListFragment : Fragment() {
                 // 그 외의 경우(다른 탭이거나, 전체 탭에 스타일이 있거나)에는 말풍선을 숨깁니다.
                 binding.emptyStyleContainer.visibility = View.GONE
                 binding.recyclerViewStyleList.visibility = View.VISIBLE
+            }
+            viewModel.sortTypeChanged.observe(viewLifecycleOwner) {
+                if (!isViewJustCreated) {
+                    scrollOnNextDataUpdate = true
+                }
+                isViewJustCreated = false
             }
             // ▲▲▲▲▲ 핵심 수정 로직 ▲▲▲▲▲
         }

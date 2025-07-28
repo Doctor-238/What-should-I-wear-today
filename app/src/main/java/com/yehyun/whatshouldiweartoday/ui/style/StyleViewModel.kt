@@ -26,6 +26,8 @@ class StyleViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _categorizedStyles = mutableMapOf<String, MutableLiveData<List<StyleWithItems>>>()
     private val seasons = listOf("전체", "봄", "여름", "가을", "겨울")
+    private val _sortTypeChanged = MutableLiveData<Unit>()
+    val sortTypeChanged: LiveData<Unit> get() = _sortTypeChanged
 
     init {
         val styleDao = AppDatabase.getDatabase(application).styleDao()
@@ -92,7 +94,10 @@ class StyleViewModel(application: Application) : AndroidViewModel(application) {
     fun setSortType(sortType: String) {
         if (_sortType.value != sortType) {
             _sortType.value = sortType
-            settingsManager.styleSortType = sortType
+            // ▼▼▼ 추가된 부분 ▼▼▼
+            // 정렬 타입이 실제로 변경되었을 때만 이벤트를 발생시킴
+            _sortTypeChanged.value = Unit
+            // ▲▲▲ 추가된 부분 ▲▲▲
         }
     }
 

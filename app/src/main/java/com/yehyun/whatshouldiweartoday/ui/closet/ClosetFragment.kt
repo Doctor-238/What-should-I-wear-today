@@ -130,6 +130,7 @@ class ClosetFragment : Fragment(), OnTabReselectedListener {
             checkNotificationPermission()
         }
 
+
         observeViewModel()
     }
 
