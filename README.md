@@ -60,7 +60,7 @@ Build Tool: Gradle
 
 UI Framework: XML-based View System
 
-AI 분석: 
+AI 분석: Gemini API 
 
 Database: Room (SQLite 기반 로컬 DB)
 
