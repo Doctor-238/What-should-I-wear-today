@@ -74,29 +74,27 @@
                 android:id="@+id/iv_back_delete_mode_style"
                 android:layout_width="48dp"
                 android:layout_height="48dp"
+                android:layout_marginLeft="5dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:scaleType="center"
+                android:padding="12dp"
                 android:src="@drawable/ic_arrow_back"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent" />
 
-            <TextView
-                android:id="@+id/fake_search_view_style"
+            <androidx.appcompat.widget.SearchView
+                android:id="@+id/search_view_delete"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
-                android:layout_marginStart="8dp"
-                android:layout_marginEnd="8dp"
+                android:layout_marginRight="8dp"
                 android:background="@drawable/bg_search_spinner"
-                android:gravity="center_vertical"
-                android:paddingStart="16dp"
-                android:paddingEnd="16dp"
-                android:text="삭제할 스타일 선택..."
-                android:textColor="@color/text_secondary"
-                app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintEnd_toStartOf="@id/iv_select_all_style"
-                app:layout_constraintStart_toEndOf="@id/iv_back_delete_mode_style"
-                app:layout_constraintTop_toTopOf="parent" />
+                app:iconifiedByDefault="false"
+                app:layout_constraintEnd_toStartOf="@+id/iv_select_all_style"
+                app:layout_constraintStart_toEndOf="@+id/iv_back_delete_mode_style"
+                app:layout_constraintTop_toTopOf="parent"
+                app:queryBackground="@android:color/transparent"
+                app:searchIcon="@drawable/search" />
 
             <ImageView
                 android:id="@+id/iv_select_all_style"
@@ -104,7 +102,7 @@
                 android:layout_height="32dp"
                 android:layout_marginEnd="8dp"
                 android:padding="2dp"
-                android:src="@drawable/ic_checkbox_unchecked_custom"
+                android:src="@drawable/custom_checkbox"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toStartOf="@id/btn_delete_style"
@@ -145,7 +143,7 @@
             app:layout_constraintTop_toTopOf="parent"
             app:tabBackground="@android:color/white"
             app:tabGravity="fill"
-            app:tabMode="scrollable"
+            app:tabMode="fixed"
             app:tabSelectedTextColor="@color/tab_selected_text"
             app:tabTextColor="@color/tab_unselected_text"
             app:tabIndicator="@drawable/tab_indicator_custom"

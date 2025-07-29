@@ -334,6 +334,13 @@ class ClosetFragment : Fragment(), OnTabReselectedListener {
                 return true
             }
         })
+        binding.searchViewDelete.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
+            override fun onQueryTextSubmit(query: String?): Boolean = false
+            override fun onQueryTextChange(newText: String?): Boolean {
+                viewModel.setSearchQuery(newText.orEmpty())
+                return true
+            }
+        })
     }
 
     private fun setupSortSpinner() {

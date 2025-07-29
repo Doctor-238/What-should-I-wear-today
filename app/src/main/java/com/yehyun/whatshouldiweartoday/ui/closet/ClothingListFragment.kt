@@ -127,6 +127,7 @@ class ClothingListFragment : Fragment() {
         _binding = null
     }
 
+
     companion object {
         private const val ARG_CATEGORY = "category"
         @JvmStatic
