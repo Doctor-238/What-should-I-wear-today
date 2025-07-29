@@ -1,3 +1,4 @@
+// 파일 경로: app/src/main/java/com/yehyun/whatshouldiweartoday/ui/closet/ClosetFragment.kt
 package com.yehyun.whatshouldiweartoday.ui.closet
 
 import android.Manifest
@@ -7,6 +8,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
+import android.transition.TransitionManager
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -14,6 +16,7 @@ import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.Spinner
 import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.SearchView
@@ -22,6 +25,7 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
+import androidx.viewpager2.widget.ViewPager2
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.workDataOf
@@ -47,6 +51,8 @@ class ClosetFragment : Fragment(), OnTabReselectedListener {
     private val viewModel: ClosetViewModel by viewModels()
 
     private var lastFabClickTime = 0L
+    private lateinit var onBackPressedCallback: OnBackPressedCallback
+
 
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -113,10 +119,15 @@ class ClosetFragment : Fragment(), OnTabReselectedListener {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        setupViewPager()
+        setupFabs()
         setupSearch()
         setupSortSpinner()
+        setupBackButtonHandler()
+        setupViewPagerAndTabs()
+        setupObservers()
+    }
 
+    private fun setupFabs() {
         binding.fabAddClothing.setOnClickListener {
             findNavController().navigate(R.id.action_navigation_closet_to_addClothingFragment)
         }
@@ -126,12 +137,116 @@ class ClosetFragment : Fragment(), OnTabReselectedListener {
                 return@setOnClickListener
             }
             lastFabClickTime = System.currentTimeMillis()
-
             checkNotificationPermission()
         }
+    }
 
+    private fun setupObservers() {
+        // UI 상태를 결정하는 핵심 Observer
+        viewModel.currentTabState.observe(viewLifecycleOwner) { state ->
+            if (_binding == null) return@observe
 
-        observeViewModel()
+            // 1. 툴바 가시성 업데이트
+            updateToolbarVisibility(state.isDeleteMode)
+            onBackPressedCallback.isEnabled = state.isDeleteMode
+
+            // 2. 삭제 버튼 상태 업데이트
+            binding.btnDelete.isEnabled = state.selectedItemIds.isNotEmpty()
+
+            // 3. '전체 선택' 아이콘 상태 업데이트
+            if (state.isDeleteMode) {
+                if (state.items.isEmpty()) {
+                    binding.ivSelectAll.isEnabled = false
+                    updateSelectAllIcon(false)
+                } else {
+                    binding.ivSelectAll.isEnabled = true
+                    val areAllSelected = state.items.all { it.id in state.selectedItemIds }
+                    updateSelectAllIcon(areAllSelected)
+                }
+            }
+        }
+
+        // 어댑터 업데이트를 위한 Observer는 별도로 유지
+        viewModel.isDeleteMode.observe(viewLifecycleOwner) { notifyAdapterDeleteModeChanged() }
+        viewModel.selectedItems.observe(viewLifecycleOwner) { notifyAdapterSelectionChanged() }
+
+        // 일괄 추가 진행 상태 Observer
+        viewModel.batchAddWorkInfo.observe(viewLifecycleOwner) { workInfos ->
+            val workInfo = workInfos.firstOrNull() ?: run {
+                binding.fabBatchAdd.hideProgress()
+                return@observe
+            }
+
+            if (workInfo.state.isFinished) {
+                lifecycleScope.launch {
+                    delay(500)
+                    _binding?.fabBatchAdd?.hideProgress()
+                    viewModel.workManager.pruneWork()
+                }
+            } else {
+                val progress = workInfo.progress
+                val current = progress.getInt(BatchAddWorker.PROGRESS_CURRENT, 0)
+                val total = progress.getInt(BatchAddWorker.PROGRESS_TOTAL, 1)
+                val percentage = if (total > 0) (current * 100 / total) else 0
+                binding.fabBatchAdd.showProgress(percentage)
+            }
+        }
+    }
+
+    private fun setupViewPagerAndTabs() {
+        val categories = listOf("전체", "상의", "하의", "아우터", "신발", "가방", "모자", "기타")
+        val viewPagerAdapter = ClosetViewPagerAdapter(this, categories)
+        binding.viewPagerCloset.adapter = viewPagerAdapter
+
+        TabLayoutMediator(binding.tabLayoutCategory, binding.viewPagerCloset) { tab, position ->
+            tab.text = categories[position]
+        }.attach()
+
+        // 탭 레이아웃 리스너 대신 ViewPager2의 콜백을 사용
+        binding.viewPagerCloset.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
+            override fun onPageSelected(position: Int) {
+                super.onPageSelected(position)
+                viewModel.setCurrentTabIndex(position)
+            }
+        })
+
+        // '전체 선택' 아이콘 클릭 리스너
+        binding.ivSelectAll.setOnClickListener {
+            val currentState = viewModel.currentTabState.value ?: return@setOnClickListener
+            if (currentState.items.isEmpty()) return@setOnClickListener
+
+            val areAllSelected = currentState.items.all { it.id in currentState.selectedItemIds }
+            if (areAllSelected) {
+                viewModel.deselectAll(currentState.items)
+            } else {
+                viewModel.selectAll(currentState.items)
+            }
+        }
+
+        // 삭제 버튼 클릭 리스너
+        binding.btnDelete.setOnClickListener {
+            val count = viewModel.selectedItems.value?.size ?: 0
+            if (count > 0) {
+                AlertDialog.Builder(requireContext())
+                    .setTitle("삭제 확인")
+                    .setMessage("${count}개의 옷을 정말 삭제하시겠습니까?")
+                    .setPositiveButton("예") { _, _ -> viewModel.deleteSelectedItems() }
+                    .setNegativeButton("아니오", null)
+                    .show()
+            }
+        }
+
+        // 뒤로가기 버튼 클릭 리스너
+        binding.ivBackDeleteMode.setOnClickListener { viewModel.exitDeleteMode() }
+    }
+
+    private fun updateSelectAllIcon(isChecked: Boolean) {
+        if (_binding == null) return
+        if (isChecked) {
+            binding.ivSelectAll.setImageResource(R.drawable.ic_checkbox_checked_custom)
+        } else {
+            binding.ivSelectAll.setImageResource(R.drawable.ic_checkbox_unchecked_custom)
+        }
     }
 
     private fun showGoToSettingsDialog() {
@@ -168,31 +283,32 @@ class ClosetFragment : Fragment(), OnTabReselectedListener {
         }
     }
 
-
-    private fun observeViewModel() {
-        viewModel.batchAddWorkInfo.observe(viewLifecycleOwner) { workInfos ->
-            val workInfo = workInfos.firstOrNull() ?: run {
-                binding.fabBatchAdd.hideProgress()
-                return@observe
-            }
-
-            if (workInfo.state.isFinished) {
-                lifecycleScope.launch {
-                    delay(500)
-                    _binding?.fabBatchAdd?.hideProgress()
-                    viewModel.workManager.pruneWork()
-                }
-            } else {
-                val progress = workInfo.progress
-                val current = progress.getInt(BatchAddWorker.PROGRESS_CURRENT, 0)
-                val total = progress.getInt(BatchAddWorker.PROGRESS_TOTAL, 1)
-                val percentage = if (total > 0) (current * 100 / total) else 0
-                binding.fabBatchAdd.showProgress(percentage)
-            }
+    private fun updateToolbarVisibility(isDeleteMode: Boolean) {
+        if (_binding == null) return
+        TransitionManager.beginDelayedTransition(binding.toolbarContainer)
+        if (isDeleteMode) {
+            binding.toolbarNormal.visibility = View.GONE
+            binding.toolbarDelete.visibility = View.VISIBLE
+        } else {
+            binding.toolbarNormal.visibility = View.VISIBLE
+            binding.toolbarDelete.visibility = View.GONE
         }
-        // ▼▼▼▼▼ 핵심 수정: 불필요한 코드 라인 삭제 ▼▼▼▼▼
-        // viewModel.clothes.observe(viewLifecycleOwner) {}
-        // ▲▲▲▲▲ 핵심 수정 ▲▲▲▲▲
+    }
+
+    private fun notifyAdapterDeleteModeChanged() {
+        if (binding.viewPagerCloset.adapter == null) return
+        for (i in 0 until binding.viewPagerCloset.adapter!!.itemCount) {
+            val fragment = childFragmentManager.findFragmentByTag("f$i") as? ClothingListFragment
+            fragment?.notifyAdapter("DELETE_MODE_CHANGED")
+        }
+    }
+
+    private fun notifyAdapterSelectionChanged() {
+        if (binding.viewPagerCloset.adapter == null) return
+        for (i in 0 until binding.viewPagerCloset.adapter!!.itemCount) {
+            val fragment = childFragmentManager.findFragmentByTag("f$i") as? ClothingListFragment
+            fragment?.notifyAdapter("SELECTION_CHANGED")
+        }
     }
 
     private fun startBatchAddWorker(imagePaths: Array<String>) {
@@ -208,26 +324,6 @@ class ClosetFragment : Fragment(), OnTabReselectedListener {
     override fun onResume() {
         super.onResume()
         viewModel.refreshData()
-    }
-
-    private fun setupViewPager() {
-        val categories = listOf("전체", "상의", "하의", "아우터", "신발", "가방", "모자", "기타")
-        val viewPagerAdapter = ClosetViewPagerAdapter(this, categories)
-        binding.viewPagerCloset.adapter = viewPagerAdapter
-
-        TabLayoutMediator(binding.tabLayoutCategory, binding.viewPagerCloset) { tab, position ->
-            tab.text = categories[position]
-        }.attach()
-
-        binding.tabLayoutCategory.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
-            override fun onTabSelected(tab: TabLayout.Tab?) {}
-            override fun onTabUnselected(tab: TabLayout.Tab?) {}
-            override fun onTabReselected(tab: TabLayout.Tab?) {
-                tab?.position?.let { position ->
-                    (childFragmentManager.findFragmentByTag("f$position") as? ClothingListFragment)?.scrollToTop()
-                }
-            }
-        })
     }
 
     private fun setupSearch() {
@@ -255,14 +351,29 @@ class ClosetFragment : Fragment(), OnTabReselectedListener {
 
         spinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
-                viewModel.setSortType(sortOptions[position])
-                // scrollToTop() 제거! ViewModel에서 이벤트로 처리
+                if (viewModel.isDeleteMode.value == false) {
+                    viewModel.setSortType(sortOptions[position])
+                }
             }
             override fun onNothingSelected(parent: AdapterView<*>?) {}
         }
     }
 
+    private fun setupBackButtonHandler() {
+        onBackPressedCallback = object : OnBackPressedCallback(false) {
+            override fun handleOnBackPressed() {
+                viewModel.exitDeleteMode()
+            }
+        }
+        requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, onBackPressedCallback)
+    }
+
     override fun onTabReselected() {
+        if (viewModel.isDeleteMode.value == true) {
+            viewModel.exitDeleteMode()
+            return
+        }
+
         val navController = findNavController()
         if (navController.currentDestination?.id != R.id.navigation_closet) {
             navController.popBackStack(R.id.navigation_closet, false)
@@ -279,6 +390,7 @@ class ClosetFragment : Fragment(), OnTabReselectedListener {
 
     override fun onDestroyView() {
         super.onDestroyView()
+        onBackPressedCallback.remove()
         _binding = null
     }
 }

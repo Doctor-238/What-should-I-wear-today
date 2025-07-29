@@ -14,6 +14,8 @@ import com.yehyun.whatshouldiweartoday.data.repository.StyleRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
+
+
 class StyleViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository: StyleRepository

@@ -1,3 +1,4 @@
+// 파일 경로: app/src/main/java/com/yehyun/whatshouldiweartoday/ui/closet/ClosetViewModel.kt
 package com.yehyun.whatshouldiweartoday.ui.closet
 
 import android.app.Application
@@ -15,7 +16,14 @@ import com.yehyun.whatshouldiweartoday.data.preference.SettingsManager
 import com.yehyun.whatshouldiweartoday.data.repository.ClothingRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import java.util.UUID
+import java.io.File
+
+// 현재 탭의 모든 상태를 담는 데이터 클래스
+data class CurrentTabState(
+    val items: List<ClothingItem> = emptyList(),
+    val selectedItemIds: Set<Int> = emptySet(),
+    val isDeleteMode: Boolean = false
+)
 
 class ClosetViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -34,18 +42,26 @@ class ClosetViewModel(application: Application) : AndroidViewModel(application) 
     private val _sortChangedEvent = MutableLiveData<Unit>()
     val sortChangedEvent: LiveData<Unit> = _sortChangedEvent
 
+    private val _isDeleteMode = MutableLiveData(false)
+    val isDeleteMode: LiveData<Boolean> = _isDeleteMode
+
+    private val _selectedItems = MutableLiveData<Set<Int>>(emptySet())
+    val selectedItems: LiveData<Set<Int>> = _selectedItems
+
+    // 현재 탭 인덱스와 상태를 관리할 LiveData
+    private val _currentTabIndex = MutableLiveData(0)
+    val currentTabState = MediatorLiveData<CurrentTabState>()
+
     init {
         val clothingDao = AppDatabase.getDatabase(application).clothingDao()
         repository = ClothingRepository(clothingDao)
 
-        // DB에서 가져오는 모든 옷 데이터 (정렬/필터는 ViewModel에서 처리)
         allClothes = repository.getItems("전체", "", "최신순")
 
         categories.forEach { category ->
             _categorizedClothes[category] = MutableLiveData()
         }
 
-        // 옷 목록, 검색어, 정렬 방식 중 하나라도 변경되면 필터링을 다시 수행
         val filterTrigger = MediatorLiveData<Unit>()
         val triggerObserver = Observer<Any> { filterAndSortClothes() }
 
@@ -53,17 +69,35 @@ class ClosetViewModel(application: Application) : AndroidViewModel(application) 
         filterTrigger.addSource(_searchQuery, triggerObserver)
         filterTrigger.addSource(_sortType, triggerObserver)
 
-        // MediatorLiveData가 활성화되도록 더미 관찰자 추가
         filterTrigger.observeForever { }
+
+        // currentTabState 설정 로직
+        val stateObserver = Observer<Any> {
+            val tabIndex = _currentTabIndex.value ?: 0
+            val category = categories.getOrNull(tabIndex) ?: "전체"
+            val itemsForCategory = _categorizedClothes[category]?.value ?: emptyList()
+            val selectedIds = _selectedItems.value ?: emptySet()
+            val deleteMode = _isDeleteMode.value ?: false
+
+            val newState = CurrentTabState(itemsForCategory, selectedIds, deleteMode)
+            if (currentTabState.value != newState) {
+                currentTabState.value = newState
+            }
+        }
+
+        currentTabState.addSource(_currentTabIndex, stateObserver)
+        currentTabState.addSource(_selectedItems, stateObserver)
+        currentTabState.addSource(_isDeleteMode, stateObserver)
+        _categorizedClothes.values.forEach {
+            currentTabState.addSource(it, stateObserver)
+        }
     }
 
-    // 각 Fragment가 호출할 함수
     fun getClothesForCategory(category: String): LiveData<List<ClothingItem>> {
         return _categorizedClothes[category] ?: MutableLiveData()
     }
 
     private fun filterAndSortClothes() {
-        // CPU 사용량이 많은 필터링/정렬 작업을 백그라운드 스레드에서 수행
         viewModelScope.launch(Dispatchers.Default) {
             val clothesList = allClothes.value ?: return@launch
             val query = _searchQuery.value ?: ""
@@ -84,7 +118,6 @@ class ClosetViewModel(application: Application) : AndroidViewModel(application) 
                 else -> filtered.sortedByDescending { it.timestamp } // "최신순"
             }
 
-            // 각 카테고리별로 데이터를 분류하여 LiveData에 postValue
             val groupedByCategory = sorted.groupBy { it.category }
 
             categories.forEach { category ->
@@ -93,7 +126,6 @@ class ClosetViewModel(application: Application) : AndroidViewModel(application) 
                 } else {
                     groupedByCategory[category] ?: emptyList()
                 }
-                // postValue는 결과를 메인 스레드로 안전하게 전달
                 _categorizedClothes[category]?.postValue(categoryList)
             }
         }
@@ -109,10 +141,7 @@ class ClosetViewModel(application: Application) : AndroidViewModel(application) 
         if (_sortType.value != sortType) {
             _sortType.value = sortType
             settingsManager.closetSortType = sortType
-
-            // ▼▼▼ 정렬 변경 이벤트 발생 ▼▼▼
             _sortChangedEvent.value = Unit
-            // ▲▲▲ 이벤트 발생 ▲▲▲
         }
     }
 
@@ -120,5 +149,66 @@ class ClosetViewModel(application: Application) : AndroidViewModel(application) 
 
     fun refreshData() {
         filterAndSortClothes()
+    }
+
+    fun setCurrentTabIndex(index: Int) {
+        if (_currentTabIndex.value != index) {
+            _currentTabIndex.value = index
+        }
+    }
+
+    fun enterDeleteMode(initialItemId: Int) {
+        if (_isDeleteMode.value == false) {
+            _isDeleteMode.value = true
+            _selectedItems.value = setOf(initialItemId)
+        }
+    }
+
+    fun exitDeleteMode() {
+        if (_isDeleteMode.value == true) {
+            _isDeleteMode.value = false
+            _selectedItems.value = emptySet()
+        }
+    }
+
+    fun toggleItemSelection(itemId: Int) {
+        val currentSelected = _selectedItems.value ?: emptySet()
+        _selectedItems.value = if (currentSelected.contains(itemId)) {
+            currentSelected - itemId
+        } else {
+            currentSelected + itemId
+        }
+    }
+
+    fun selectAll(itemsToSelect: List<ClothingItem>) {
+        val currentSelected = _selectedItems.value ?: emptySet()
+        _selectedItems.value = currentSelected + itemsToSelect.map { it.id }
+    }
+
+    fun deselectAll(itemsToDeselect: List<ClothingItem>) {
+        val currentSelected = _selectedItems.value ?: emptySet()
+        _selectedItems.value = currentSelected - itemsToDeselect.map { it.id }.toSet()
+    }
+
+
+    fun deleteSelectedItems() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val itemsToDeleteIds = _selectedItems.value ?: return@launch
+            if (itemsToDeleteIds.isEmpty()) return@launch
+
+            val allItems = allClothes.value ?: return@launch
+            val itemsToDelete = allItems.filter { it.id in itemsToDeleteIds }
+
+            itemsToDelete.forEach { item ->
+                try {
+                    item.imageUri?.let { uri -> if(File(uri).exists()) File(uri).delete() }
+                    item.processedImageUri?.let { uri -> if(File(uri).exists()) File(uri).delete() }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+                repository.delete(item)
+            }
+        }
+        exitDeleteMode()
     }
 }

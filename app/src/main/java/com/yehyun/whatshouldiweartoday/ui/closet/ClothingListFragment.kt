@@ -1,3 +1,4 @@
+// 파일 경로: app/src/main/java/com/yehyun/whatshouldiweartoday/ui/closet/ClothingListFragment.kt
 package com.yehyun.whatshouldiweartoday.ui.closet
 
 import android.os.Bundle
@@ -22,17 +23,13 @@ class ClothingListFragment : Fragment() {
     private var category: String = "전체"
     private var isViewJustCreated = false
 
-    // ▼▼▼ 추가된 변수 ▼▼▼
-    // 다음 데이터 업데이트 시 스크롤을 실행할지 여부를 결정하는 플래그
     private var scrollOnNextDataUpdate = false
-    // 메모리 누수 방지를 위해 AdapterDataObserver 참조를 저장
     private lateinit var dataObserver: RecyclerView.AdapterDataObserver
-    // ▲▲▲ 추가된 변수 ▲▲▲
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         arguments?.getString("category")?.let {
-            category = it // null 아님이 보장됨
+            category = it
         }
     }
 
@@ -55,54 +52,59 @@ class ClothingListFragment : Fragment() {
             adapter.submitList(it)
         }
 
-        // ▼▼▼ 수정된 정렬 변경 리스너 ▼▼▼
         viewModel.sortChangedEvent.observe(viewLifecycleOwner, Observer {
             if (!isViewJustCreated) {
-                // 스크롤을 바로 실행하는 대신, 플래그를 true로 설정하여
-                // 다음 데이터 업데이트가 완료될 때 스크롤하도록 예약합니다.
                 scrollOnNextDataUpdate = true
             }
             isViewJustCreated = false
         })
-        // ▲▲▲ 수정된 정렬 변경 리스너 ▲▲▲
     }
 
     private fun setupRecyclerView() {
-        adapter = ClothingAdapter { clickedItem ->
-            val action =
-                ClosetFragmentDirections.actionNavigationClosetToEditClothingFragment(clickedItem.id)
-            requireParentFragment().findNavController().navigate(action)
-        }
+        adapter = ClothingAdapter(
+            onItemClicked = { clickedItem ->
+                if (viewModel.isDeleteMode.value == true) {
+                    viewModel.toggleItemSelection(clickedItem.id)
+                } else {
+                    val action =
+                        ClosetFragmentDirections.actionNavigationClosetToEditClothingFragment(clickedItem.id)
+                    requireParentFragment().findNavController().navigate(action)
+                }
+            },
+            onItemLongClicked = { longClickedItem ->
+                viewModel.enterDeleteMode(longClickedItem.id)
+            },
+            isDeleteMode = { viewModel.isDeleteMode.value ?: false },
+            isItemSelected = { itemId -> viewModel.selectedItems.value?.contains(itemId) ?: false }
+        )
 
-        // ▼▼▼ 핵심 추가 로직 ▼▼▼
-        // 어댑터의 데이터 변경을 감지하는 '감시자(Observer)'를 만듭니다.
         dataObserver = object : RecyclerView.AdapterDataObserver() {
-            // 목록 전체가 갱신되었다는 신호('onChanged')를 받으면 실행됩니다.
             override fun onChanged() {
                 super.onChanged()
-                // 스크롤 예약 플래그(scrollOnNextDataUpdate)가 true이면,
-                // 바로 이 시점에 스크롤을 실행하고 플래그를 다시 false로 바꿉니다.
                 if (scrollOnNextDataUpdate) {
                     scrollToTop()
                     scrollOnNextDataUpdate = false
                 }
             }
         }
-        // 어댑터에 위에서 만든 '감시자'를 등록합니다.
         adapter.registerAdapterDataObserver(dataObserver)
-        // ▲▲▲ 핵심 추가 로직 ▲▲▲
 
         binding.recyclerViewClothingList.layoutManager = GridLayoutManager(context, 2)
         binding.recyclerViewClothingList.adapter = adapter
     }
 
+    fun notifyAdapter(payload: String) {
+        if(::adapter.isInitialized) {
+            adapter.notifyItemRangeChanged(0, adapter.itemCount, payload)
+        }
+    }
+
+
     private fun observeViewModel() {
-        val categoryToObserve = category ?: "전체"
-        viewModel.getClothesForCategory(categoryToObserve).observe(viewLifecycleOwner) { items ->
+        viewModel.getClothesForCategory(category).observe(viewLifecycleOwner) { items ->
             adapter.submitList(items)
 
-            // '전체' 탭이고, 옷 목록이 비어있을 때만 말풍선을 보여줍니다.
-            if (categoryToObserve == "전체" && items.isEmpty()) {
+            if (category == "전체" && items.isEmpty()) {
                 binding.emptyViewContainer.visibility = View.VISIBLE
                 binding.recyclerViewClothingList.visibility = View.GONE
             } else {
@@ -113,19 +115,14 @@ class ClothingListFragment : Fragment() {
     }
 
     fun scrollToTop() {
-        // smoothScrollToPosition(0) 대신 scrollToPosition(0)을 사용하여
-        // 애니메이션 없이 즉시 맨 위로 이동시켜 더 안정적인 느낌을 줍니다.
         binding.recyclerViewClothingList.smoothScrollToPosition(0)
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
-        // ▼▼▼ 추가된 로직 ▼▼▼
-        // 화면이 사라질 때, 등록했던 '감시자'를 반드시 해제하여 메모리 누수를 방지합니다.
         if (::adapter.isInitialized && ::dataObserver.isInitialized) {
             adapter.unregisterAdapterDataObserver(dataObserver)
         }
-        // ▲▲▲ 추가된 로직 ▲▲▲
         binding.recyclerViewClothingList.adapter = null
         _binding = null
     }
