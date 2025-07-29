@@ -12,6 +12,8 @@ import com.yehyun.whatshouldiweartoday.data.database.StyleWithItems
 import com.yehyun.whatshouldiweartoday.data.preference.SettingsManager
 import com.yehyun.whatshouldiweartoday.data.repository.StyleRepository
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 
 data class StyleTabState(
@@ -37,6 +39,9 @@ class StyleViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _isDeleteMode = MutableLiveData(false)
     val isDeleteMode: LiveData<Boolean> = _isDeleteMode
+
+    private val _resetSearchEvent = MutableSharedFlow<Unit>()
+    val resetSearchEvent = _resetSearchEvent.asSharedFlow()
 
     private val _selectedItems = MutableLiveData<Set<Long>>(emptySet())
     val selectedItems: LiveData<Set<Long>> = _selectedItems
@@ -141,6 +146,7 @@ class StyleViewModel(application: Application) : AndroidViewModel(application) {
 
     fun enterDeleteMode(initialStyleId: Long) {
         if (_isDeleteMode.value == false) {
+            viewModelScope.launch { _resetSearchEvent.emit(Unit) }
             _isDeleteMode.value = true
             _selectedItems.value = setOf(initialStyleId)
         }
@@ -148,6 +154,7 @@ class StyleViewModel(application: Application) : AndroidViewModel(application) {
 
     fun exitDeleteMode() {
         if (_isDeleteMode.value == true) {
+            viewModelScope.launch { _resetSearchEvent.emit(Unit) }
             _isDeleteMode.value = false
             _selectedItems.value = emptySet()
         }

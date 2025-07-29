@@ -15,6 +15,8 @@ import com.yehyun.whatshouldiweartoday.data.database.ClothingItem
 import com.yehyun.whatshouldiweartoday.data.preference.SettingsManager
 import com.yehyun.whatshouldiweartoday.data.repository.ClothingRepository
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 import java.io.File
 
@@ -47,6 +49,8 @@ class ClosetViewModel(application: Application) : AndroidViewModel(application) 
 
     private val _selectedItems = MutableLiveData<Set<Int>>(emptySet())
     val selectedItems: LiveData<Set<Int>> = _selectedItems
+    private val _resetSearchEvent = MutableSharedFlow<Unit>()
+    val resetSearchEvent = _resetSearchEvent.asSharedFlow()
 
     // 현재 탭 인덱스와 상태를 관리할 LiveData
     private val _currentTabIndex = MutableLiveData(0)
@@ -159,6 +163,7 @@ class ClosetViewModel(application: Application) : AndroidViewModel(application) 
 
     fun enterDeleteMode(initialItemId: Int) {
         if (_isDeleteMode.value == false) {
+            viewModelScope.launch { _resetSearchEvent.emit(Unit) }
             _isDeleteMode.value = true
             _selectedItems.value = setOf(initialItemId)
         }
@@ -166,6 +171,7 @@ class ClosetViewModel(application: Application) : AndroidViewModel(application) 
 
     fun exitDeleteMode() {
         if (_isDeleteMode.value == true) {
+            viewModelScope.launch { _resetSearchEvent.emit(Unit) }
             _isDeleteMode.value = false
             _selectedItems.value = emptySet()
         }

@@ -13,6 +13,9 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.SearchView
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import androidx.viewpager2.widget.ViewPager2
 import com.google.android.material.tabs.TabLayout
@@ -20,6 +23,7 @@ import com.google.android.material.tabs.TabLayoutMediator
 import com.yehyun.whatshouldiweartoday.R
 import com.yehyun.whatshouldiweartoday.databinding.FragmentStyleBinding
 import com.yehyun.whatshouldiweartoday.ui.OnTabReselectedListener
+import kotlinx.coroutines.launch
 
 class StyleFragment : Fragment(), OnTabReselectedListener {
 
@@ -102,6 +106,13 @@ class StyleFragment : Fragment(), OnTabReselectedListener {
 
         viewModel.isDeleteMode.observe(viewLifecycleOwner) { notifyAdapterDeleteModeChanged() }
         viewModel.selectedItems.observe(viewLifecycleOwner) { notifyAdapterSelectionChanged() }
+        viewLifecycleOwner.lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.resetSearchEvent.collect {
+                    resetsearchViewStyle() // 신호가 오면 스스로 함수 호출
+                }
+            }
+        }
     }
 
     private fun updateToolbarVisibility(isDeleteMode: Boolean) {
@@ -191,6 +202,12 @@ class StyleFragment : Fragment(), OnTabReselectedListener {
                 return true
             }
         })
+    }
+
+    private fun resetsearchViewStyle(){
+        var query=""
+        binding.searchViewDelete.setQuery(query, false)
+        binding.searchViewStyle.setQuery(query, false)
     }
 
     private fun setupSortSpinner() {

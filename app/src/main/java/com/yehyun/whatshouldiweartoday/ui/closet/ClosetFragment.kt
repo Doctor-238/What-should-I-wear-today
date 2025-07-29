@@ -23,7 +23,9 @@ import androidx.appcompat.widget.SearchView
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import androidx.viewpager2.widget.ViewPager2
 import androidx.work.ExistingWorkPolicy
@@ -52,6 +54,7 @@ class ClosetFragment : Fragment(), OnTabReselectedListener {
 
     private var lastFabClickTime = 0L
     private lateinit var onBackPressedCallback: OnBackPressedCallback
+    private var pendingScrollToTop = false // 맨 위로 스크롤이 필요한지 여부를 나타내는 플래그
 
 
     private val requestPermissionLauncher = registerForActivityResult(
@@ -191,6 +194,13 @@ class ClosetFragment : Fragment(), OnTabReselectedListener {
                 binding.fabBatchAdd.showProgress(percentage)
             }
         }
+        viewLifecycleOwner.lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.resetSearchEvent.collect {
+                    resetsearchViewCloset() // 신호가 오면 스스로 함수 호출
+                }
+            }
+        }
     }
 
     private fun setupViewPagerAndTabs() {
@@ -202,15 +212,41 @@ class ClosetFragment : Fragment(), OnTabReselectedListener {
             tab.text = categories[position]
         }.attach()
 
-        // 탭 레이아웃 리스너 대신 ViewPager2의 콜백을 사용
+        binding.tabLayoutCategory.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
+            override fun onTabSelected(tab: TabLayout.Tab?) {}
+            override fun onTabUnselected(tab: TabLayout.Tab?) {}
+
+            override fun onTabReselected(tab: TabLayout.Tab?) {
+                if (viewModel.isDeleteMode.value == true) {
+                    viewModel.exitDeleteMode()
+                } else {
+                    val currentFragment = childFragmentManager.findFragmentByTag("f${tab?.position}")
+                    (currentFragment as? ClothingListFragment)?.scrollToTop()
+                }
+            }
+        })
+
+        // ▼▼▼▼▼ 핵심 수정 부분 ▼▼▼▼▼
         binding.viewPagerCloset.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
             override fun onPageSelected(position: Int) {
                 super.onPageSelected(position)
                 viewModel.setCurrentTabIndex(position)
             }
-        })
 
-        // '전체 선택' 아이콘 클릭 리스너
+            override fun onPageScrollStateChanged(state: Int) {
+                super.onPageScrollStateChanged(state)
+                // 스크롤이 멈추고, 스크롤 요청이 있었으며, 현재 탭이 '전체' 탭일 때 실행
+                if (state == ViewPager2.SCROLL_STATE_IDLE && pendingScrollToTop) {
+                    if (binding.viewPagerCloset.currentItem == 0) {
+                        val fragment = childFragmentManager.findFragmentByTag("f0") as? ClothingListFragment
+                        fragment?.scrollToTop()
+                        pendingScrollToTop = false // 플래그 초기화
+                    }
+                }
+            }
+        })
+        // ▲▲▲▲▲ 핵심 수정 부분 ▲▲▲▲▲
+
         binding.ivSelectAll.setOnClickListener {
             val currentState = viewModel.currentTabState.value ?: return@setOnClickListener
             if (currentState.items.isEmpty()) return@setOnClickListener
@@ -223,7 +259,6 @@ class ClosetFragment : Fragment(), OnTabReselectedListener {
             }
         }
 
-        // 삭제 버튼 클릭 리스너
         binding.btnDelete.setOnClickListener {
             val count = viewModel.selectedItems.value?.size ?: 0
             if (count > 0) {
@@ -235,8 +270,6 @@ class ClosetFragment : Fragment(), OnTabReselectedListener {
                     .show()
             }
         }
-
-        // 뒤로가기 버튼 클릭 리스너
         binding.ivBackDeleteMode.setOnClickListener { viewModel.exitDeleteMode() }
     }
 
@@ -342,11 +375,16 @@ class ClosetFragment : Fragment(), OnTabReselectedListener {
             }
         })
     }
+    private fun resetsearchViewCloset(){
+        var query=""
+        binding.searchViewDelete.setQuery(query, false)
+        binding.searchViewCloset.setQuery(query, false)
+    }
 
     private fun setupSortSpinner() {
         val spinner: Spinner = binding.spinnerSort
         val sortOptions = listOf("최신순", "오래된 순", "이름 오름차순", "이름 내림차순", "온도 오름차순", "온도 내림차순")
-        val arrayAdapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, sortOptions)
+        val arrayAdapter = ArrayAdapter(requireContext(), R.layout.spinner_item_centered, sortOptions) // 수정된 레이아웃 사용
         arrayAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         spinner.adapter = arrayAdapter
 
@@ -375,6 +413,7 @@ class ClosetFragment : Fragment(), OnTabReselectedListener {
         requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, onBackPressedCallback)
     }
 
+    // ▼▼▼▼▼ 핵심 수정 부분 ▼▼▼▼▼
     override fun onTabReselected() {
         if (viewModel.isDeleteMode.value == true) {
             viewModel.exitDeleteMode()
@@ -386,14 +425,20 @@ class ClosetFragment : Fragment(), OnTabReselectedListener {
             navController.popBackStack(R.id.navigation_closet, false)
             return
         }
+
         if (_binding == null) return
-        binding.viewPagerCloset.currentItem = 0
-        binding.viewPagerCloset.post {
-            if (isAdded) {
-                (childFragmentManager.findFragmentByTag("f0") as? ClothingListFragment)?.scrollToTop()
-            }
+
+        // 현재 탭이 이미 '전체' 탭이고 스크롤이 최상단이 아니라면, 바로 스크롤
+        if (binding.viewPagerCloset.currentItem == 0) {
+            val fragment = childFragmentManager.findFragmentByTag("f0") as? ClothingListFragment
+            fragment?.scrollToTop()
+        } else {
+            // 다른 탭에 있다면, '전체' 탭으로 이동하고 스크롤 하도록 플래그 설정
+            pendingScrollToTop = true
+            binding.viewPagerCloset.currentItem = 0
         }
     }
+    // ▲▲▲▲▲ 핵심 수정 부분 ▲▲▲▲▲
 
     override fun onDestroyView() {
         super.onDestroyView()
