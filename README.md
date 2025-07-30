@@ -127,5 +127,6 @@ Database: Room (SQLite 기반 로컬 DB)
 - 2171429 이지원 [(CH4ER1)](https://github.com/CH4ER1)
 
   - UI/UX 디자인
-   (https://www.canva.com/design/DAGrymWtjvE/3CGKh1Iugw0eGi7S_W8V1A/edit?utm_content=DAGrymWtjvE&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton)
+  <br>
+  (https://www.canva.com/design/DAGrymWtjvE/3CGKh1Iugw0eGi7S_W8V1A/edit?utm_content=DAGrymWtjvE&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton)
   - 문서 작성
