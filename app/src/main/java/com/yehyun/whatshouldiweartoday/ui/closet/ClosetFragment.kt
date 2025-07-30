@@ -384,7 +384,7 @@ class ClosetFragment : Fragment(), OnTabReselectedListener {
     private fun setupSortSpinner() {
         val spinner: Spinner = binding.spinnerSort
         val sortOptions = listOf("최신순", "오래된 순", "이름 오름차순", "이름 내림차순", "온도 오름차순", "온도 내림차순")
-        val arrayAdapter = ArrayAdapter(requireContext(), R.layout.spinner_item_centered, sortOptions) // 수정된 레이아웃 사용
+        val arrayAdapter = ArrayAdapter(requireContext(), R.layout.spinner_item_centered_normal, sortOptions) // 수정된 레이아웃 사용
         arrayAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         spinner.adapter = arrayAdapter
 
