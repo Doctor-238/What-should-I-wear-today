@@ -74,7 +74,7 @@ class StyleListFragment : Fragment() {
             adapter.submitList(styles)
 
             // ▼▼▼▼▼ 핵심 수정: 오류가 발생한 부분을 원래의 올바른 로직으로 복원 ▼▼▼▼▼
-            if (seasonToObserve == "전체" && styles.isEmpty() && viewModel.isDeleteMode.value == false) {
+            if (seasonToObserve == "전체" && styles.isEmpty() && viewModel.searchQuery.value.isNullOrEmpty()) {
                 binding.emptyStyleContainer.visibility = View.VISIBLE
                 binding.recyclerViewStyleList.visibility = View.GONE
             } else {

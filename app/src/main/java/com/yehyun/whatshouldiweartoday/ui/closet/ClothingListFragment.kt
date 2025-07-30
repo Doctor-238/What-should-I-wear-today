@@ -104,7 +104,7 @@ class ClothingListFragment : Fragment() {
         viewModel.getClothesForCategory(category).observe(viewLifecycleOwner) { items ->
             adapter.submitList(items)
 
-            if (category == "전체" && items.isEmpty()) {
+            if (category == "전체" && items.isEmpty() && viewModel.searchQuery.value.isNullOrEmpty()) {
                 binding.emptyViewContainer.visibility = View.VISIBLE
                 binding.recyclerViewClothingList.visibility = View.GONE
             } else {

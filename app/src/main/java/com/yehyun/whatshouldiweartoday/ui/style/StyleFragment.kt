@@ -23,6 +23,7 @@ import com.google.android.material.tabs.TabLayoutMediator
 import com.yehyun.whatshouldiweartoday.R
 import com.yehyun.whatshouldiweartoday.databinding.FragmentStyleBinding
 import com.yehyun.whatshouldiweartoday.ui.OnTabReselectedListener
+import com.yehyun.whatshouldiweartoday.ui.closet.ClothingListFragment
 import kotlinx.coroutines.launch
 
 class StyleFragment : Fragment(), OnTabReselectedListener {
@@ -253,10 +254,14 @@ class StyleFragment : Fragment(), OnTabReselectedListener {
         }
 
         if (_binding == null) return
-        binding.viewPagerStyle.currentItem = 0
-        binding.viewPagerStyle.post {
-            if (isAdded) {
-                (childFragmentManager.findFragmentByTag("f0") as? StyleListFragment)?.scrollToTop()
+        if (binding.viewPagerStyle.currentItem == 0) {
+            val fragment = childFragmentManager.findFragmentByTag("f0") as? StyleListFragment
+            fragment?.scrollToTop()
+        } else {
+            binding.viewPagerStyle.currentItem = 0
+            binding.viewPagerStyle.post { // ViewPager 애니메이션 완료 후 스크롤을 위해 post 사용
+                val fragment = childFragmentManager.findFragmentByTag("f0") as? StyleListFragment
+                fragment?.scrollToTop()
             }
         }
     }

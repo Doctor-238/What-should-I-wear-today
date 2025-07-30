@@ -28,6 +28,7 @@ class StyleViewModel(application: Application) : AndroidViewModel(application) {
     private val settingsManager = SettingsManager(application)
 
     private val _searchQuery = MutableLiveData("")
+    val searchQuery: LiveData<String> = _searchQuery
     private val _sortType = MutableLiveData(settingsManager.styleSortType)
 
     private val allStyles: LiveData<List<StyleWithItems>>

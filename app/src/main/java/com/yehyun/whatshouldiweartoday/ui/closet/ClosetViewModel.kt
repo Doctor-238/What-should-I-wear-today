@@ -41,6 +41,7 @@ class ClosetViewModel(application: Application) : AndroidViewModel(application) 
     val batchAddWorkInfo: LiveData<List<WorkInfo>> = workManager.getWorkInfosForUniqueWorkLiveData("batch_add")
 
     private val _searchQuery = MutableLiveData("")
+    val searchQuery: LiveData<String> = _searchQuery
     private val _sortType = MutableLiveData(settingsManager.closetSortType)
 
     private val allClothes: LiveData<List<ClothingItem>>
