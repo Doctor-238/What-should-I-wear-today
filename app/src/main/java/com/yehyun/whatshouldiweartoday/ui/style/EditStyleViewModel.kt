@@ -1,3 +1,4 @@
+// 파일 경로: app/src/main/java/com/yehyun/whatshouldiweartoday/ui/style/EditStyleViewModel.kt
 package com.yehyun.whatshouldiweartoday.ui.style
 
 import android.app.Application
@@ -29,10 +30,8 @@ class EditStyleViewModel(application: Application) : AndroidViewModel(applicatio
     val currentStyleName = MutableLiveData<String>()
     val currentSeason = MutableLiveData<String>()
 
-    // ▼▼▼▼▼ 핵심 수정 1: 선택 순서를 기억하기 위해 List로 변경 ▼▼▼▼▼
     private val _selectedItems = MutableLiveData<MutableList<ClothingItem>>(mutableListOf())
     val selectedItems: LiveData<MutableList<ClothingItem>> = _selectedItems
-    // ▲▲▲▲▲ 핵심 수정 1 ▲▲▲▲▲
 
     val toolbarTitle = MutableLiveData<String>()
     val saveButtonEnabled = MutableLiveData(false)
@@ -54,14 +53,30 @@ class EditStyleViewModel(application: Application) : AndroidViewModel(applicatio
 
         allClothes = clothingRepository.getItems("전체", "", "최신순")
 
-        filteredClothes.addSource(allClothes) { filter() }
+        // ▼▼▼▼▼ 버그 수정 1: 전체 옷 목록 변경 시 선택된 아이템 유효성 검사 ▼▼▼▼▼
+        filteredClothes.addSource(allClothes) { clothesList ->
+            validateSelectedItems(clothesList)
+            filter()
+        }
+        // ▲▲▲▲▲ 버그 수정 1 ▲▲▲▲▲
         filteredClothes.addSource(_clothingCategory) { filter() }
-        // ▼▼▼▼▼ 핵심 수정 2: 선택된 아이템이 변경되어도 정렬 재실행 ▼▼▼▼▼
         filteredClothes.addSource(selectedItems) { filter() }
-        // ▲▲▲▲▲ 핵심 수정 2 ▲▲▲▲▲
     }
 
-    // ▼▼▼▼▼ 핵심 수정 3: 요청하신 정렬 로직 적용 ▼▼▼▼▼
+    // ▼▼▼▼▼ 버그 수정 1: 선택된 아이템 유효성 검사 함수 추가 ▼▼▼▼▼
+    private fun validateSelectedItems(currentClothes: List<ClothingItem>?) {
+        val clothes = currentClothes ?: return
+        _selectedItems.value?.let { selected ->
+            val existingIds = clothes.map { it.id }.toSet()
+            // selected 목록에서 더 이상 allClothes에 존재하지 않는 아이템을 제거
+            val selectionChanged = selected.removeAll { it.id !in existingIds }
+            if (selectionChanged) {
+                _selectedItems.postValue(selected) // 변경이 있었으면 LiveData 갱신
+            }
+        }
+    }
+    // ▲▲▲▲▲ 버그 수정 1 ▲▲▲▲▲
+
     private fun filter() {
         val category = _clothingCategory.value ?: "전체"
         val clothes = allClothes.value ?: emptyList()
@@ -82,7 +97,6 @@ class EditStyleViewModel(application: Application) : AndroidViewModel(applicatio
 
         filteredClothes.value = sortedList
     }
-    // ▲▲▲▲▲ 핵심 수정 3 ▲▲▲▲▲
 
     fun loadStyleIfNeeded(styleId: Long) {
         if (originalStyle != null && currentStyleId == styleId) return
@@ -116,7 +130,6 @@ class EditStyleViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
-    // ▼▼▼▼▼ 핵심 수정 4: List 자료구조에 맞게 로직 수정 ▼▼▼▼▼
     fun toggleItemSelection(item: ClothingItem) {
         val currentList = _selectedItems.value ?: mutableListOf()
         val isSelected = currentList.any { it.id == item.id }
@@ -138,7 +151,6 @@ class EditStyleViewModel(application: Application) : AndroidViewModel(applicatio
         _selectedItems.value = currentList
         checkForChanges()
     }
-    // ▲▲▲▲▲ 핵심 수정 4 ▲▲▲▲▲
 
     private fun checkForChanges() {
         if (originalStyle == null || initialItemIds == null) return

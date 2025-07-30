@@ -1,3 +1,4 @@
+// 파일 경로: app/src/main/java/com/yehyun/whatshouldiweartoday/ui/style/SaveStyleViewModel.kt
 package com.yehyun.whatshouldiweartoday.ui.style
 
 import android.app.Application
@@ -21,9 +22,7 @@ class SaveStyleViewModel(application: Application) : AndroidViewModel(applicatio
     val filteredClothes = MediatorLiveData<List<ClothingItem>>()
     private val allClothes: LiveData<List<ClothingItem>>
 
-    // ▼▼▼▼▼ 핵심 수정 1: 선택 순서를 기억하기 위해 Set -> List로 변경 ▼▼▼▼▼
-    val selectedItems = MutableLiveData<MutableList<ClothingItem>>(mutableListOf())
-    // ▲▲▲▲▲ 핵심 수정 1 ▲▲▲▲▲
+    val selectedItems = MutableLiveData<MutableList<ClothingItem>>()
     val styleName = MutableLiveData<String>()
     val selectedSeason = MutableLiveData<String?>()
 
@@ -45,14 +44,29 @@ class SaveStyleViewModel(application: Application) : AndroidViewModel(applicatio
         styleRepository = StyleRepository(db.styleDao())
         allClothes = clothingRepository.getItems("전체", "", "최신순")
 
-        filteredClothes.addSource(allClothes) { filter() }
+        // ▼▼▼▼▼ 버그 수정 1: 전체 옷 목록 변경 시 선택된 아이템 유효성 검사 ▼▼▼▼▼
+        filteredClothes.addSource(allClothes) { clothesList ->
+            validateSelectedItems(clothesList)
+            filter()
+        }
+        // ▲▲▲▲▲ 버그 수정 1 ▲▲▲▲▲
         filteredClothes.addSource(_clothingCategory) { filter() }
-        // ▼▼▼▼▼ 핵심 수정 2: 선택된 아이템 목록이 바뀔 때도 정렬이 다시 실행되도록 추가 ▼▼▼▼▼
         filteredClothes.addSource(selectedItems) { filter() }
-        // ▲▲▲▲▲ 핵심 수정 2 ▲▲▲▲▲
     }
 
-    // ▼▼▼▼▼ 핵심 수정 3: 요청하신 정렬 로직 적용 ▼▼▼▼▼
+    // ▼▼▼▼▼ 버그 수정 1: 선택된 아이템 유효성 검사 함수 추가 ▼▼▼▼▼
+    private fun validateSelectedItems(currentClothes: List<ClothingItem>?) {
+        val clothes = currentClothes ?: return
+        selectedItems.value?.let { selected ->
+            val existingIds = clothes.map { it.id }.toSet()
+            val selectionChanged = selected.removeAll { it.id !in existingIds }
+            if (selectionChanged) {
+                selectedItems.postValue(selected) // 변경사항 알림
+            }
+        }
+    }
+    // ▲▲▲▲▲ 버그 수정 1 ▲▲▲▲▲
+
     private fun filter() {
         val category = _clothingCategory.value ?: "전체"
         val clothes = allClothes.value ?: emptyList()
@@ -63,18 +77,16 @@ class SaveStyleViewModel(application: Application) : AndroidViewModel(applicatio
             clothes.filter { it.category == category }
         }
 
-        // 선택된 아이템을 앞으로, 그 외에는 최신순으로 정렬
         val selectedIdsSet = selectedItems.value?.map { it.id }?.toSet() ?: emptySet()
         val selectionOrderMap = selectedItems.value?.mapIndexed { index, item -> item.id to index }?.toMap() ?: emptyMap()
 
         val sortedList = categoryFiltered.sortedWith(
-            compareByDescending<ClothingItem> { it.id in selectedIdsSet } // 1. 선택된 아이템을 맨 위로
-                .thenBy { selectionOrderMap[it.id] } // 2. 선택된 아이템은 선택된 순서대로
-        ) // 3. 선택되지 않은 아이템은 allClothes의 기본 정렬(최신순)을 따름
+            compareByDescending<ClothingItem> { it.id in selectedIdsSet }
+                .thenBy { selectionOrderMap[it.id] }
+        )
 
         filteredClothes.value = sortedList
     }
-    // ▲▲▲▲▲ 핵심 수정 3 ▲▲▲▲▲
 
     fun setClothingFilter(category: String) {
         if (_clothingCategory.value != category) {
@@ -82,7 +94,6 @@ class SaveStyleViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
-    // ▼▼▼▼▼ 핵심 수정 4: List 자료구조에 맞게 로직 수정 ▼▼▼▼▼
     fun toggleItemSelected(item: ClothingItem) {
         val currentList = selectedItems.value ?: mutableListOf()
         if (currentList.any { it.id == item.id }) {
@@ -92,7 +103,7 @@ class SaveStyleViewModel(application: Application) : AndroidViewModel(applicatio
                 currentList.add(item)
             }
         }
-        selectedItems.value = currentList // LiveData에 변경사항 알림
+        selectedItems.value = currentList
         checkForChanges()
     }
 
@@ -100,14 +111,16 @@ class SaveStyleViewModel(application: Application) : AndroidViewModel(applicatio
         if (initialItemIds != null) return
 
         initialItemIds = ids.toSet()
-        allClothes.observeForever { all ->
-            // preselect 시에는 순서가 중요하지 않으므로 Set으로 처리 후 List로 변환
-            val preselected = all.filter { it.id in ids }.toMutableList()
-            selectedItems.postValue(preselected)
-            hasChanges.postValue(false)
+        val observer = object : androidx.lifecycle.Observer<List<ClothingItem>> {
+            override fun onChanged(all: List<ClothingItem>) {
+                val preselected = all.filter { it.id in ids }.toMutableList()
+                selectedItems.postValue(preselected)
+                hasChanges.postValue(false)
+                allClothes.removeObserver(this)
+            }
         }
+        allClothes.observeForever(observer)
     }
-    // ▲▲▲▲▲ 핵심 수정 4 ▲▲▲▲▲
 
 
     fun setStyleName(name: String) {
@@ -134,7 +147,6 @@ class SaveStyleViewModel(application: Application) : AndroidViewModel(applicatio
 
         hasChanges.value = itemsChanged || nameChanged || seasonChanged
     }
-
 
     fun saveStyle() {
         if (_isLoading.value == true) return

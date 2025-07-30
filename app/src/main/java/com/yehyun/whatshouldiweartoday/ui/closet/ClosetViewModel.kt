@@ -12,6 +12,9 @@ import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import com.yehyun.whatshouldiweartoday.data.database.AppDatabase
 import com.yehyun.whatshouldiweartoday.data.database.ClothingItem
+// ▼▼▼▼▼ 핵심 수정 1: StyleDao 임포트 ▼▼▼▼▼
+import com.yehyun.whatshouldiweartoday.data.database.StyleDao
+// ▲▲▲▲▲ 핵심 수정 1 ▲▲▲▲▲
 import com.yehyun.whatshouldiweartoday.data.preference.SettingsManager
 import com.yehyun.whatshouldiweartoday.data.repository.ClothingRepository
 import kotlinx.coroutines.Dispatchers
@@ -30,6 +33,9 @@ data class CurrentTabState(
 class ClosetViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository: ClothingRepository
+    // ▼▼▼▼▼ 핵심 수정 2: styleDao 멤버 변수 추가 ▼▼▼▼▼
+    private val styleDao: StyleDao
+    // ▲▲▲▲▲ 핵심 수정 2 ▲▲▲▲▲
     private val settingsManager = SettingsManager(application)
     val workManager: WorkManager = WorkManager.getInstance(application)
     val batchAddWorkInfo: LiveData<List<WorkInfo>> = workManager.getWorkInfosForUniqueWorkLiveData("batch_add")
@@ -57,7 +63,11 @@ class ClosetViewModel(application: Application) : AndroidViewModel(application) 
     val currentTabState = MediatorLiveData<CurrentTabState>()
 
     init {
-        val clothingDao = AppDatabase.getDatabase(application).clothingDao()
+        val db = AppDatabase.getDatabase(application)
+        val clothingDao = db.clothingDao()
+        // ▼▼▼▼▼ 핵심 수정 3: styleDao 초기화 ▼▼▼▼▼
+        styleDao = db.styleDao()
+        // ▲▲▲▲▲ 핵심 수정 3 ▲▲▲▲▲
         repository = ClothingRepository(clothingDao)
 
         allClothes = repository.getItems("전체", "", "최신순")
@@ -214,6 +224,9 @@ class ClosetViewModel(application: Application) : AndroidViewModel(application) 
                 }
                 repository.delete(item)
             }
+            // ▼▼▼▼▼ 핵심 수정 4: 옷 삭제 후 비어있는 스타일 정리하는 로직 추가 ▼▼▼▼▼
+            styleDao.deleteOrphanedStyles()
+            // ▲▲▲▲▲ 핵심 수정 4 ▲▲▲▲▲
         }
         exitDeleteMode()
     }
