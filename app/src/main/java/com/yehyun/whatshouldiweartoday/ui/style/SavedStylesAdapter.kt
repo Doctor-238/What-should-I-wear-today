@@ -1,14 +1,14 @@
 package com.yehyun.whatshouldiweartoday.ui.style
 
 import android.annotation.SuppressLint
-import android.view.GestureDetector
 import android.view.LayoutInflater
-import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.animation.AnimationUtils
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.recyclerview.widget.DiffUtil
+import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.yehyun.whatshouldiweartoday.R
 import com.yehyun.whatshouldiweartoday.data.database.ClothingItem
@@ -20,15 +20,7 @@ class SavedStylesAdapter(
     private val onItemLongClicked: (StyleWithItems) -> Unit,
     private val isDeleteMode: () -> Boolean,
     private val isItemSelected: (Long) -> Boolean
-) : RecyclerView.Adapter<SavedStylesAdapter.StyleViewHolder>() {
-
-    private var styles: List<StyleWithItems> = listOf()
-
-    @SuppressLint("NotifyDataSetChanged")
-    fun submitList(newStyles: List<StyleWithItems>) {
-        styles = newStyles
-        notifyDataSetChanged()
-    }
+) : ListAdapter<StyleWithItems, SavedStylesAdapter.StyleViewHolder>(diffUtil) { // RecyclerView.Adapter -> ListAdapter 로 변경
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): StyleViewHolder {
         val view = LayoutInflater.from(parent.context).inflate(R.layout.item_saved_style, parent, false)
@@ -36,7 +28,7 @@ class SavedStylesAdapter(
     }
 
     override fun onBindViewHolder(holder: StyleViewHolder, position: Int) {
-        val currentStyle = styles[position]
+        val currentStyle = getItem(position)
         holder.bind(currentStyle, onItemClicked, onItemLongClicked, isDeleteMode, isItemSelected)
     }
 
@@ -45,17 +37,13 @@ class SavedStylesAdapter(
             super.onBindViewHolder(holder, position, payloads)
         } else {
             for (payload in payloads) {
-                if (payload == "DELETE_MODE_CHANGED") {
-                    holder.updateDeleteModeUI(isDeleteMode())
-                }
-                if (payload == "SELECTION_CHANGED") {
-                    holder.updateSelectionUI(isItemSelected(styles[position].style.styleId))
+                when (payload) {
+                    "DELETE_MODE_CHANGED" -> holder.updateDeleteModeUI(isDeleteMode())
+                    "SELECTION_CHANGED" -> holder.updateSelectionUI(isItemSelected(getItem(position).style.styleId))
                 }
             }
         }
     }
-
-    override fun getItemCount(): Int = styles.size
 
     class StyleViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val styleName: TextView = itemView.findViewById(R.id.tv_style_name)
@@ -87,39 +75,20 @@ class SavedStylesAdapter(
             )
             itemsAdapter.submitList(sortedItems)
 
-            // GestureDetector를 사용하여 클릭과 롱클릭 이벤트 모두 처리
-            val gestureDetector = GestureDetector(itemView.context, object : GestureDetector.SimpleOnGestureListener() {
-                // 짧게 클릭했을 때의 동작
-                override fun onSingleTapUp(e: MotionEvent): Boolean {
-                    clickAction(styleWithItems)
-                    return true
+            itemView.setOnClickListener {
+                clickAction(styleWithItems)
+            }
+            itemView.setOnLongClickListener {
+                if (!isDeleteMode()) {
+                    longClickAction(styleWithItems)
                 }
-
-                // 길게 눌렀을 때의 동작
-                override fun onLongPress(e: MotionEvent) {
-                    if (!isDeleteMode()) {
-                        longClickAction(styleWithItems)
-                    }
-                }
-            })
-
-            // 아이템뷰 전체에 터치 리스너 설정
-            itemView.setOnTouchListener { _, event ->
-                gestureDetector.onTouchEvent(event)
-                true // 이벤트를 소비하여 중복 처리를 방지
+                true
             }
 
-            // 내부 RecyclerView 터치 이벤트가 상위로 전달되도록 설정
-            itemsRecyclerView.addOnItemTouchListener(object : RecyclerView.OnItemTouchListener {
-                override fun onInterceptTouchEvent(rv: RecyclerView, e: MotionEvent): Boolean {
-                    gestureDetector.onTouchEvent(e)
-                    return false // 이벤트를 가로채지 않고 계속 전달
-                }
-
-                override fun onTouchEvent(rv: RecyclerView, e: MotionEvent) {}
-                override fun onRequestDisallowInterceptTouchEvent(disallowIntercept: Boolean) {}
-            })
-
+            itemsRecyclerView.setOnTouchListener { v, event ->
+                itemView.onTouchEvent(event)
+                false
+            }
 
             updateDeleteModeUI(isDeleteMode())
             updateSelectionUI(isItemSelected(styleWithItems.style.styleId))
@@ -142,4 +111,18 @@ class SavedStylesAdapter(
             )
         }
     }
+
+    // ▼▼▼▼▼ 핵심 수정: DiffUtil 구현 추가 ▼▼▼▼▼
+    companion object {
+        val diffUtil = object : DiffUtil.ItemCallback<StyleWithItems>() {
+            override fun areItemsTheSame(oldItem: StyleWithItems, newItem: StyleWithItems): Boolean {
+                return oldItem.style.styleId == newItem.style.styleId
+            }
+
+            override fun areContentsTheSame(oldItem: StyleWithItems, newItem: StyleWithItems): Boolean {
+                return oldItem == newItem
+            }
+        }
+    }
+    // ▲▲▲▲▲ 핵심 수정 ▲▲▲▲▲
 }

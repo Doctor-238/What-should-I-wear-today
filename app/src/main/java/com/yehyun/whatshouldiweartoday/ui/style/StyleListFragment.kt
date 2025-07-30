@@ -7,7 +7,9 @@ import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
+import androidx.recyclerview.widget.DefaultItemAnimator
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.yehyun.whatshouldiweartoday.R
 import com.yehyun.whatshouldiweartoday.databinding.FragmentStyleListBinding
 
 class StyleListFragment : Fragment() {
@@ -46,8 +48,12 @@ class StyleListFragment : Fragment() {
                 if (viewModel.isDeleteMode.value == true) {
                     viewModel.toggleItemSelection(clickedStyle.style.styleId)
                 } else {
-                    val action = StyleFragmentDirections.actionNavigationStyleToEditStyleFragment(clickedStyle.style.styleId)
-                    requireParentFragment().findNavController().navigate(action)
+                    // ▼▼▼▼▼ 핵심 수정: requireParentFragment()로 NavController를 찾도록 수정 ▼▼▼▼▼
+                    val navController = requireParentFragment().findNavController()
+                    if (navController.currentDestination?.id == R.id.navigation_style) {
+                        val action = StyleFragmentDirections.actionNavigationStyleToEditStyleFragment(clickedStyle.style.styleId)
+                        navController.navigate(action)
+                    }
                 }
             },
             onItemLongClicked = { longClickedStyle ->
@@ -58,6 +64,7 @@ class StyleListFragment : Fragment() {
         )
         binding.recyclerViewStyleList.layoutManager = LinearLayoutManager(context)
         binding.recyclerViewStyleList.adapter = adapter
+        binding.recyclerViewStyleList.itemAnimator = DefaultItemAnimator()
     }
 
     private fun observeViewModel() {
@@ -65,6 +72,8 @@ class StyleListFragment : Fragment() {
 
         viewModel.getStylesForSeason(seasonToObserve).observe(viewLifecycleOwner) { styles ->
             adapter.submitList(styles)
+
+            // ▼▼▼▼▼ 핵심 수정: 오류가 발생한 부분을 원래의 올바른 로직으로 복원 ▼▼▼▼▼
             if (seasonToObserve == "전체" && styles.isEmpty() && viewModel.isDeleteMode.value == false) {
                 binding.emptyStyleContainer.visibility = View.VISIBLE
                 binding.recyclerViewStyleList.visibility = View.GONE
@@ -72,6 +81,7 @@ class StyleListFragment : Fragment() {
                 binding.emptyStyleContainer.visibility = View.GONE
                 binding.recyclerViewStyleList.visibility = View.VISIBLE
             }
+            // ▲▲▲▲▲ 핵심 수정 ▲▲▲▲▲
         }
     }
 

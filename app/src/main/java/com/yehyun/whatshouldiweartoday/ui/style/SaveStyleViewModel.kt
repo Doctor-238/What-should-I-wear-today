@@ -1,4 +1,3 @@
-// 파일 경로: app/src/main/java/com/yehyun/whatshouldiweartoday/ui/style/SaveStyleViewModel.kt
 package com.yehyun.whatshouldiweartoday.ui.style
 
 import android.app.Application
@@ -34,7 +33,7 @@ class SaveStyleViewModel(application: Application) : AndroidViewModel(applicatio
 
     val hasChanges = MutableLiveData(false)
     private var initialItemIds: Set<Int>? = null
-    private var initialName: String? = null
+    private var initialName: String? = "" // 초기값을 null이 아닌 빈 문자열로 설정
     private var initialSeason: String? = null
 
 
@@ -44,28 +43,24 @@ class SaveStyleViewModel(application: Application) : AndroidViewModel(applicatio
         styleRepository = StyleRepository(db.styleDao())
         allClothes = clothingRepository.getItems("전체", "", "최신순")
 
-        // ▼▼▼▼▼ 버그 수정 1: 전체 옷 목록 변경 시 선택된 아이템 유효성 검사 ▼▼▼▼▼
         filteredClothes.addSource(allClothes) { clothesList ->
             validateSelectedItems(clothesList)
             filter()
         }
-        // ▲▲▲▲▲ 버그 수정 1 ▲▲▲▲▲
         filteredClothes.addSource(_clothingCategory) { filter() }
         filteredClothes.addSource(selectedItems) { filter() }
     }
 
-    // ▼▼▼▼▼ 버그 수정 1: 선택된 아이템 유효성 검사 함수 추가 ▼▼▼▼▼
     private fun validateSelectedItems(currentClothes: List<ClothingItem>?) {
         val clothes = currentClothes ?: return
         selectedItems.value?.let { selected ->
             val existingIds = clothes.map { it.id }.toSet()
             val selectionChanged = selected.removeAll { it.id !in existingIds }
             if (selectionChanged) {
-                selectedItems.postValue(selected) // 변경사항 알림
+                selectedItems.postValue(selected)
             }
         }
     }
-    // ▲▲▲▲▲ 버그 수정 1 ▲▲▲▲▲
 
     private fun filter() {
         val category = _clothingCategory.value ?: "전체"
@@ -115,7 +110,9 @@ class SaveStyleViewModel(application: Application) : AndroidViewModel(applicatio
             override fun onChanged(all: List<ClothingItem>) {
                 val preselected = all.filter { it.id in ids }.toMutableList()
                 selectedItems.postValue(preselected)
-                hasChanges.postValue(false)
+                // ▼▼▼▼▼ 핵심 수정: 초기 아이템 설정 후에도 변경사항을 확인합니다. ▼▼▼▼▼
+                checkForChanges()
+                // ▲▲▲▲▲ 핵심 수정 ▲▲▲▲▲
                 allClothes.removeObserver(this)
             }
         }
@@ -124,19 +121,20 @@ class SaveStyleViewModel(application: Application) : AndroidViewModel(applicatio
 
 
     fun setStyleName(name: String) {
-        if(initialName == null) initialName = styleName.value ?: ""
+        if (initialName == null) initialName = "" // 최초 이름 설정 시 초기값 할당
         styleName.value = name
         checkForChanges()
     }
 
     fun setSeason(season: String?) {
-        if(initialSeason == null) initialSeason = selectedSeason.value
+        if (initialSeason == null) initialSeason = selectedSeason.value
         selectedSeason.value = season
         checkForChanges()
     }
 
     private fun checkForChanges() {
-        if(initialItemIds == null && styleName.value.isNullOrEmpty() && selectedSeason.value.isNullOrEmpty()) {
+        // ▼▼▼▼▼ 핵심 수정: 초기값이 설정되지 않았으면 변경사항이 없는 것으로 간주합니다. ▼▼▼▼▼
+        if (initialItemIds == null && initialName == null && initialSeason == null) {
             hasChanges.value = false
             return
         }

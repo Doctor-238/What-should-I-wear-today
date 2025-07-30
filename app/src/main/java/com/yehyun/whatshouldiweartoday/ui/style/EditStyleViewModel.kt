@@ -53,29 +53,25 @@ class EditStyleViewModel(application: Application) : AndroidViewModel(applicatio
 
         allClothes = clothingRepository.getItems("전체", "", "최신순")
 
-        // ▼▼▼▼▼ 버그 수정 1: 전체 옷 목록 변경 시 선택된 아이템 유효성 검사 ▼▼▼▼▼
         filteredClothes.addSource(allClothes) { clothesList ->
             validateSelectedItems(clothesList)
             filter()
         }
-        // ▲▲▲▲▲ 버그 수정 1 ▲▲▲▲▲
         filteredClothes.addSource(_clothingCategory) { filter() }
         filteredClothes.addSource(selectedItems) { filter() }
     }
 
-    // ▼▼▼▼▼ 버그 수정 1: 선택된 아이템 유효성 검사 함수 추가 ▼▼▼▼▼
     private fun validateSelectedItems(currentClothes: List<ClothingItem>?) {
         val clothes = currentClothes ?: return
         _selectedItems.value?.let { selected ->
             val existingIds = clothes.map { it.id }.toSet()
-            // selected 목록에서 더 이상 allClothes에 존재하지 않는 아이템을 제거
             val selectionChanged = selected.removeAll { it.id !in existingIds }
             if (selectionChanged) {
-                _selectedItems.postValue(selected) // 변경이 있었으면 LiveData 갱신
+                _selectedItems.postValue(selected)
+                checkForChanges()
             }
         }
     }
-    // ▲▲▲▲▲ 버그 수정 1 ▲▲▲▲▲
 
     private fun filter() {
         val category = _clothingCategory.value ?: "전체"
@@ -188,9 +184,16 @@ class EditStyleViewModel(application: Application) : AndroidViewModel(applicatio
         val items = _selectedItems.value
         val style = originalStyle
 
-        if (name.isNullOrEmpty() || season.isNullOrEmpty() || items == null || style == null) {
+        if (name.isNullOrEmpty() || season.isNullOrEmpty() || style == null) {
             return
         }
+
+        // ▼▼▼▼▼ 핵심 수정: 아이템이 비어있으면 삭제 로직을 호출합니다. ▼▼▼▼▼
+        if (items.isNullOrEmpty()) {
+            deleteStyle()
+            return
+        }
+        // ▲▲▲▲▲ 핵심 수정 ▲▲▲▲▲
 
         _isProcessing.value = true
         viewModelScope.launch {
