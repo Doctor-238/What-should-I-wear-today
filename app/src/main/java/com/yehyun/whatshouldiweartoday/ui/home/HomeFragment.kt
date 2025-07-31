@@ -41,7 +41,11 @@ class HomeFragment : Fragment(), OnTabReselectedListener {
     ) { isGranted: Boolean ->
         homeViewModel.permissionRequestedThisSession = false
         if (isGranted) {
-            checkAndRefresh()
+            try {
+                checkAndRefresh()
+            }finally{
+                homeViewModel.stopLoading()
+            }
         } else {
             if (shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_COARSE_LOCATION)) {
                 showToast("위치 권한이 거부되어 날씨 정보를 가져올 수 없습니다.")
