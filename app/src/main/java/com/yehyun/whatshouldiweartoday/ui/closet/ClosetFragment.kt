@@ -36,6 +36,7 @@ import com.google.android.material.tabs.TabLayoutMediator
 import com.yehyun.whatshouldiweartoday.R
 import com.yehyun.whatshouldiweartoday.databinding.FragmentClosetBinding
 import com.yehyun.whatshouldiweartoday.ui.OnTabReselectedListener
+import com.yehyun.whatshouldiweartoday.ui.style.StyleListFragment
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -194,6 +195,7 @@ class ClosetFragment : Fragment(), OnTabReselectedListener {
                 binding.fabBatchAdd.showProgress(percentage)
             }
         }
+
         viewLifecycleOwner.lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.resetSearchEvent.collect {
@@ -217,12 +219,8 @@ class ClosetFragment : Fragment(), OnTabReselectedListener {
             override fun onTabUnselected(tab: TabLayout.Tab?) {}
 
             override fun onTabReselected(tab: TabLayout.Tab?) {
-                if (viewModel.isDeleteMode.value == true) {
-                    viewModel.exitDeleteMode()
-                } else {
                     val currentFragment = childFragmentManager.findFragmentByTag("f${tab?.position}")
                     (currentFragment as? ClothingListFragment)?.scrollToTop()
-                }
             }
         })
 
@@ -396,9 +394,14 @@ class ClosetFragment : Fragment(), OnTabReselectedListener {
 
         spinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
-                if (viewModel.isDeleteMode.value == false) {
+                if(position!=currentPosition){
                     viewModel.setSortType(sortOptions[position])
-                }
+                    val current = binding.viewPagerCloset.currentItem
+                    val fragment =
+                        childFragmentManager.findFragmentByTag("f$current") as? ClothingListFragment
+                    fragment?.scrollToTop()
+                }else{viewModel.setSortType(sortOptions[position])}
+
             }
             override fun onNothingSelected(parent: AdapterView<*>?) {}
         }
@@ -433,9 +436,12 @@ class ClosetFragment : Fragment(), OnTabReselectedListener {
             val fragment = childFragmentManager.findFragmentByTag("f0") as? ClothingListFragment
             fragment?.scrollToTop()
         } else {
-            // 다른 탭에 있다면, '전체' 탭으로 이동하고 스크롤 하도록 플래그 설정
             pendingScrollToTop = true
             binding.viewPagerCloset.currentItem = 0
+            binding.viewPagerCloset.post { // ViewPager 애니메이션 완료 후 스크롤을 위해 post 사용
+                val fragment = childFragmentManager.findFragmentByTag("f0") as? ClothingListFragment
+                fragment?.scrollToTop()
+            }
         }
     }
     // ▲▲▲▲▲ 핵심 수정 부분 ▲▲▲▲▲

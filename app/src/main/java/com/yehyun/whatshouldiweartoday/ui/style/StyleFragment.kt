@@ -107,6 +107,8 @@ class StyleFragment : Fragment(), OnTabReselectedListener {
 
         viewModel.isDeleteMode.observe(viewLifecycleOwner) { notifyAdapterDeleteModeChanged() }
         viewModel.selectedItems.observe(viewLifecycleOwner) { notifyAdapterSelectionChanged() }
+
+
         viewLifecycleOwner.lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.resetSearchEvent.collect {
@@ -154,12 +156,8 @@ class StyleFragment : Fragment(), OnTabReselectedListener {
             override fun onTabSelected(tab: TabLayout.Tab?) {}
             override fun onTabUnselected(tab: TabLayout.Tab?) {}
             override fun onTabReselected(tab: TabLayout.Tab?) {
-                if (viewModel.isDeleteMode.value == true) {
-                    viewModel.exitDeleteMode()
-                } else {
-                    tab?.position?.let { position ->
-                        (childFragmentManager.findFragmentByTag("f$position") as? StyleListFragment)?.scrollToTop()
-                    }
+                tab?.position?.let { position ->
+                    (childFragmentManager.findFragmentByTag("f$position") as? StyleListFragment)?.scrollToTop()
                 }
             }
         })
@@ -226,9 +224,19 @@ class StyleFragment : Fragment(), OnTabReselectedListener {
 
         spinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
-                viewModel.setSortType(sortOptions[position])
+                if(position!=currentPosition){
+                    viewModel.setSortType(sortOptions[position])
+                    val current = binding.viewPagerStyle.currentItem
+                    val fragment =
+                        childFragmentManager.findFragmentByTag("f$current") as? StyleListFragment
+                    fragment?.scrollToTop()
+                }else{viewModel.setSortType(sortOptions[position])}
             }
-            override fun onNothingSelected(parent: AdapterView<*>?) {}
+            override fun onNothingSelected(parent: AdapterView<*>?) {
+
+            }
+
+
         }
     }
 
