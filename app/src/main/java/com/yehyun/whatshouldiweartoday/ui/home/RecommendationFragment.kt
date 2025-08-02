@@ -29,6 +29,17 @@ class RecommendationFragment : Fragment(R.layout.fragment_recommendation) {
                 HomeFragmentDirections.actionNavigationHomeToEditClothingFragment(item.id)
             )
         }
+        view.findViewById<RecyclerView>(R.id.rv_best_combination).adapter =
+            RecommendationAdapter(onClothingItemClicked)
+
+        view.findViewById<RecyclerView>(R.id.rv_tops).adapter =
+            RecommendationAdapter(onClothingItemClicked)
+
+        view.findViewById<RecyclerView>(R.id.rv_bottoms).adapter =
+            RecommendationAdapter(onClothingItemClicked)
+
+        view.findViewById<RecyclerView>(R.id.rv_outers).adapter =
+            RecommendationAdapter(onClothingItemClicked)
 
         // ▼▼▼▼▼ 핵심 수정 부분 ▼▼▼▼▼
         // '내일' 탭일 경우 제목 텍스트를 변경합니다.
@@ -171,7 +182,25 @@ class RecommendationFragment : Fragment(R.layout.fragment_recommendation) {
     fun scrollToTop() {
         if (::scrollView.isInitialized) {
             scrollView.smoothScrollTo(0, 0)
+            resetHorizontalScroll()
         }
+    }
+
+    private fun resetHorizontalScroll() {
+        view?.findViewById<RecyclerView>(R.id.rv_best_combination)
+            ?.smoothScrollToPosition(0)
+        view?.findViewById<RecyclerView>(R.id.rv_tops)
+            ?.smoothScrollToPosition(0)
+        view?.findViewById<RecyclerView>(R.id.rv_bottoms)
+            ?.smoothScrollToPosition(0)
+        view?.findViewById<RecyclerView>(R.id.rv_outers)
+            ?.smoothScrollToPosition(0)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // 다른 탭에서 돌아오거나 더블클릭으로 재진입 시에도 스크롤 위치 리셋
+        resetHorizontalScroll()
     }
 
     companion object {
