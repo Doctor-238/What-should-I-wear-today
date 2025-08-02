@@ -1,3 +1,4 @@
+// app/src/main/java/com/yehyun/whatshouldiweartoday/ui/closet/AddClothingFragment.kt
 package com.yehyun.whatshouldiweartoday.ui.closet
 
 import android.content.Context
@@ -19,6 +20,7 @@ import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.cardview.widget.CardView
+import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.core.widget.addTextChangedListener
 import androidx.fragment.app.Fragment
@@ -41,7 +43,7 @@ import java.io.InputStream
 data class ClothingAnalysis(
     val is_wearable: Boolean,
     val category: String? = null,
-    val suitable_temperature: Double? = null,
+    var suitable_temperature: Double? = null,
     val color_hex: String? = null
 )
 
@@ -59,7 +61,6 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabResel
     private lateinit var switchRemoveBackground: SwitchMaterial
     private lateinit var frameLayoutPreview: FrameLayout
 
-    // AI Info Card Views
     private lateinit var cardAiInfo: CardView
     private lateinit var tvInfoCategory: TextView
     private lateinit var tvInfoTemperature: TextView
@@ -113,7 +114,6 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabResel
     }
     override fun onResume() {
         super.onResume()
-        // 화면이 다시 보일 때마다 ViewModel에 온도 표시를 새로고침하도록 요청
         viewModel.refreshDisplayWithNewSettings()
     }
 
@@ -188,32 +188,30 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabResel
             }
         }
 
-        viewModel.analysisResultText.observe(viewLifecycleOwner) { text ->
-            if (text.isNotEmpty()) {
-                // "분류:상의, 적정 온도:18.5°C ~ 22.5°C"
-                val parts = text.split(", ")
-                val categoryPart = parts.find { it.startsWith("분류:") }?.substringAfter(":")
-                val tempPart = parts.find { it.startsWith("적정 온도:") }?.substringAfter(":")
+        viewModel.isTemperatureVisible.observe(viewLifecycleOwner) { isVisible ->
+            buttonTempIncrease.isVisible = isVisible
+            buttonTempDecrease.isVisible = isVisible
+            val textColorRes = if (isVisible) R.color.text_primary else R.color.text_secondary
+            tvInfoTemperature.setTextColor(ContextCompat.getColor(requireContext(), textColorRes))
+        }
 
-                tvInfoCategory.text = categoryPart
-                tvInfoTemperature.text = tempPart
+        viewModel.temperatureText.observe(viewLifecycleOwner) { text ->
+            tvInfoTemperature.text = text
+        }
 
-                cardAiInfo.isVisible = true
-            } else {
-                cardAiInfo.isVisible = false
-            }
+        viewModel.categoryText.observe(viewLifecycleOwner) { text ->
+            tvInfoCategory.text = text
+            cardAiInfo.isVisible = text.isNotEmpty()
         }
 
         viewModel.viewColor.observe(viewLifecycleOwner) { color ->
             if (color != null) {
-                // ▼▼▼▼▼ 핵심 수정 부분 ▼▼▼▼▼
                 val colorDrawable = GradientDrawable().apply {
                     shape = GradientDrawable.RECTANGLE
                     setColor(color)
-                    setStroke(3, Color.BLACK) // 3px 두께의 검은색 테두리
+                    setStroke(3, Color.BLACK)
                 }
                 viewInfoColorSwatch.background = colorDrawable
-                // ▲▲▲▲▲ 핵심 수정 부분 ▲▲▲▲▲
                 viewInfoColorSwatch.isVisible = true
             } else {
                 viewInfoColorSwatch.isVisible = false
@@ -265,11 +263,9 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabResel
     }
 
     private fun openGallery() {
-        // 현재 시간과 마지막 클릭 시간의 차이가 1초 미만이면 함수를 종료합니다.
         if (System.currentTimeMillis() - lastClickTime < 700) {
             return
         }
-        // 마지막 클릭 시간을 현재 시간으로 업데이트합니다.
         lastClickTime = System.currentTimeMillis()
         pickImageLauncher.launch("image/*")
     }

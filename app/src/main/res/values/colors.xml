@@ -31,4 +31,7 @@
     <color name="fab_color_style_tab">#88CCFD</color>
     <color name="temp_high_red">#FF6B6B</color>
     <color name="temp_low_blue">#54A0FF</color>
+
+    <color name="delete_button_red_active">#FF4646</color>
+    <color name="delete_button_red_inactive">#FFBDBD</color>
 </resources>

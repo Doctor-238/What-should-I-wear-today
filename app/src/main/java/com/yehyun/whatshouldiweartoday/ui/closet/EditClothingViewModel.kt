@@ -29,9 +29,7 @@ class EditClothingViewModel(application: Application) : AndroidViewModel(applica
     private val _isChanged = MutableLiveData<Boolean>(false)
     val isChanged: LiveData<Boolean> = _isChanged
 
-    // '저장 가능' 상태를 관리하는 LiveData
     val canBeSaved = MediatorLiveData<Boolean>().apply {
-        // isChanged나 currentClothingItem이 변경될 때마다 저장 가능 여부를 다시 계산
         addSource(_isChanged) { value = checkCanBeSaved() }
         addSource(_currentClothingItem) { value = checkCanBeSaved() }
     }
@@ -55,7 +53,6 @@ class EditClothingViewModel(application: Application) : AndroidViewModel(applica
         }
     }
 
-    // 저장 가능 조건을 확인하는 함수
     private fun checkCanBeSaved(): Boolean {
         val hasChanges = _isChanged.value ?: false
         val isNameValid = !_currentClothingItem.value?.name.isNullOrBlank()
@@ -79,7 +76,7 @@ class EditClothingViewModel(application: Application) : AndroidViewModel(applica
         _currentClothingItem.value?.let {
             if (it.name != name) {
                 it.name = name
-                _currentClothingItem.postValue(it) // LiveData를 업데이트하여 옵저버가 알 수 있도록 함
+                _currentClothingItem.postValue(it)
                 checkForChanges()
             }
         }
@@ -132,7 +129,6 @@ class EditClothingViewModel(application: Application) : AndroidViewModel(applica
     }
 
     fun saveChanges() {
-        // 저장하기 전, ViewModel에서도 한 번 더 저장 가능 여부 확인
         if (_isProcessing.value == true || canBeSaved.value != true) return
 
         _currentClothingItem.value?.let {
@@ -155,7 +151,9 @@ class EditClothingViewModel(application: Application) : AndroidViewModel(applica
             viewModelScope.launch {
                 try {
                     repository.delete(itemToDelete)
-                    styleDao.deleteOrphanedStyles()
+                    // ▼▼▼▼▼ 핵심 수정: 버그를 유발하는 고아 스타일 삭제 로직을 제거합니다. ▼▼▼▼▼
+                    // styleDao.deleteOrphanedStyles()
+                    // ▲▲▲▲▲ 핵심 수정 ▲▲▲▲▲
                     _isDeleteComplete.postValue(true)
                 } finally {
                     _isProcessing.postValue(false)

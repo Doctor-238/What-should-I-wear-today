@@ -1,23 +1,21 @@
 package com.yehyun.whatshouldiweartoday
 
 import android.Manifest
-import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.content.Context
-import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.graphics.Color
-import android.net.Uri
-import android.os.Build
-import android.os.Bundle
-import android.provider.Settings
+import android.graphics.BitmapShader
+import android.graphics.Canvas
+import android.graphics.Paint
+import android.graphics.RectF
+import android.graphics.Shader
 import android.util.Log
 import android.view.View
 import android.widget.RemoteViews
 import androidx.core.app.ActivityCompat
-import androidx.navigation.NavDeepLinkBuilder
+import androidx.core.content.ContextCompat
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.google.android.gms.location.LocationServices
@@ -37,7 +35,6 @@ import java.io.File
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import kotlin.math.abs
-import kotlin.math.min
 
 class WidgetUpdateWorker(private val appContext: Context, workerParams: WorkerParameters) :
     CoroutineWorker(appContext, workerParams) {
@@ -87,19 +84,9 @@ class WidgetUpdateWorker(private val appContext: Context, workerParams: WorkerPa
             errorMessage = "업데이트 중 오류 발생"
         } finally {
             when {
-                errorMessage != null -> {
-                    if (errorMessage.contains("권한")) {
-                        showPermissionError(appWidgetId, remoteViews, isToday)
-                    } else {
-                        showError(appWidgetId, remoteViews, isToday, errorMessage)
-                    }
-                }
-                resultPair != null -> {
-                    showSuccessState(appWidgetId, remoteViews, isToday, resultPair!!.first, resultPair!!.second)
-                }
-                else -> {
-                    showError(appWidgetId, remoteViews, isToday, "알 수 없는 오류")
-                }
+                errorMessage != null -> showError(appWidgetId, remoteViews, isToday, errorMessage)
+                resultPair != null -> showSuccessState(appWidgetId, remoteViews, isToday, resultPair!!.first, resultPair!!.second)
+                else -> showError(appWidgetId, remoteViews, isToday, "알 수 없는 오류")
             }
         }
         return Result.success()
@@ -109,14 +96,6 @@ class WidgetUpdateWorker(private val appContext: Context, workerParams: WorkerPa
         remoteViews.setTextViewText(R.id.tv_widget_weather_summary, "업데이트 중...")
         remoteViews.setViewVisibility(R.id.ll_widget_clothing_images, View.INVISIBLE)
         remoteViews.setViewVisibility(R.id.tv_widget_no_reco, View.GONE)
-        finalizeWidgetUpdate(appWidgetId, remoteViews, isToday)
-    }
-
-    private fun showPermissionError(appWidgetId: Int, remoteViews: RemoteViews, isToday: Boolean) {
-        remoteViews.setTextViewText(R.id.tv_widget_weather_summary, "위치 권한을 허용해주세요!")
-        remoteViews.setViewVisibility(R.id.ll_widget_clothing_images, View.GONE)
-        remoteViews.setViewVisibility(R.id.tv_widget_no_reco, View.GONE)
-        setupPermissionClickIntent(appWidgetId, remoteViews)
         finalizeWidgetUpdate(appWidgetId, remoteViews, isToday)
     }
 
@@ -147,20 +126,6 @@ class WidgetUpdateWorker(private val appContext: Context, workerParams: WorkerPa
         AppWidgetManager.getInstance(appContext).updateAppWidget(appWidgetId, remoteViews)
     }
 
-    private fun setupPermissionClickIntent(appWidgetId: Int, remoteViews: RemoteViews) {
-        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        val uri = Uri.fromParts("package", appContext.packageName, null)
-        intent.data = uri
-        val pendingIntentFlag = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        } else {
-            PendingIntent.FLAG_UPDATE_CURRENT
-        }
-        val pendingIntent = PendingIntent.getActivity(appContext, appWidgetId, intent, pendingIntentFlag)
-        remoteViews.setOnClickPendingIntent(R.id.widget_root, pendingIntent)
-    }
-
     private fun processAndRecommend(weatherResponse: WeatherResponse, allClothes: List<ClothingItem>, isToday: Boolean): Pair<DailyWeatherSummary, RecommendationResult>? {
         val targetDate = if (isToday) LocalDate.now() else LocalDate.now().plusDays(1)
         val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
@@ -178,7 +143,7 @@ class WidgetUpdateWorker(private val appContext: Context, workerParams: WorkerPa
         val temperatureTolerance = settingsManager.getTemperatureTolerance()
         val packableOuterTolerance = settingsManager.getPackableOuterTolerance()
         val constitutionAdjustment = settingsManager.getConstitutionAdjustment()
-        val significantTempDifference = 10.0
+        val significantTempDifference = 12.0
         val recommendedClothes = allClothes.filter {
             val adjustedTemp = it.suitableTemperature + constitutionAdjustment
             val itemMinTemp = adjustedTemp - temperatureTolerance
@@ -206,11 +171,6 @@ class WidgetUpdateWorker(private val appContext: Context, workerParams: WorkerPa
         return RecommendationResult(recommendedTops, recommendedBottoms, recommendedOuters, bestCombination, packableOuter, umbrellaRecommendation, isTempDifferenceSignificant)
     }
 
-    // ▼▼▼▼▼ 핵심 수정 부분 ▼▼▼▼▼
-    /**
-     * 파일 경로로부터 이미지를 디코딩하되, 위젯 메모리 제한을 초과하지 않도록
-     * 지정된 크기(256x256)로 리사이즈하여 비트맵을 생성합니다.
-     */
     private fun getResizedBitmap(path: String, reqWidth: Int = 256, reqHeight: Int = 256): Bitmap? {
         return try {
             val options = BitmapFactory.Options().apply {
@@ -227,10 +187,6 @@ class WidgetUpdateWorker(private val appContext: Context, workerParams: WorkerPa
         }
     }
 
-    /**
-     * 원본 이미지 크기와 요청된 크기를 비교하여 적절한 샘플링 사이즈를 계산합니다.
-     * 이는 메모리 사용량을 효율적으로 줄이기 위한 표준적인 방법입니다.
-     */
     private fun calculateInSampleSize(options: BitmapFactory.Options, reqWidth: Int, reqHeight: Int): Int {
         val (height: Int, width: Int) = options.run { outHeight to outWidth }
         var inSampleSize = 1
@@ -246,6 +202,40 @@ class WidgetUpdateWorker(private val appContext: Context, workerParams: WorkerPa
         return inSampleSize
     }
 
+    private fun createFramedBitmap(bitmap: Bitmap): Bitmap {
+        val output = Bitmap.createBitmap(bitmap.width, bitmap.height, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(output)
+
+        val imagePaint = Paint().apply {
+            isAntiAlias = true
+            shader = BitmapShader(bitmap, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP)
+        }
+
+        val borderPaint = Paint().apply {
+            isAntiAlias = true
+            color = ContextCompat.getColor(appContext, R.color.clothing_item_border)
+            style = Paint.Style.STROKE
+            strokeWidth = 10f // 테두리 두께
+        }
+
+        val rect = RectF(0f, 0f, bitmap.width.toFloat(), bitmap.height.toFloat())
+        val cornerRadius = 30f // 모서리 둥근 정도
+
+        // 둥근 사각형 모양으로 원본 이미지를 그립니다.
+        canvas.drawRoundRect(rect, cornerRadius, cornerRadius, imagePaint)
+
+        // 이미지 위에 둥근 테두리를 그립니다.
+        val borderRect = RectF(
+            borderPaint.strokeWidth / 2,
+            borderPaint.strokeWidth / 2,
+            bitmap.width - borderPaint.strokeWidth / 2,
+            bitmap.height - borderPaint.strokeWidth / 2
+        )
+        canvas.drawRoundRect(borderRect, cornerRadius, cornerRadius, borderPaint)
+
+        return output
+    }
+
     private fun updateWidgetImages(remoteViews: RemoteViews, items: List<ClothingItem>) {
         val imageViews = listOf(R.id.iv_widget_item1, R.id.iv_widget_item2, R.id.iv_widget_item3)
         imageViews.forEach { viewId -> remoteViews.setViewVisibility(viewId, View.GONE) }
@@ -255,10 +245,10 @@ class WidgetUpdateWorker(private val appContext: Context, workerParams: WorkerPa
                 try {
                     val file = File(imagePath)
                     if (file.exists()) {
-                        // 원본 비트맵을 그대로 사용하는 대신, 크기를 줄인 비트맵을 사용합니다.
-                        val bitmap = getResizedBitmap(file.absolutePath)
-                        if (bitmap != null) {
-                            remoteViews.setImageViewBitmap(imageViews[index], bitmap)
+                        val originalBitmap = getResizedBitmap(file.absolutePath)
+                        if (originalBitmap != null) {
+                            val framedBitmap = createFramedBitmap(originalBitmap)
+                            remoteViews.setImageViewBitmap(imageViews[index], framedBitmap)
                             remoteViews.setViewVisibility(imageViews[index], View.VISIBLE)
                         }
                     }
@@ -268,5 +258,4 @@ class WidgetUpdateWorker(private val appContext: Context, workerParams: WorkerPa
             }
         }
     }
-    // ▲▲▲▲▲ 핵심 수정 부분 ▲▲▲▲▲
 }

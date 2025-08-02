@@ -1,3 +1,4 @@
+// 파일 경로: app/src/main/java/com/yehyun/whatshouldiweartoday/ui/closet/ClothingListFragment.kt
 package com.yehyun.whatshouldiweartoday.ui.closet
 
 import android.os.Bundle
@@ -6,8 +7,10 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.Observer
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.GridLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.yehyun.whatshouldiweartoday.databinding.FragmentClothingListBinding
 
 class ClothingListFragment : Fragment() {
@@ -15,14 +18,18 @@ class ClothingListFragment : Fragment() {
     private var _binding: FragmentClothingListBinding? = null
     private val binding get() = _binding!!
 
-    private val viewModel: ClosetViewModel by viewModels({requireParentFragment()})
+    private val viewModel: ClosetViewModel by viewModels({ requireParentFragment() })
     private lateinit var adapter: ClothingAdapter
-    private var category: String? = null
+    private var category: String = "전체"
+    private var isViewJustCreated = false
+
+    private var scrollOnNextDataUpdate = false
+    private lateinit var dataObserver: RecyclerView.AdapterDataObserver
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        arguments?.let {
-            category = it.getString(ARG_CATEGORY)
+        arguments?.getString("category")?.let {
+            category = it
         }
     }
 
@@ -36,48 +43,90 @@ class ClothingListFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        isViewJustCreated = true
+
         setupRecyclerView()
         observeViewModel()
+
+        viewModel.getClothesForCategory(category).observe(viewLifecycleOwner) {
+            adapter.submitList(it)
+        }
+
+        viewModel.sortChangedEvent.observe(viewLifecycleOwner, Observer {
+            if (!isViewJustCreated) {
+                scrollOnNextDataUpdate = true
+            }
+            isViewJustCreated = false
+        })
     }
 
     private fun setupRecyclerView() {
-        adapter = ClothingAdapter { clickedItem ->
-            val action = ClosetFragmentDirections.actionNavigationClosetToEditClothingFragment(clickedItem.id)
-            requireParentFragment().findNavController().navigate(action)
+        adapter = ClothingAdapter(
+            onItemClicked = { clickedItem ->
+                if (viewModel.isDeleteMode.value == true) {
+                    viewModel.toggleItemSelection(clickedItem.id)
+                } else {
+                    val action =
+                        ClosetFragmentDirections.actionNavigationClosetToEditClothingFragment(clickedItem.id)
+                    requireParentFragment().findNavController().navigate(action)
+                }
+            },
+            onItemLongClicked = { longClickedItem ->
+                viewModel.enterDeleteMode(longClickedItem.id)
+            },
+            isDeleteMode = { viewModel.isDeleteMode.value ?: false },
+            isItemSelected = { itemId -> viewModel.selectedItems.value?.contains(itemId) ?: false }
+        )
+
+        dataObserver = object : RecyclerView.AdapterDataObserver() {
+            override fun onChanged() {
+                super.onChanged()
+                if (scrollOnNextDataUpdate) {
+                    scrollToTop()
+                    scrollOnNextDataUpdate = false
+                }
+            }
         }
+        adapter.registerAdapterDataObserver(dataObserver)
+
         binding.recyclerViewClothingList.layoutManager = GridLayoutManager(context, 2)
         binding.recyclerViewClothingList.adapter = adapter
     }
 
+    fun notifyAdapter(payload: String) {
+        if(::adapter.isInitialized) {
+            adapter.notifyItemRangeChanged(0, adapter.itemCount, payload)
+        }
+    }
+
+
     private fun observeViewModel() {
-        val categoryToObserve = category ?: "전체"
-        viewModel.getClothesForCategory(categoryToObserve).observe(viewLifecycleOwner) { items ->
+        viewModel.getClothesForCategory(category).observe(viewLifecycleOwner) { items ->
             adapter.submitList(items)
 
-            // ▼▼▼▼▼ 핵심 추가 로직 ▼▼▼▼▼
-            // '전체' 탭이고, 옷 목록이 비어있을 때만 말풍선을 보여줍니다.
-            if (categoryToObserve == "전체" && items.isEmpty()) {
+            if (category == "전체" && items.isEmpty() && viewModel.searchQuery.value.isNullOrEmpty()) {
                 binding.emptyViewContainer.visibility = View.VISIBLE
                 binding.recyclerViewClothingList.visibility = View.GONE
             } else {
                 binding.emptyViewContainer.visibility = View.GONE
                 binding.recyclerViewClothingList.visibility = View.VISIBLE
             }
-            // ▲▲▲▲▲ 핵심 추가 로직 ▲▲▲▲▲
         }
     }
 
     fun scrollToTop() {
-        if (isAdded && _binding != null) {
-            binding.recyclerViewClothingList.smoothScrollToPosition(0)
-        }
+        binding.recyclerViewClothingList.smoothScrollToPosition(0)
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
+        if (::adapter.isInitialized && ::dataObserver.isInitialized) {
+            adapter.unregisterAdapterDataObserver(dataObserver)
+        }
         binding.recyclerViewClothingList.adapter = null
         _binding = null
     }
+
 
     companion object {
         private const val ARG_CATEGORY = "category"

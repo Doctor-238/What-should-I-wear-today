@@ -1,12 +1,14 @@
 package com.yehyun.whatshouldiweartoday.ui.style
 
 import android.annotation.SuppressLint
-import android.view.GestureDetector
 import android.view.LayoutInflater
-import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
+import android.view.animation.AnimationUtils
+import android.widget.ImageView
 import android.widget.TextView
+import androidx.recyclerview.widget.DiffUtil
+import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.yehyun.whatshouldiweartoday.R
 import com.yehyun.whatshouldiweartoday.data.database.ClothingItem
@@ -14,16 +16,11 @@ import com.yehyun.whatshouldiweartoday.data.database.StyleWithItems
 import com.yehyun.whatshouldiweartoday.ui.home.RecommendationAdapter
 
 class SavedStylesAdapter(
-    private val onItemClicked: (StyleWithItems) -> Unit
-) : RecyclerView.Adapter<SavedStylesAdapter.StyleViewHolder>() {
-
-    private var styles: List<StyleWithItems> = listOf()
-
-    @SuppressLint("NotifyDataSetChanged")
-    fun submitList(newStyles: List<StyleWithItems>) {
-        styles = newStyles
-        notifyDataSetChanged()
-    }
+    private val onItemClicked: (StyleWithItems) -> Unit,
+    private val onItemLongClicked: (StyleWithItems) -> Unit,
+    private val isDeleteMode: () -> Boolean,
+    private val isItemSelected: (Long) -> Boolean
+) : ListAdapter<StyleWithItems, SavedStylesAdapter.StyleViewHolder>(diffUtil) { // RecyclerView.Adapter -> ListAdapter 로 변경
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): StyleViewHolder {
         val view = LayoutInflater.from(parent.context).inflate(R.layout.item_saved_style, parent, false)
@@ -31,23 +28,41 @@ class SavedStylesAdapter(
     }
 
     override fun onBindViewHolder(holder: StyleViewHolder, position: Int) {
-        val currentStyle = styles[position]
-        holder.bind(currentStyle, onItemClicked)
+        val currentStyle = getItem(position)
+        holder.bind(currentStyle, onItemClicked, onItemLongClicked, isDeleteMode, isItemSelected)
     }
 
-    override fun getItemCount(): Int = styles.size
+    override fun onBindViewHolder(holder: StyleViewHolder, position: Int, payloads: MutableList<Any>) {
+        if (payloads.isEmpty()) {
+            super.onBindViewHolder(holder, position, payloads)
+        } else {
+            for (payload in payloads) {
+                when (payload) {
+                    "DELETE_MODE_CHANGED" -> holder.updateDeleteModeUI(isDeleteMode())
+                    "SELECTION_CHANGED" -> holder.updateSelectionUI(isItemSelected(getItem(position).style.styleId))
+                }
+            }
+        }
+    }
 
     class StyleViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val styleName: TextView = itemView.findViewById(R.id.tv_style_name)
         private val itemsRecyclerView: RecyclerView = itemView.findViewById(R.id.rv_style_items)
         private val itemsAdapter = RecommendationAdapter()
+        private val deleteCheckbox: ImageView = itemView.findViewById(R.id.iv_delete_checkbox)
 
         init {
             itemsRecyclerView.adapter = itemsAdapter
         }
 
         @SuppressLint("ClickableViewAccessibility")
-        fun bind(styleWithItems: StyleWithItems, clickAction: (StyleWithItems) -> Unit) {
+        fun bind(
+            styleWithItems: StyleWithItems,
+            clickAction: (StyleWithItems) -> Unit,
+            longClickAction: (StyleWithItems) -> Unit,
+            isDeleteMode: () -> Boolean,
+            isItemSelected: (Long) -> Boolean
+        ) {
             styleName.text = styleWithItems.style.styleName
 
             val categoryOrder = mapOf(
@@ -63,18 +78,51 @@ class SavedStylesAdapter(
             itemView.setOnClickListener {
                 clickAction(styleWithItems)
             }
-
-            val gestureDetector = GestureDetector(itemView.context, object : GestureDetector.SimpleOnGestureListener() {
-                override fun onSingleTapUp(e: MotionEvent): Boolean {
-                    itemView.performClick()
-                    return true
+            itemView.setOnLongClickListener {
+                if (!isDeleteMode()) {
+                    longClickAction(styleWithItems)
                 }
-            })
+                true
+            }
 
-            itemsRecyclerView.setOnTouchListener { _, event ->
-                gestureDetector.onTouchEvent(event)
-                return@setOnTouchListener false
+            itemsRecyclerView.setOnTouchListener { v, event ->
+                itemView.onTouchEvent(event)
+                false
+            }
+
+            updateDeleteModeUI(isDeleteMode())
+            updateSelectionUI(isItemSelected(styleWithItems.style.styleId))
+        }
+
+        fun updateDeleteModeUI(isDelete: Boolean) {
+            if (isDelete && deleteCheckbox.visibility == View.GONE) {
+                deleteCheckbox.visibility = View.VISIBLE
+                deleteCheckbox.startAnimation(AnimationUtils.loadAnimation(itemView.context, R.anim.scale_in))
+            } else if (!isDelete && deleteCheckbox.visibility == View.VISIBLE) {
+                deleteCheckbox.startAnimation(AnimationUtils.loadAnimation(itemView.context, R.anim.scale_out))
+                deleteCheckbox.visibility = View.GONE
+            }
+        }
+
+        fun updateSelectionUI(isSelected: Boolean) {
+            deleteCheckbox.setImageResource(
+                if (isSelected) R.drawable.ic_checkbox_checked_custom
+                else R.drawable.ic_checkbox_unchecked_custom
+            )
+        }
+    }
+
+    // ▼▼▼▼▼ 핵심 수정: DiffUtil 구현 추가 ▼▼▼▼▼
+    companion object {
+        val diffUtil = object : DiffUtil.ItemCallback<StyleWithItems>() {
+            override fun areItemsTheSame(oldItem: StyleWithItems, newItem: StyleWithItems): Boolean {
+                return oldItem.style.styleId == newItem.style.styleId
+            }
+
+            override fun areContentsTheSame(oldItem: StyleWithItems, newItem: StyleWithItems): Boolean {
+                return oldItem == newItem
             }
         }
     }
+    // ▲▲▲▲▲ 핵심 수정 ▲▲▲▲▲
 }

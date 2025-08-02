@@ -40,10 +40,7 @@ class SaveStyleFragment : Fragment(R.layout.fragment_save_style), OnTabReselecte
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // ▼▼▼▼▼ 핵심 수정: 프래그먼트가 처음 생성될 때만 상태를 초기화 ▼▼▼▼▼
-        if (args.preselectedIds == null && savedInstanceState == null) {
-            viewModel.resetAllState()
-        }
+
         // ▲▲▲▲▲ 핵심 수정 ▲▲▲▲▲
 
         tabLayout = view.findViewById(R.id.tab_layout_save_style_category)
