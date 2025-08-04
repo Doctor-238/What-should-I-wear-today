@@ -29,7 +29,7 @@ class RecyclerItemClickListener(
 
     // 외부(Fragment)에서 RecyclerView의 스크롤 상태를 전달받을 변수
     var isRecyclerViewBusy = false
-    
+
 
     private val longPressRunnable = Runnable {
         touchedView?.let { view ->

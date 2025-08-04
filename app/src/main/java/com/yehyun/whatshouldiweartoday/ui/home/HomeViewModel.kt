@@ -73,8 +73,10 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     val error: LiveData<String?> = _error
     private val _isLoading = MutableLiveData<Boolean>()
     val isLoading: LiveData<Boolean> = _isLoading
-    private val _isRecommendationScrolledToTop = MutableLiveData(true)
-    val isRecommendationScrolledToTop: LiveData<Boolean> = _isRecommendationScrolledToTop
+
+    // ▼▼▼▼▼ 핵심 수정: 스크롤 상태 관련 LiveData 모두 제거 ▼▼▼▼▼
+    // isRecommendationScrolledToTop, childFragmentScrolled 등 모두 삭제
+    // ▲▲▲▲▲ 핵심 수정 끝 ▲▲▲▲▲
 
     private val _switchToTab = MutableLiveData<Int?>()
     val switchToTab: LiveData<Int?> = _switchToTab
@@ -91,11 +93,9 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         clothingRepository = ClothingRepository(clothingDao)
     }
 
-    fun setScrollState(isAtTop: Boolean) {
-        if (_isRecommendationScrolledToTop.value != isAtTop) {
-            _isRecommendationScrolledToTop.value = isAtTop
-        }
-    }
+    // ▼▼▼▼▼ 핵심 수정: 스크롤 관련 함수 모두 제거 ▼▼▼▼▼
+    // setScrollState, onChildFragmentScrolled 등 모두 삭제
+    // ▲▲▲▲▲ 핵심 수정 끝 ▲▲▲▲▲
 
     fun startLoading() {
         if (_isLoading.value != true) _isLoading.value = true
@@ -106,7 +106,6 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun refreshWeatherData(apiKey: String) {
-        // 기존 요청 취소
         cancellationTokenSource.cancel()
         cancellationTokenSource = CancellationTokenSource()
 
@@ -129,17 +128,15 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private suspend fun getFreshLocation(): Location {
-        // 1. 마지막 위치 확인 (빠름)
         try {
             val lastLocation = fusedLocationClient.lastLocation.await()
-            if (lastLocation != null && (System.currentTimeMillis() - lastLocation.time) < 600000) { // 10분 이내
+            if (lastLocation != null && (System.currentTimeMillis() - lastLocation.time) < 600000) {
                 return lastLocation
             }
         } catch (e: Exception) {
             Log.w("HomeViewModel", "마지막 위치 가져오기 실패", e)
         }
 
-        // 2. 현재 위치 요청 (안정적)
         return fusedLocationClient.getCurrentLocation(
             Priority.PRIORITY_BALANCED_POWER_ACCURACY,
             cancellationTokenSource.token

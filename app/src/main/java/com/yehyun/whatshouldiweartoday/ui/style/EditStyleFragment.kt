@@ -193,7 +193,11 @@ class EditStyleFragment : Fragment(R.layout.fragment_edit_style), OnTabReselecte
     private fun setupBackButtonHandler() {
         onBackPressedCallback = object : OnBackPressedCallback(false) {
             override fun handleOnBackPressed() {
-                showSaveChangesDialog()
+                if (buttonSave.isEnabled) {
+                    showSaveChangesDialog()
+                } else {
+                    findNavController().popBackStack()
+                }
             }
         }
         requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, onBackPressedCallback)
