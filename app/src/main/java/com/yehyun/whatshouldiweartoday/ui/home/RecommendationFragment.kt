@@ -22,12 +22,9 @@ class RecommendationFragment : Fragment(R.layout.fragment_recommendation) {
     private val isToday: Boolean by lazy { arguments?.getBoolean(ARG_IS_TODAY, true) ?: true }
     private lateinit var scrollView: ScrollView
 
-    // ▼▼▼▼▼ 핵심 수정: 스크롤 가능 여부를 알려주는 함수로 변경 ▼▼▼▼▼
     fun canScrollUp(): Boolean {
-        // View.canScrollVertically(-1)은 위로 스크롤할 내용이 남아있으면 true를 반환합니다.
         return if (::scrollView.isInitialized) scrollView.canScrollVertically(-1) else false
     }
-    // ▲▲▲▲▲ 핵심 수정 끝 ▲▲▲▲▲
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -44,10 +41,6 @@ class RecommendationFragment : Fragment(R.layout.fragment_recommendation) {
     }
 
     private fun setupViews(view: View, onClothingItemClicked: (ClothingItem) -> Unit) {
-        // ▼▼▼▼▼ 핵심 수정: 스크롤 리스너 완전 삭제 ▼▼▼▼▼
-        // scrollView.setOnScrollChangeListener { ... }
-        // ▲▲▲▲▲ 핵심 수정 끝 ▲▲▲▲▲
-
         view.findViewById<RecyclerView>(R.id.rv_best_combination).adapter = RecommendationAdapter(onClothingItemClicked)
         view.findViewById<RecyclerView>(R.id.rv_tops).adapter = RecommendationAdapter(onClothingItemClicked)
         view.findViewById<RecyclerView>(R.id.rv_bottoms).adapter = RecommendationAdapter(onClothingItemClicked)
@@ -116,16 +109,21 @@ class RecommendationFragment : Fragment(R.layout.fragment_recommendation) {
         }
     }
 
+    // ▼▼▼▼▼ 핵심 수정: 어댑터에 객체 목록을 전달 ▼▼▼▼▼
     private fun bindRecommendationData(view: View, result: RecommendationResult) {
-        (view.findViewById<RecyclerView>(R.id.rv_tops).adapter as RecommendationAdapter).submitList(result.recommendedTops, result.packableOuter?.id)
-        (view.findViewById<RecyclerView>(R.id.rv_bottoms).adapter as RecommendationAdapter).submitList(result.recommendedBottoms)
-        (view.findViewById<RecyclerView>(R.id.rv_outers).adapter as RecommendationAdapter).submitList(result.recommendedOuters, result.packableOuter?.id)
+        val rvTops = view.findViewById<RecyclerView>(R.id.rv_tops)
+        val rvBottoms = view.findViewById<RecyclerView>(R.id.rv_bottoms)
+        val rvOuters = view.findViewById<RecyclerView>(R.id.rv_outers)
+
+        (rvTops.adapter as RecommendationAdapter).submitList(result.recommendedTops, result.packableOuters)
+        (rvBottoms.adapter as RecommendationAdapter).submitList(result.recommendedBottoms)
+        (rvOuters.adapter as RecommendationAdapter).submitList(result.recommendedOuters, result.packableOuters)
 
         val cardBestCombination = view.findViewById<com.google.android.material.card.MaterialCardView>(R.id.card_best_combination)
         if (result.bestCombination.isNotEmpty()) {
             cardBestCombination.isVisible = true
             val rvBestCombination = view.findViewById<RecyclerView>(R.id.rv_best_combination)
-            (rvBestCombination.adapter as RecommendationAdapter).submitList(result.bestCombination)
+            (rvBestCombination.adapter as RecommendationAdapter).submitList(result.bestCombination, result.packableOuters)
 
             view.findViewById<android.widget.Button>(R.id.btn_save_combination).setOnClickListener {
                 val ids = result.bestCombination.map { it.id }.toIntArray()
@@ -135,6 +133,7 @@ class RecommendationFragment : Fragment(R.layout.fragment_recommendation) {
         } else {
             cardBestCombination.isVisible = false
         }
+        // ▲▲▲▲▲ 핵심 수정 끝 ▲▲▲▲▲
 
         view.findViewById<TextView>(R.id.tv_no_tops).isVisible = result.recommendedTops.isEmpty()
         view.findViewById<TextView>(R.id.tv_no_bottoms).isVisible = result.recommendedBottoms.isEmpty()

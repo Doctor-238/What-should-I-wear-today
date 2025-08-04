@@ -9,6 +9,7 @@ import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.DefaultItemAnimator
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.yehyun.whatshouldiweartoday.R
 import com.yehyun.whatshouldiweartoday.databinding.FragmentStyleListBinding
 
@@ -20,6 +21,10 @@ class StyleListFragment : Fragment() {
     private val viewModel: StyleViewModel by viewModels({ requireParentFragment() })
     private lateinit var adapter: SavedStylesAdapter
     private var season: String? = null
+
+    // ▼▼▼▼▼ 핵심 수정 1: itemClickListener 멤버 변수 제거 ▼▼▼▼▼
+    // private lateinit var itemClickListener: RecyclerItemClickListener
+    // ▲▲▲▲▲ 핵심 수정 끝 ▲▲▲▲▲
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -43,7 +48,6 @@ class StyleListFragment : Fragment() {
     }
 
     private fun setupRecyclerView() {
-        // 어댑터 생성자는 그대로 둡니다.
         adapter = SavedStylesAdapter(
             isDeleteMode = { viewModel.isDeleteMode.value ?: false },
             isItemSelected = { styleId -> viewModel.selectedItems.value?.contains(styleId) ?: false }
@@ -52,32 +56,31 @@ class StyleListFragment : Fragment() {
         binding.recyclerViewStyleList.adapter = adapter
         binding.recyclerViewStyleList.itemAnimator = DefaultItemAnimator()
 
-        binding.recyclerViewStyleList.addOnItemTouchListener(
-            RecyclerItemClickListener(
-                context = requireContext(),
-                recyclerView = binding.recyclerViewStyleList,
-                onItemClick = { _, position ->
-                    // ▼▼▼▼▼ 핵심 수정: getItem을 getStyleAt으로 변경 ▼▼▼▼▼
-                    adapter.getStyleAt(position)?.let { clickedStyle ->
-                        if (viewModel.isDeleteMode.value == true) {
-                            viewModel.toggleItemSelection(clickedStyle.style.styleId)
-                        } else {
-                            val navController = requireParentFragment().findNavController()
-                            if (navController.currentDestination?.id == R.id.navigation_style) {
-                                val action = StyleFragmentDirections.actionNavigationStyleToEditStyleFragment(clickedStyle.style.styleId)
-                                navController.navigate(action)
-                            }
+        // ▼▼▼▼▼ 핵심 수정 2: itemClickListener를 다시 지역 변수로 생성 ▼▼▼▼▼
+        val itemClickListener = RecyclerItemClickListener(
+            context = requireContext(),
+            recyclerView = binding.recyclerViewStyleList,
+            onItemClick = { _, position ->
+                adapter.getStyleAt(position)?.let { clickedStyle ->
+                    if (viewModel.isDeleteMode.value == true) {
+                        viewModel.toggleItemSelection(clickedStyle.style.styleId)
+                    } else {
+                        val navController = requireParentFragment().findNavController()
+                        if (navController.currentDestination?.id == R.id.navigation_style) {
+                            val action = StyleFragmentDirections.actionNavigationStyleToEditStyleFragment(clickedStyle.style.styleId)
+                            navController.navigate(action)
                         }
                     }
-                },
-                onItemLongClick = { _, position ->
-                    // ▼▼▼▼▼ 핵심 수정: getItem을 getStyleAt으로 변경 ▼▼▼▼▼
-                    adapter.getStyleAt(position)?.let { longClickedStyle ->
-                        viewModel.enterDeleteMode(longClickedStyle.style.styleId)
-                    }
                 }
-            )
+            },
+            onItemLongClick = { _, position ->
+                adapter.getStyleAt(position)?.let { longClickedStyle ->
+                    viewModel.enterDeleteMode(longClickedStyle.style.styleId)
+                }
+            }
         )
+        binding.recyclerViewStyleList.addOnItemTouchListener(itemClickListener)
+        // ▲▲▲▲▲ 핵심 수정 끝 ▲▲▲▲▲
     }
 
     private fun observeViewModel() {
@@ -102,11 +105,26 @@ class StyleListFragment : Fragment() {
         }
     }
 
+    // ▼▼▼▼▼ 핵심 수정 3: scrollToTop 함수에서 isDragging 관련 코드 제거 ▼▼▼▼▼
     fun scrollToTop() {
         if (isAdded && _binding != null) {
             binding.recyclerViewStyleList.smoothScrollToPosition(0)
+
+            (binding.recyclerViewStyleList.layoutManager as? LinearLayoutManager)?.let { layoutManager ->
+                val firstVisible = layoutManager.findFirstVisibleItemPosition()
+                val lastVisible = layoutManager.findLastVisibleItemPosition()
+
+                if (firstVisible != RecyclerView.NO_POSITION) {
+                    for (i in firstVisible..lastVisible) {
+                        val holder = binding.recyclerViewStyleList.findViewHolderForAdapterPosition(i)
+                        val nestedRv = holder?.itemView?.findViewById<RecyclerView>(R.id.rv_style_items)
+                        nestedRv?.smoothScrollToPosition(0)
+                    }
+                }
+            }
         }
     }
+    // ▲▲▲▲▲ 핵심 수정 끝 ▲▲▲▲▲
 
     override fun onDestroyView() {
         super.onDestroyView()

@@ -21,14 +21,37 @@ class RecyclerItemClickListener(
 
     private val handler = Handler(Looper.getMainLooper())
     private var touchedView: View? = null
-    private var isDragging = false
+    var isDragging = false // isDragging을 public으로 변경하여 외부에서 접근 가능하도록 함
     private var initialX = 0f
     private var initialY = 0f
     private val touchSlop = ViewConfiguration.get(context).scaledTouchSlop
     private val longPressTimeout = ViewConfiguration.getLongPressTimeout().toLong()
 
-    // 외부(Fragment)에서 RecyclerView의 스크롤 상태를 전달받을 변수
     var isRecyclerViewBusy = false
+
+    // ▼▼▼▼▼ 핵심 수정: 스크롤 상태를 감지하여 터치 상태를 자동으로 리셋하는 리스너 추가 ▼▼▼▼▼
+    init {
+        recyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+            override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
+                super.onScrollStateChanged(recyclerView, newState)
+
+                // 스크롤이 시작되면(사용자 드래그, 자동 스크롤 모두 포함)
+                if (newState != RecyclerView.SCROLL_STATE_IDLE) {
+                    // 진행 중이던 롱클릭 이벤트를 취소하고, 눌려있던 뷰의 상태를 초기화
+                    handler.removeCallbacks(longPressRunnable)
+                    if (touchedView != null) {
+                        touchedView?.isPressed = false
+                        touchedView = null
+                    }
+                    isDragging = true // 스크롤 중에는 클릭이 되지 않도록 드래그 상태로 설정
+                } else {
+                    // 스크롤이 멈추면 드래그 상태를 해제
+                    isDragging = false
+                }
+            }
+        })
+    }
+    // ▲▲▲▲▲ 핵심 수정 끝 ▲▲▲▲▲
 
 
     private val longPressRunnable = Runnable {
@@ -43,9 +66,7 @@ class RecyclerItemClickListener(
     }
 
     override fun onInterceptTouchEvent(rv: RecyclerView, e: MotionEvent): Boolean {
-        // RecyclerView가 스크롤 또는 관성 이동 중일 때는 모든 터치 로직을 건너뜁니다.
         if (isRecyclerViewBusy) {
-            // 진행 중이던 터치가 있다면 깔끔하게 정리합니다.
             if (touchedView != null) {
                 handler.removeCallbacks(longPressRunnable)
                 touchedView?.isPressed = false
@@ -74,28 +95,28 @@ class RecyclerItemClickListener(
 
 
             MotionEvent.ACTION_MOVE -> {
-                var dx = abs(e.x - initialX)
-                var dy = abs(e.y - initialY)
+                val dx = abs(e.x - initialX)
+                val dy = abs(e.y - initialY)
 
-                    if (dx > touchSlop || dy > touchSlop) {
-                        isDragging = true
-                        handler.removeCallbacks(longPressRunnable)
-                        touchedView?.isPressed = false
-                    }
-                    else{
-                        isDragging = false
-                    }
+                if (dx > touchSlop || dy > touchSlop) {
+                    isDragging = true
+                    handler.removeCallbacks(longPressRunnable)
+                    touchedView?.isPressed = false
+                }
+                else{
+                    isDragging = false
+                }
 
             }
 
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                 handler.removeCallbacks(longPressRunnable)
+                val wasDragging = isDragging // isDragging이 false로 바뀌기 전 상태 저장
                 isDragging = false
                 touchedView?.let { view ->
                     val wasPressed = view.isPressed
                     view.isPressed = false
-                    // 드래그 중이 아니었고, 뷰가 눌려있던 상태일 때만 클릭으로 간주
-                    if (!isDragging && wasPressed) {
+                    if (!wasDragging && wasPressed) {
                         val position = recyclerView.getChildAdapterPosition(view)
                         if (position != RecyclerView.NO_POSITION) {
                             onItemClick(view, position)

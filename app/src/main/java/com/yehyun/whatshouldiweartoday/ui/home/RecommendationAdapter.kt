@@ -1,5 +1,3 @@
-// app/src/main/java/com/yehyun/whatshouldiweartoday/ui/home/RecommendationAdapter.kt
-
 package com.yehyun.whatshouldiweartoday.ui.home
 
 import android.net.Uri
@@ -14,20 +12,21 @@ import com.yehyun.whatshouldiweartoday.R
 import com.yehyun.whatshouldiweartoday.data.database.ClothingItem
 import java.io.File
 
-// [핵심 수정] onItemLongClicked 람다 파라미터 추가
 class RecommendationAdapter(
     private val onItemClicked: ((ClothingItem) -> Unit)? = null,
-    private val onItemLongClicked: ((ClothingItem) -> Unit)? = null // 롱클릭 리스너 추가
+    private val onItemLongClicked: ((ClothingItem) -> Unit)? = null
 ) : RecyclerView.Adapter<RecommendationAdapter.RecommendationViewHolder>() {
 
     private var items: List<ClothingItem> = listOf()
-    private var packableOuterId: Int? = null
+    // ▼▼▼▼▼ 핵심 수정: ID 목록 -> 객체 목록으로 변경 ▼▼▼▼▼
+    private var packableOuters: List<ClothingItem> = emptyList()
 
-    fun submitList(newItems: List<ClothingItem>, packableId: Int? = null) {
+    fun submitList(newItems: List<ClothingItem>, packableOuters: List<ClothingItem> = emptyList()) {
         items = newItems
-        packableOuterId = packableId
+        this.packableOuters = packableOuters
         notifyDataSetChanged()
     }
+    // ▲▲▲▲▲ 핵심 수정 끝 ▲▲▲▲▲
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecommendationViewHolder {
         val view = LayoutInflater.from(parent.context).inflate(R.layout.item_recommendation_clothing_square, parent, false)
@@ -37,20 +36,21 @@ class RecommendationAdapter(
     override fun onBindViewHolder(holder: RecommendationViewHolder, position: Int) {
         val currentItem = items[position]
 
-        // 일반 클릭 리스너 설정
         onItemClicked?.let { listener ->
             holder.itemView.setOnClickListener { listener(currentItem) }
         }
 
-        // [추가] 롱클릭 리스너 설정
         onItemLongClicked?.let { listener ->
             holder.itemView.setOnLongClickListener {
                 listener(currentItem)
-                true // 이벤트 소비
+                true
             }
         }
 
-        holder.bind(currentItem, currentItem.id == packableOuterId)
+        // ▼▼▼▼▼ 핵심 수정: 현재 아이템이 '챙겨갈 아우터' 목록에 있는지 ID로 확인 ▼▼▼▼▼
+        val isPackable = packableOuters.any { it.id == currentItem.id }
+        holder.bind(currentItem, isPackable)
+        // ▲▲▲▲▲ 핵심 수정 끝 ▲▲▲▲▲
     }
 
     override fun getItemCount(): Int = items.size
@@ -60,9 +60,7 @@ class RecommendationAdapter(
         private val iconView: ImageView = itemView.findViewById(R.id.icon_packable)
 
         fun bind(item: ClothingItem, isPackable: Boolean) {
-            val imageToShow = if (item.useProcessedImage && item.processedImageUri != null) {
-                item.processedImageUri
-            } else { item.imageUri }
+            val imageToShow = if (item.useProcessedImage && item.processedImageUri != null) item.processedImageUri else item.imageUri
             Glide.with(itemView.context).load(Uri.fromFile(File(imageToShow))).into(imageView)
             iconView.isVisible = isPackable
         }
