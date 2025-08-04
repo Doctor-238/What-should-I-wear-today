@@ -43,28 +43,41 @@ class StyleListFragment : Fragment() {
     }
 
     private fun setupRecyclerView() {
+        // 어댑터 생성자는 그대로 둡니다.
         adapter = SavedStylesAdapter(
-            onItemClicked = { clickedStyle ->
-                if (viewModel.isDeleteMode.value == true) {
-                    viewModel.toggleItemSelection(clickedStyle.style.styleId)
-                } else {
-                    // ▼▼▼▼▼ 핵심 수정: requireParentFragment()로 NavController를 찾도록 수정 ▼▼▼▼▼
-                    val navController = requireParentFragment().findNavController()
-                    if (navController.currentDestination?.id == R.id.navigation_style) {
-                        val action = StyleFragmentDirections.actionNavigationStyleToEditStyleFragment(clickedStyle.style.styleId)
-                        navController.navigate(action)
-                    }
-                }
-            },
-            onItemLongClicked = { longClickedStyle ->
-                viewModel.enterDeleteMode(longClickedStyle.style.styleId)
-            },
             isDeleteMode = { viewModel.isDeleteMode.value ?: false },
             isItemSelected = { styleId -> viewModel.selectedItems.value?.contains(styleId) ?: false }
         )
         binding.recyclerViewStyleList.layoutManager = LinearLayoutManager(context)
         binding.recyclerViewStyleList.adapter = adapter
         binding.recyclerViewStyleList.itemAnimator = DefaultItemAnimator()
+
+        binding.recyclerViewStyleList.addOnItemTouchListener(
+            RecyclerItemClickListener(
+                context = requireContext(),
+                recyclerView = binding.recyclerViewStyleList,
+                onItemClick = { _, position ->
+                    // ▼▼▼▼▼ 핵심 수정: getItem을 getStyleAt으로 변경 ▼▼▼▼▼
+                    adapter.getStyleAt(position)?.let { clickedStyle ->
+                        if (viewModel.isDeleteMode.value == true) {
+                            viewModel.toggleItemSelection(clickedStyle.style.styleId)
+                        } else {
+                            val navController = requireParentFragment().findNavController()
+                            if (navController.currentDestination?.id == R.id.navigation_style) {
+                                val action = StyleFragmentDirections.actionNavigationStyleToEditStyleFragment(clickedStyle.style.styleId)
+                                navController.navigate(action)
+                            }
+                        }
+                    }
+                },
+                onItemLongClick = { _, position ->
+                    // ▼▼▼▼▼ 핵심 수정: getItem을 getStyleAt으로 변경 ▼▼▼▼▼
+                    adapter.getStyleAt(position)?.let { longClickedStyle ->
+                        viewModel.enterDeleteMode(longClickedStyle.style.styleId)
+                    }
+                }
+            )
+        )
     }
 
     private fun observeViewModel() {
@@ -73,7 +86,6 @@ class StyleListFragment : Fragment() {
         viewModel.getStylesForSeason(seasonToObserve).observe(viewLifecycleOwner) { styles ->
             adapter.submitList(styles)
 
-            // ▼▼▼▼▼ 핵심 수정: 오류가 발생한 부분을 원래의 올바른 로직으로 복원 ▼▼▼▼▼
             if (seasonToObserve == "전체" && styles.isEmpty() && viewModel.searchQuery.value.isNullOrEmpty()) {
                 binding.emptyStyleContainer.visibility = View.VISIBLE
                 binding.recyclerViewStyleList.visibility = View.GONE
@@ -81,7 +93,6 @@ class StyleListFragment : Fragment() {
                 binding.emptyStyleContainer.visibility = View.GONE
                 binding.recyclerViewStyleList.visibility = View.VISIBLE
             }
-            // ▲▲▲▲▲ 핵심 수정 ▲▲▲▲▲
         }
     }
 

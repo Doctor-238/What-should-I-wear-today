@@ -34,6 +34,8 @@ class StyleFragment : Fragment(), OnTabReselectedListener {
     private val viewModel: StyleViewModel by viewModels()
     private lateinit var onBackPressedCallback: OnBackPressedCallback
 
+
+
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
