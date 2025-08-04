@@ -14,7 +14,17 @@
 
 ## 📱 실행 데모
 
-<< 사진 혹은 영상 삽입 >>
+<table>
+  <tr>
+    <td><a href="https://ibb.co/vCGmbfcb"><img src="https://i.ibb.co/0pSZk1nk/1-2.png" width="300"></a></td>
+    <td><a href="https://ibb.co/SFhQX77"><img src="https://i.ibb.co/1FDsfJJ/2-1.png" width="300"></a></td>
+  </tr>
+  <tr>
+    <td><a href="https://ibb.co/JjCjw3Xb"><img src="https://i.ibb.co/pjnjBhCs/3-1.png" width="300"></a></td>
+    <td><a href="https://ibb.co/nMZyqX0p"><img src="https://i.ibb.co/Jj0TWYdZ/4-1.png" width="300"></a></td>
+  </tr>
+</table>
+
 
 ## 🛠 주요 기능   
 
@@ -60,7 +70,7 @@ Build Tool: Gradle
 
 UI Framework: XML-based View System
 
-AI 분석: 
+AI 분석: Google Gemini API
 
 Database: Room (SQLite 기반 로컬 DB)
 
