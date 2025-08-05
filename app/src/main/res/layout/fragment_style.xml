@@ -2,6 +2,7 @@
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/style_fragment_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context=".ui.style.StyleFragment">
@@ -123,8 +124,8 @@
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintTop_toTopOf="parent" />
-
         </androidx.constraintlayout.widget.ConstraintLayout>
+
     </FrameLayout>
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/tabs_container"
@@ -133,7 +134,6 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/toolbar_container_style">
-
         <com.google.android.material.tabs.TabLayout
             android:id="@+id/tab_layout_style_season"
             android:layout_width="0dp"
@@ -151,7 +151,6 @@
             app:tabIndicatorColor="@color/tab_selected_text"
             app:tabIndicatorFullWidth="false"
             app:tabIndicatorGravity="bottom"/>
-
     </androidx.constraintlayout.widget.ConstraintLayout>
 
     <View
@@ -170,6 +169,38 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/separator" />
 
+    <LinearLayout
+        android:id="@+id/scroll_mode_alert_container"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="24dp"
+        android:background="@drawable/bg_search_spinner"
+        android:elevation="4dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="12dp"
+        android:paddingTop="8dp"
+        android:paddingEnd="12dp"
+        android:paddingBottom="8dp"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toStartOf="@+id/fab_add_style"
+        tools:visibility="visible">
+
+        <ImageView
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:src="@drawable/alert" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:text="재클릭시 스크롤 모드가 해제됩니다."
+            android:textColor="@color/text_secondary"
+            android:textSize="12sp" />
+    </LinearLayout>
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/fab_add_style"
         android:layout_width="wrap_content"

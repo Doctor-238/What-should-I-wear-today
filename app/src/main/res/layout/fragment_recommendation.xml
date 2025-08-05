@@ -398,7 +398,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginHorizontal="16dp"
-                app:cardBackgroundColor="@color/settings_card_background"
+                app:cardBackgroundColor="#f2f2f2"
                 app:cardCornerRadius="16dp"
                 app:cardElevation="4dp"
                 android:visibility="gone"
@@ -412,8 +412,8 @@
                     android:padding="16dp">
 
                     <ImageView
-                        android:layout_width="24dp"
-                        android:layout_height="24dp"
+                        android:layout_width="36dp"
+                        android:layout_height="36dp"
                         android:src="@drawable/ic_packable_bag" />
                     <TextView
                         android:id="@+id/tv_info_temp_difference"

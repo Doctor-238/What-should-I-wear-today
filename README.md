@@ -14,7 +14,17 @@
 
 ## 📱 실행 데모
 
-<< 사진 혹은 영상 삽입 >>
+<table>
+  <tr>
+    <td><a href="https://ibb.co/vCGmbfcb"><img src="https://i.ibb.co/0pSZk1nk/1-2.png" width="300"></a></td>
+    <td><a href="https://ibb.co/SFhQX77"><img src="https://i.ibb.co/1FDsfJJ/2-1.png" width="300"></a></td>
+  </tr>
+  <tr>
+    <td><a href="https://ibb.co/JjCjw3Xb"><img src="https://i.ibb.co/pjnjBhCs/3-1.png" width="300"></a></td>
+    <td><a href="https://ibb.co/nMZyqX0p"><img src="https://i.ibb.co/Jj0TWYdZ/4-1.png" width="300"></a></td>
+  </tr>
+</table>
+
 
 ## 🛠 주요 기능   
 
@@ -60,7 +70,7 @@ Build Tool: Gradle
 
 UI Framework: XML-based View System
 
-AI 분석: 
+AI 분석: Google Gemini API
 
 Database: Room (SQLite 기반 로컬 DB)
 
@@ -124,8 +134,10 @@ Database: Room (SQLite 기반 로컬 DB)
   - 기획 / 기능 설계
   - 프론트엔드 개발
   - 백엔드 연동, 로컬 데이터 처리
+<br>
 - 2171429 이지원 [(CH4ER1)](https://github.com/CH4ER1)
-
   - UI/UX 디자인
-   - (https://www.canva.com/design/DAGrymWtjvE/3CGKh1Iugw0eGi7S_W8V1A/edit?utm_content=DAGrymWtjvE&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton)
   - 문서 작성
+
+## ✍️ 디자인 원본 (Canva)
+- https://www.canva.com/design/DAGrymWtjvE/3CGKh1Iugw0eGi7S_W8V1A/edit?utm_content=DAGrymWtjvE&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton

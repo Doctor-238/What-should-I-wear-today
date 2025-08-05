@@ -8,7 +8,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.BitmapShader
 import android.graphics.Canvas
-import android.graphics.Color // Color를 사용하기 위해 import
+import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.RectF
 import android.graphics.Shader
@@ -36,10 +36,16 @@ import java.io.File
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import kotlin.math.abs
-import kotlin.math.max // max 함수를 사용하기 위해 import
+import kotlin.math.min
 
 class WidgetUpdateWorker(private val appContext: Context, workerParams: WorkerParameters) :
     CoroutineWorker(appContext, workerParams) {
+
+    companion object {
+        // ▼▼▼▼▼ 핵심 수정 1: 최종 이미지 크기를 상수로 정의 ▼▼▼▼▼
+        private const val FINAL_IMAGE_SIZE = 256
+        // ▲▲▲▲▲ 핵심 수정 1 ▲▲▲▲▲
+    }
 
     override suspend fun doWork(): Result {
         val appWidgetId = inputData.getInt(AppWidgetManager.EXTRA_APPWIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID)
@@ -225,24 +231,12 @@ class WidgetUpdateWorker(private val appContext: Context, workerParams: WorkerPa
         return inSampleSize
     }
 
-    // ▼▼▼▼▼ 핵심 수정 1: 흰색 배경을 추가하는 함수 ▼▼▼▼▼
-    private fun createBitmapWithWhiteBackground(source: Bitmap): Bitmap {
-        // 원본 이미지의 가로/세로 중 더 긴 쪽을 기준으로 정사각형 비트맵 생성
-        val size = max(source.width, source.height)
-        val newBitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(newBitmap)
-
-        // 캔버스를 흰색으로 채움
-        canvas.drawColor(Color.WHITE)
-
-        // 원본 이미지를 중앙에 그림
-        val left = (size - source.width) / 2f
-        val top = (size - source.height) / 2f
-        canvas.drawBitmap(source, left, top, null)
-
-        return newBitmap
+    private fun createCenterCroppedSquareBitmap(source: Bitmap): Bitmap {
+        val size = min(source.width, source.height)
+        val x = (source.width - size) / 2
+        val y = (source.height - size) / 2
+        return Bitmap.createBitmap(source, x, y, size, size)
     }
-    // ▲▲▲▲▲ 핵심 수정 끝 ▲▲▲▲▲
 
     private fun createFramedBitmap(bitmap: Bitmap, isPackable: Boolean): Bitmap {
         val output = Bitmap.createBitmap(bitmap.width, bitmap.height, Bitmap.Config.ARGB_8888)
@@ -253,7 +247,8 @@ class WidgetUpdateWorker(private val appContext: Context, workerParams: WorkerPa
             shader = BitmapShader(bitmap, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP)
         }
 
-        val strokeWidth = 10f
+        val strokeWidth = 8f // 테두리 두께 조정
+        val cornerRadius = 24f // 코너 곡률 조정
         val borderPaint = Paint().apply {
             isAntiAlias = true
             color = ContextCompat.getColor(appContext, R.color.clothing_item_border)
@@ -262,8 +257,6 @@ class WidgetUpdateWorker(private val appContext: Context, workerParams: WorkerPa
         }
 
         val imageRect = RectF(0f, 0f, bitmap.width.toFloat(), bitmap.height.toFloat())
-        val cornerRadius = 30f
-
         canvas.drawRoundRect(imageRect, cornerRadius, cornerRadius, imagePaint)
 
         val borderRect = RectF(
@@ -302,22 +295,26 @@ class WidgetUpdateWorker(private val appContext: Context, workerParams: WorkerPa
                     if (file.exists()) {
                         val originalBitmap = getResizedBitmap(file.absolutePath)
                         if (originalBitmap != null) {
-                            // ▼▼▼▼▼ 핵심 수정 2: 이미지를 프레이밍하기 전에 배경 처리 ▼▼▼▼▼
-                            // 1. 어떤 이미지든 흰색 배경을 가진 정사각형 이미지로 변환
-                            val cleanBitmap = createBitmapWithWhiteBackground(originalBitmap)
+                            // ▼▼▼▼▼ 핵심 수정 2: 이미지 처리 파이프라인 변경 ▼▼▼▼▼
+                            // 1. 이미지를 중앙을 기준으로 잘라내어 다양한 크기의 정사각형으로 만듭니다.
+                            val croppedBitmap = createCenterCroppedSquareBitmap(originalBitmap)
 
-                            // 2. '챙겨갈 아우터' 여부 확인
+                            // 2. 다양한 크기의 정사각형을 최종 크기(256x256)의 정사각형으로 스케일링합니다.
+                            val scaledBitmap = Bitmap.createScaledBitmap(croppedBitmap, FINAL_IMAGE_SIZE, FINAL_IMAGE_SIZE, true)
+
+                            // 3. '챙겨갈 아우터' 여부를 확인합니다.
                             val isPackable = packableOuters.any { it.id == item.id }
 
-                            // 3. 배경 처리된 깔끔한 이미지에 테두리와 아이콘을 그림
-                            val framedBitmap = createFramedBitmap(cleanBitmap, isPackable)
+                            // 4. 최종 크기로 통일된 비트맵에 테두리와 아이콘을 그립니다.
+                            val framedBitmap = createFramedBitmap(scaledBitmap, isPackable)
                             remoteViews.setImageViewBitmap(imageViews[index], framedBitmap)
                             remoteViews.setViewVisibility(imageViews[index], View.VISIBLE)
 
-                            // 메모리 관리
+                            // 메모리 관리를 위해 사용한 중간 비트맵들을 모두 정리합니다.
                             if (!originalBitmap.isRecycled) originalBitmap.recycle()
-                            if (!cleanBitmap.isRecycled) cleanBitmap.recycle()
-                            // ▲▲▲▲▲ 핵심 수정 끝 ▲▲▲▲▲
+                            if (!croppedBitmap.isRecycled) croppedBitmap.recycle()
+                            if (!scaledBitmap.isRecycled) scaledBitmap.recycle()
+                            // ▲▲▲▲▲ 핵심 수정 2 ▲▲▲▲▲
                         }
                     }
                 } catch (e: Exception) {

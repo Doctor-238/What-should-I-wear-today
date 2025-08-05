@@ -21,10 +21,7 @@ class StyleListFragment : Fragment() {
     private val viewModel: StyleViewModel by viewModels({ requireParentFragment() })
     private lateinit var adapter: SavedStylesAdapter
     private var season: String? = null
-
-    // ▼▼▼▼▼ 핵심 수정 1: itemClickListener 멤버 변수 제거 ▼▼▼▼▼
-    // private lateinit var itemClickListener: RecyclerItemClickListener
-    // ▲▲▲▲▲ 핵심 수정 끝 ▲▲▲▲▲
+    private lateinit var itemClickListener: RecyclerItemClickListener
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -56,8 +53,7 @@ class StyleListFragment : Fragment() {
         binding.recyclerViewStyleList.adapter = adapter
         binding.recyclerViewStyleList.itemAnimator = DefaultItemAnimator()
 
-        // ▼▼▼▼▼ 핵심 수정 2: itemClickListener를 다시 지역 변수로 생성 ▼▼▼▼▼
-        val itemClickListener = RecyclerItemClickListener(
+        itemClickListener = RecyclerItemClickListener(
             context = requireContext(),
             recyclerView = binding.recyclerViewStyleList,
             onItemClick = { _, position ->
@@ -78,9 +74,12 @@ class StyleListFragment : Fragment() {
                     viewModel.enterDeleteMode(longClickedStyle.style.styleId)
                 }
             }
-        )
+        ).apply {
+            onDragStateChanged = { isDragging ->
+                viewModel.setDragging(isDragging)
+            }
+        }
         binding.recyclerViewStyleList.addOnItemTouchListener(itemClickListener)
-        // ▲▲▲▲▲ 핵심 수정 끝 ▲▲▲▲▲
     }
 
     private fun observeViewModel() {
@@ -97,6 +96,12 @@ class StyleListFragment : Fragment() {
                 binding.recyclerViewStyleList.visibility = View.VISIBLE
             }
         }
+
+        viewModel.isDragging.observe(viewLifecycleOwner) { isDragging ->
+            if (!isDragging) {
+                itemClickListener.cancelDrag()
+            }
+        }
     }
 
     fun notifyAdapter(payload: String) {
@@ -105,9 +110,9 @@ class StyleListFragment : Fragment() {
         }
     }
 
-    // ▼▼▼▼▼ 핵심 수정 3: scrollToTop 함수에서 isDragging 관련 코드 제거 ▼▼▼▼▼
     fun scrollToTop() {
         if (isAdded && _binding != null) {
+            itemClickListener.cancelDrag()
             binding.recyclerViewStyleList.smoothScrollToPosition(0)
 
             (binding.recyclerViewStyleList.layoutManager as? LinearLayoutManager)?.let { layoutManager ->
@@ -124,7 +129,6 @@ class StyleListFragment : Fragment() {
             }
         }
     }
-    // ▲▲▲▲▲ 핵심 수정 끝 ▲▲▲▲▲
 
     override fun onDestroyView() {
         super.onDestroyView()
