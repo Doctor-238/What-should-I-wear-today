@@ -55,16 +55,6 @@ class EditStyleFragment : Fragment(R.layout.fragment_edit_style), OnTabReselecte
         viewModel.loadStyleIfNeeded(args.styleId)
     }
 
-    // ▼▼▼▼▼ 핵심 수정: onResume 콜백 제거 ▼▼▼▼▼
-    // 이 부분이 화면으로 돌아올 때마다 데이터를 덮어쓰는 버그의 원인이었습니다.
-    /*
-    override fun onResume() {
-        super.onResume()
-        viewModel.refreshCurrentStyle()
-    }
-    */
-    // ▲▲▲▲▲ 핵심 수정 ▲▲▲▲▲
-
     private fun setupViews(view: View) {
         buttonSave = view.findViewById(R.id.button_save_style_edit)
         buttonDelete = view.findViewById(R.id.button_delete_style)
@@ -160,19 +150,29 @@ class EditStyleFragment : Fragment(R.layout.fragment_edit_style), OnTabReselecte
         )
         view.findViewById<RecyclerView>(R.id.rv_selected_items).adapter = adapterForSelected
 
-        adapterForAll = SaveStyleAdapter(
-            onItemClicked = { item, _ ->
-                viewModel.toggleItemSelection(item)
+        // ▼▼▼▼▼ 핵심 수정: 생성자에서 클릭 리스너를 제거합니다. ▼▼▼▼▼
+        adapterForAll = SaveStyleAdapter()
+        val recyclerViewAll = view.findViewById<RecyclerView>(R.id.rv_all_items_for_edit)
+        recyclerViewAll.adapter = adapterForAll
+
+        // ▼▼▼▼▼ 핵심 수정: RecyclerItemClickListener를 추가하여 클릭 이벤트를 처리합니다. ▼▼▼▼▼
+        recyclerViewAll.addOnItemTouchListener(RecyclerItemClickListener(
+            context = requireContext(),
+            recyclerView = recyclerViewAll,
+            onItemClick = { _, position ->
+                adapterForAll.getItem(position)?.let { item ->
+                    viewModel.toggleItemSelection(item)
+                }
             },
-            onItemLongClicked = { item ->
-                val action = EditStyleFragmentDirections.actionEditStyleFragmentToEditClothingFragment(item.id)
-                findNavController().navigate(action)
+            onItemLongClick = { _, position ->
+                adapterForAll.getItem(position)?.let { item ->
+                    val action = EditStyleFragmentDirections.actionEditStyleFragmentToEditClothingFragment(item.id)
+                    findNavController().navigate(action)
+                }
             }
-        )
-        view.findViewById<RecyclerView>(R.id.rv_all_items_for_edit).adapter = adapterForAll
+        ))
     }
 
-    // ... 이하 코드는 변경사항 없음 ...
     private fun setupListeners(view: View) {
         toolbar.setNavigationOnClickListener { handleBackButton() }
         buttonSave.setOnClickListener { saveChangesAndExit() }
@@ -193,7 +193,11 @@ class EditStyleFragment : Fragment(R.layout.fragment_edit_style), OnTabReselecte
     private fun setupBackButtonHandler() {
         onBackPressedCallback = object : OnBackPressedCallback(false) {
             override fun handleOnBackPressed() {
-                showSaveChangesDialog()
+                if (buttonSave.isEnabled) {
+                    showSaveChangesDialog()
+                } else {
+                    findNavController().popBackStack()
+                }
             }
         }
         requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, onBackPressedCallback)

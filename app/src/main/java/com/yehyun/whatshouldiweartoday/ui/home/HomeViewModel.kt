@@ -29,16 +29,17 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import kotlin.math.abs
 
-// Data Class들은 변경 없습니다.
+// ▼▼▼▼▼ 핵심 수정 1: RecommendationResult 구조 변경 ▼▼▼▼▼
 data class RecommendationResult(
     val recommendedTops: List<ClothingItem>,
     val recommendedBottoms: List<ClothingItem>,
     val recommendedOuters: List<ClothingItem>,
     val bestCombination: List<ClothingItem>,
-    val packableOuter: ClothingItem?,
+    val packableOuters: List<ClothingItem>, // 변경: 단일 객체 -> 객체 리스트
     val umbrellaRecommendation: String,
     val isTempDifferenceSignificant: Boolean
 )
+// ▲▲▲▲▲ 핵심 수정 끝 ▲▲▲▲▲
 
 data class DailyWeatherSummary(
     val date: String,
@@ -60,7 +61,6 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     private var fetchJob: Job? = null
     private var cancellationTokenSource = CancellationTokenSource()
 
-
     private val _todayWeatherSummary = MutableLiveData<DailyWeatherSummary?>()
     val todayWeatherSummary: LiveData<DailyWeatherSummary?> = _todayWeatherSummary
     private val _tomorrowWeatherSummary = MutableLiveData<DailyWeatherSummary?>()
@@ -73,8 +73,6 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     val error: LiveData<String?> = _error
     private val _isLoading = MutableLiveData<Boolean>()
     val isLoading: LiveData<Boolean> = _isLoading
-    private val _isRecommendationScrolledToTop = MutableLiveData(true)
-    val isRecommendationScrolledToTop: LiveData<Boolean> = _isRecommendationScrolledToTop
 
     private val _switchToTab = MutableLiveData<Int?>()
     val switchToTab: LiveData<Int?> = _switchToTab
@@ -91,12 +89,6 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         clothingRepository = ClothingRepository(clothingDao)
     }
 
-    fun setScrollState(isAtTop: Boolean) {
-        if (_isRecommendationScrolledToTop.value != isAtTop) {
-            _isRecommendationScrolledToTop.value = isAtTop
-        }
-    }
-
     fun startLoading() {
         if (_isLoading.value != true) _isLoading.value = true
     }
@@ -106,7 +98,6 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun refreshWeatherData(apiKey: String) {
-        // 기존 요청 취소
         cancellationTokenSource.cancel()
         cancellationTokenSource = CancellationTokenSource()
 
@@ -129,17 +120,15 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private suspend fun getFreshLocation(): Location {
-        // 1. 마지막 위치 확인 (빠름)
         try {
             val lastLocation = fusedLocationClient.lastLocation.await()
-            if (lastLocation != null && (System.currentTimeMillis() - lastLocation.time) < 600000) { // 10분 이내
+            if (lastLocation != null && (System.currentTimeMillis() - lastLocation.time) < 600000) {
                 return lastLocation
             }
         } catch (e: Exception) {
             Log.w("HomeViewModel", "마지막 위치 가져오기 실패", e)
         }
 
-        // 2. 현재 위치 요청 (안정적)
         return fusedLocationClient.getCurrentLocation(
             Priority.PRIORITY_BALANCED_POWER_ACCURACY,
             cancellationTokenSource.token
@@ -209,6 +198,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         return DailyWeatherSummary("", maxTemp, minTemp, maxFeelsLike, minFeelsLike, weatherCondition, pop)
     }
 
+    // ▼▼▼▼▼ 핵심 수정 2: 홈 화면을 위한 추천 로직 ▼▼▼▼▼
     fun generateRecommendation(summary: DailyWeatherSummary, allClothes: List<ClothingItem>): RecommendationResult {
         val maxTempCriteria = (summary.maxTemp + summary.maxFeelsLike) / 2
         val minTempCriteria = (summary.minTemp + summary.minFeelsLike) / 2
@@ -228,18 +218,28 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
         val recommendedTops = recommendedClothes.filter { it.category == "상의" }
         val recommendedBottoms = recommendedClothes.filter { it.category == "하의" }
-        val recommendedOuters = recommendedClothes.filter { it.category == "아우터" }
+        val recommendedOuters = recommendedClothes.filter { it.category == "아우터" }.toMutableList()
 
         val isTempDifferenceSignificant = (maxTempCriteria - minTempCriteria) >= SIGNIFICANT_TEMP_DIFFERENCE
-        val packableOuter = if (isTempDifferenceSignificant) {
+
+        // '챙겨갈 아우터'를 여러 개 찾습니다.
+        val packableOuters = if (isTempDifferenceSignificant) {
             allClothes.filter { it.category == "아우터" }
                 .filter {
-                    val tempRangeForMin = (it.suitableTemperature + packableOuterTolerance)..it.suitableTemperature
-                    tempRangeForMin.contains(minTempCriteria)
+                    val suitableTemp = it.suitableTemperature
+                    val minRange = minTempCriteria
+                    val maxRange = minTempCriteria + abs(packableOuterTolerance)
+                    suitableTemp in minRange..maxRange
                 }
-                .minByOrNull { abs(it.suitableTemperature - minTempCriteria) }
         } else {
-            null
+            emptyList()
+        }
+
+        // '챙겨갈 아우터'들을 기존 추천 목록에 중복되지 않게 추가합니다.
+        packableOuters.forEach { po ->
+            if (recommendedOuters.none { it.id == po.id }) {
+                recommendedOuters.add(po)
+            }
         }
 
         val bestTop = recommendedTops.minByOrNull { abs(it.suitableTemperature - maxTempCriteria) }
@@ -253,8 +253,17 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             else -> ""
         }
 
-        return RecommendationResult(recommendedTops, recommendedBottoms, recommendedOuters, bestCombination, packableOuter, umbrellaRecommendation, isTempDifferenceSignificant)
+        return RecommendationResult(
+            recommendedTops,
+            recommendedBottoms,
+            recommendedOuters.sortedBy { it.suitableTemperature },
+            bestCombination,
+            packableOuters, // 찾은 '챙겨갈 아우터' 목록 전체를 전달
+            umbrellaRecommendation,
+            isTempDifferenceSignificant
+        )
     }
+    // ▲▲▲▲▲ 핵심 수정 끝 ▲▲▲▲▲
 
     fun requestTabSwitch(tabIndex: Int) {
         _switchToTab.value = tabIndex

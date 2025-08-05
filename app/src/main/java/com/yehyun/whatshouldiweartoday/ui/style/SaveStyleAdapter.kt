@@ -11,14 +11,16 @@ import com.yehyun.whatshouldiweartoday.R
 import com.yehyun.whatshouldiweartoday.data.database.ClothingItem
 import java.io.File
 
-// [수정] 생성자에 onItemLongClicked 람다 추가
-class SaveStyleAdapter(
-    private val onItemClicked: (item: ClothingItem, isSelected: Boolean) -> Unit,
-    private val onItemLongClicked: (item: ClothingItem) -> Unit // 꾹 누르기 이벤트 핸들러
-) : RecyclerView.Adapter<SaveStyleAdapter.SelectableViewHolder>() {
+// ▼▼▼▼▼ 핵심 수정: 생성자에서 클릭 리스너를 모두 제거합니다. ▼▼▼▼▼
+class SaveStyleAdapter : RecyclerView.Adapter<SaveStyleAdapter.SelectableViewHolder>() {
 
     private var allItems: List<ClothingItem> = listOf()
     private var selectedItemIds = setOf<Int>()
+
+    // ▼▼▼▼▼ 핵심 수정: 외부에서 아이템 정보를 가져올 수 있도록 함수를 추가합니다. ▼▼▼▼▼
+    fun getItem(position: Int): ClothingItem? {
+        return allItems.getOrNull(position)
+    }
 
     fun submitList(items: List<ClothingItem>) {
         this.allItems = items
@@ -41,16 +43,9 @@ class SaveStyleAdapter(
 
         holder.bind(item, isSelected)
 
-        // 일반 클릭 이벤트
-        holder.itemView.setOnClickListener {
-            onItemClicked(item, isSelected)
-        }
-
-        // [추가] 꾹 누르기(Long Click) 이벤트
-        holder.itemView.setOnLongClickListener {
-            onItemLongClicked(item)
-            true // 이벤트를 소비했음을 시스템에 알림
-        }
+        // ▼▼▼▼▼ 핵심 수정: 클릭 및 롱클릭 리스너 설정을 모두 제거합니다. ▼▼▼▼▼
+        // holder.itemView.setOnClickListener { ... }
+        // holder.itemView.setOnLongClickListener { ... }
     }
 
     override fun getItemCount(): Int = allItems.size

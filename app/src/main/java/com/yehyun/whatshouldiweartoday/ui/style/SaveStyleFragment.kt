@@ -26,7 +26,7 @@ import com.yehyun.whatshouldiweartoday.ui.OnTabReselectedListener
 
 class SaveStyleFragment : Fragment(R.layout.fragment_save_style), OnTabReselectedListener {
 
-    private val viewModel: SaveStyleViewModel by viewModels() // ViewModel 범위를 Fragment로 한정
+    private val viewModel: SaveStyleViewModel by viewModels()
     private val args: SaveStyleFragmentArgs by navArgs()
     private lateinit var adapter: SaveStyleAdapter
     private lateinit var tabLayout: TabLayout
@@ -39,9 +39,6 @@ class SaveStyleFragment : Fragment(R.layout.fragment_save_style), OnTabReselecte
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
-
-        // ▲▲▲▲▲ 핵심 수정 ▲▲▲▲▲
 
         tabLayout = view.findViewById(R.id.tab_layout_save_style_category)
         tvSelectionGuide = view.findViewById(R.id.tv_selection_guide)
@@ -61,7 +58,6 @@ class SaveStyleFragment : Fragment(R.layout.fragment_save_style), OnTabReselecte
         }
     }
 
-    // ... 이하 코드는 변경사항 없음 ...
     private fun setupTabs(view: View) {
         val categories = listOf("전체", "상의", "하의", "아우터", "신발", "가방", "모자", "기타")
         if (tabLayout.tabCount == 0) {
@@ -77,17 +73,27 @@ class SaveStyleFragment : Fragment(R.layout.fragment_save_style), OnTabReselecte
     }
 
     private fun setupRecyclerView(view: View) {
-        adapter = SaveStyleAdapter(
-            onItemClicked = { item, _ ->
-                viewModel.toggleItemSelected(item)
-            },
-            onItemLongClicked = { item ->
-                val action = SaveStyleFragmentDirections.actionSaveStyleFragmentToEditClothingFragment(item.id)
-                findNavController().navigate(action)
-            }
-        )
+        // ▼▼▼▼▼ 핵심 수정: 생성자에서 클릭 리스너를 제거합니다. ▼▼▼▼▼
+        adapter = SaveStyleAdapter()
         val recyclerView = view.findViewById<RecyclerView>(R.id.rv_clothing_selection)
         recyclerView.adapter = adapter
+
+        // ▼▼▼▼▼ 핵심 수정: RecyclerItemClickListener를 추가하여 클릭 이벤트를 처리합니다. ▼▼▼▼▼
+        recyclerView.addOnItemTouchListener(RecyclerItemClickListener(
+            context = requireContext(),
+            recyclerView = recyclerView,
+            onItemClick = { _, position ->
+                adapter.getItem(position)?.let { item ->
+                    viewModel.toggleItemSelected(item)
+                }
+            },
+            onItemLongClick = { _, position ->
+                adapter.getItem(position)?.let { item ->
+                    val action = SaveStyleFragmentDirections.actionSaveStyleFragmentToEditClothingFragment(item.id)
+                    findNavController().navigate(action)
+                }
+            }
+        ))
     }
 
     private fun observeViewModel() {

@@ -382,18 +382,88 @@
             tools:itemCount="5"
             tools:listitem="@layout/item_recommendation_clothing_square" />
 
-        <TextView
-            android:id="@+id/tv_temp_difference_notice"
+        <LinearLayout
+            android:id="@+id/ll_info_container"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:orientation="vertical"
             android:layout_marginTop="24dp"
-            android:gravity="center"
-            android:lineSpacingExtra="6sp"
-            android:text="오늘은 일교차가 큰 날이에요!\n아우터를 따로 챙겨가는 것을 추천드립니다"
-            android:textColor="@color/text_secondary"
-            android:textSize="14sp"
+            android:clipToPadding="false"
+            android:paddingBottom="8dp"
             android:visibility="gone"
-            tools:visibility="visible" />
+            tools:visibility="visible">
 
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/card_temp_difference"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="16dp"
+                app:cardBackgroundColor="#f2f2f2"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="4dp"
+                android:visibility="gone"
+                tools:visibility="visible">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:padding="16dp">
+
+                    <ImageView
+                        android:layout_width="36dp"
+                        android:layout_height="36dp"
+                        android:src="@drawable/ic_packable_bag" />
+                    <TextView
+                        android:id="@+id/tv_info_temp_difference"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="12dp"
+                        android:textColor="@color/text_primary"
+                        android:textSize="14sp"
+                        android:lineSpacingExtra="4dp"
+                        tools:text="오늘은 일교차가 큰 날이에요!\n아우터를 따로 챙겨가는 것을 추천드립니다."/>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/card_rain_warning"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="16dp"
+                android:layout_marginTop="12dp"
+                app:cardBackgroundColor="#f2f2f2"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="4dp"
+                android:visibility="gone"
+                tools:visibility="visible">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:padding="16dp">
+
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@drawable/umbrella" />
+                    <TextView
+                        android:id="@+id/tv_info_rain"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="12dp"
+                        android:textColor="@color/text_primary"
+                        android:textSize="14sp"
+                        android:lineSpacingExtra="4dp"
+                        tools:text="비가 올 예정이니 우산을 꼭 챙겨주세요!"/>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+        </LinearLayout>
     </LinearLayout>
 </ScrollView>

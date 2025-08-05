@@ -9,6 +9,7 @@ import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.DefaultItemAnimator
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.yehyun.whatshouldiweartoday.R
 import com.yehyun.whatshouldiweartoday.databinding.FragmentStyleListBinding
 
@@ -20,6 +21,7 @@ class StyleListFragment : Fragment() {
     private val viewModel: StyleViewModel by viewModels({ requireParentFragment() })
     private lateinit var adapter: SavedStylesAdapter
     private var season: String? = null
+    private lateinit var itemClickListener: RecyclerItemClickListener
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -44,27 +46,40 @@ class StyleListFragment : Fragment() {
 
     private fun setupRecyclerView() {
         adapter = SavedStylesAdapter(
-            onItemClicked = { clickedStyle ->
-                if (viewModel.isDeleteMode.value == true) {
-                    viewModel.toggleItemSelection(clickedStyle.style.styleId)
-                } else {
-                    // ▼▼▼▼▼ 핵심 수정: requireParentFragment()로 NavController를 찾도록 수정 ▼▼▼▼▼
-                    val navController = requireParentFragment().findNavController()
-                    if (navController.currentDestination?.id == R.id.navigation_style) {
-                        val action = StyleFragmentDirections.actionNavigationStyleToEditStyleFragment(clickedStyle.style.styleId)
-                        navController.navigate(action)
-                    }
-                }
-            },
-            onItemLongClicked = { longClickedStyle ->
-                viewModel.enterDeleteMode(longClickedStyle.style.styleId)
-            },
             isDeleteMode = { viewModel.isDeleteMode.value ?: false },
             isItemSelected = { styleId -> viewModel.selectedItems.value?.contains(styleId) ?: false }
         )
         binding.recyclerViewStyleList.layoutManager = LinearLayoutManager(context)
         binding.recyclerViewStyleList.adapter = adapter
         binding.recyclerViewStyleList.itemAnimator = DefaultItemAnimator()
+
+        itemClickListener = RecyclerItemClickListener(
+            context = requireContext(),
+            recyclerView = binding.recyclerViewStyleList,
+            onItemClick = { _, position ->
+                adapter.getStyleAt(position)?.let { clickedStyle ->
+                    if (viewModel.isDeleteMode.value == true) {
+                        viewModel.toggleItemSelection(clickedStyle.style.styleId)
+                    } else {
+                        val navController = requireParentFragment().findNavController()
+                        if (navController.currentDestination?.id == R.id.navigation_style) {
+                            val action = StyleFragmentDirections.actionNavigationStyleToEditStyleFragment(clickedStyle.style.styleId)
+                            navController.navigate(action)
+                        }
+                    }
+                }
+            },
+            onItemLongClick = { _, position ->
+                adapter.getStyleAt(position)?.let { longClickedStyle ->
+                    viewModel.enterDeleteMode(longClickedStyle.style.styleId)
+                }
+            }
+        ).apply {
+            onDragStateChanged = { isDragging ->
+                viewModel.setDragging(isDragging)
+            }
+        }
+        binding.recyclerViewStyleList.addOnItemTouchListener(itemClickListener)
     }
 
     private fun observeViewModel() {
@@ -73,7 +88,6 @@ class StyleListFragment : Fragment() {
         viewModel.getStylesForSeason(seasonToObserve).observe(viewLifecycleOwner) { styles ->
             adapter.submitList(styles)
 
-            // ▼▼▼▼▼ 핵심 수정: 오류가 발생한 부분을 원래의 올바른 로직으로 복원 ▼▼▼▼▼
             if (seasonToObserve == "전체" && styles.isEmpty() && viewModel.searchQuery.value.isNullOrEmpty()) {
                 binding.emptyStyleContainer.visibility = View.VISIBLE
                 binding.recyclerViewStyleList.visibility = View.GONE
@@ -81,7 +95,12 @@ class StyleListFragment : Fragment() {
                 binding.emptyStyleContainer.visibility = View.GONE
                 binding.recyclerViewStyleList.visibility = View.VISIBLE
             }
-            // ▲▲▲▲▲ 핵심 수정 ▲▲▲▲▲
+        }
+
+        viewModel.isDragging.observe(viewLifecycleOwner) { isDragging ->
+            if (!isDragging) {
+                itemClickListener.cancelDrag()
+            }
         }
     }
 
@@ -93,7 +112,21 @@ class StyleListFragment : Fragment() {
 
     fun scrollToTop() {
         if (isAdded && _binding != null) {
+            itemClickListener.cancelDrag()
             binding.recyclerViewStyleList.smoothScrollToPosition(0)
+
+            (binding.recyclerViewStyleList.layoutManager as? LinearLayoutManager)?.let { layoutManager ->
+                val firstVisible = layoutManager.findFirstVisibleItemPosition()
+                val lastVisible = layoutManager.findLastVisibleItemPosition()
+
+                if (firstVisible != RecyclerView.NO_POSITION) {
+                    for (i in firstVisible..lastVisible) {
+                        val holder = binding.recyclerViewStyleList.findViewHolderForAdapterPosition(i)
+                        val nestedRv = holder?.itemView?.findViewById<RecyclerView>(R.id.rv_style_items)
+                        nestedRv?.smoothScrollToPosition(0)
+                    }
+                }
+            }
         }
     }
 

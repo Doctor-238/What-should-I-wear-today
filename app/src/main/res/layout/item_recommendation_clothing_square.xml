@@ -30,7 +30,7 @@
             android:layout_margin="8dp"
             android:src="@drawable/ic_packable_bag"
             android:visibility="gone"
-            app:tint="?attr/colorPrimary"
+            app:tint="@null"
             tools:visibility="visible" />
 
     </FrameLayout>

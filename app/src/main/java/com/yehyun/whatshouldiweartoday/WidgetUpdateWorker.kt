@@ -8,6 +8,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.BitmapShader
 import android.graphics.Canvas
+import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.RectF
 import android.graphics.Shader
@@ -35,9 +36,16 @@ import java.io.File
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import kotlin.math.abs
+import kotlin.math.min
 
 class WidgetUpdateWorker(private val appContext: Context, workerParams: WorkerParameters) :
     CoroutineWorker(appContext, workerParams) {
+
+    companion object {
+        // ▼▼▼▼▼ 핵심 수정 1: 최종 이미지 크기를 상수로 정의 ▼▼▼▼▼
+        private const val FINAL_IMAGE_SIZE = 256
+        // ▲▲▲▲▲ 핵심 수정 1 ▲▲▲▲▲
+    }
 
     override suspend fun doWork(): Result {
         val appWidgetId = inputData.getInt(AppWidgetManager.EXTRA_APPWIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID)
@@ -112,7 +120,7 @@ class WidgetUpdateWorker(private val appContext: Context, workerParams: WorkerPa
         if (result.bestCombination.isNotEmpty()) {
             remoteViews.setViewVisibility(R.id.ll_widget_clothing_images, View.VISIBLE)
             remoteViews.setViewVisibility(R.id.tv_widget_no_reco, View.GONE)
-            updateWidgetImages(remoteViews, result.bestCombination)
+            updateWidgetImages(remoteViews, result.bestCombination, result.packableOuters)
         } else {
             remoteViews.setViewVisibility(R.id.ll_widget_clothing_images, View.GONE)
             remoteViews.setViewVisibility(R.id.tv_widget_no_reco, View.VISIBLE)
@@ -156,19 +164,40 @@ class WidgetUpdateWorker(private val appContext: Context, workerParams: WorkerPa
         val recommendedTops = recommendedClothes.filter { it.category == "상의" }
         val recommendedBottoms = recommendedClothes.filter { it.category == "하의" }
         val recommendedOuters = recommendedClothes.filter { it.category == "아우터" }
-        val isTempDifferenceSignificant = (maxTempCriteria - minTempCriteria) >= significantTempDifference
-        val packableOuter = if (isTempDifferenceSignificant) {
-            allClothes.filter { it.category == "아우터" }.filter {
-                val tempRangeForMin = (it.suitableTemperature + packableOuterTolerance)..it.suitableTemperature
-                tempRangeForMin.contains(minTempCriteria)
-            }.minByOrNull { abs(it.suitableTemperature - minTempCriteria) }
-        } else { null }
+
         val bestTop = recommendedTops.minByOrNull { abs(it.suitableTemperature - maxTempCriteria) }
         val bestBottom = recommendedBottoms.minByOrNull { abs(it.suitableTemperature - maxTempCriteria) }
-        val bestOuter = recommendedOuters.minByOrNull { abs(it.suitableTemperature - maxTempCriteria) }
+        var bestOuter = recommendedOuters.minByOrNull { abs(it.suitableTemperature - maxTempCriteria) }
+
+        var packableOuterForWidget: ClothingItem? = null
+        val isTempDifferenceSignificant = (maxTempCriteria - minTempCriteria) >= significantTempDifference
+
+        if (bestOuter == null && isTempDifferenceSignificant) {
+            packableOuterForWidget = allClothes.filter { it.category == "아우터" }
+                .filter {
+                    val suitableTemp = it.suitableTemperature
+                    val minRange = minTempCriteria
+                    val maxRange = minTempCriteria + abs(packableOuterTolerance)
+                    suitableTemp in minRange..maxRange
+                }
+                .minByOrNull { abs(it.suitableTemperature - minTempCriteria) }
+
+            if(packableOuterForWidget != null) {
+                bestOuter = packableOuterForWidget
+            }
+        }
+
         val bestCombination = listOfNotNull(bestTop, bestBottom, bestOuter)
-        val umbrellaRecommendation = ""
-        return RecommendationResult(recommendedTops, recommendedBottoms, recommendedOuters, bestCombination, packableOuter, umbrellaRecommendation, isTempDifferenceSignificant)
+
+        return RecommendationResult(
+            emptyList(),
+            emptyList(),
+            emptyList(),
+            bestCombination,
+            if(packableOuterForWidget != null) listOf(packableOuterForWidget) else emptyList(),
+            "",
+            isTempDifferenceSignificant
+        )
     }
 
     private fun getResizedBitmap(path: String, reqWidth: Int = 256, reqHeight: Int = 256): Bitmap? {
@@ -202,7 +231,14 @@ class WidgetUpdateWorker(private val appContext: Context, workerParams: WorkerPa
         return inSampleSize
     }
 
-    private fun createFramedBitmap(bitmap: Bitmap): Bitmap {
+    private fun createCenterCroppedSquareBitmap(source: Bitmap): Bitmap {
+        val size = min(source.width, source.height)
+        val x = (source.width - size) / 2
+        val y = (source.height - size) / 2
+        return Bitmap.createBitmap(source, x, y, size, size)
+    }
+
+    private fun createFramedBitmap(bitmap: Bitmap, isPackable: Boolean): Bitmap {
         val output = Bitmap.createBitmap(bitmap.width, bitmap.height, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(output)
 
@@ -211,34 +247,46 @@ class WidgetUpdateWorker(private val appContext: Context, workerParams: WorkerPa
             shader = BitmapShader(bitmap, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP)
         }
 
+        val strokeWidth = 8f // 테두리 두께 조정
+        val cornerRadius = 24f // 코너 곡률 조정
         val borderPaint = Paint().apply {
             isAntiAlias = true
             color = ContextCompat.getColor(appContext, R.color.clothing_item_border)
             style = Paint.Style.STROKE
-            strokeWidth = 10f // 테두리 두께
+            this.strokeWidth = strokeWidth
         }
 
-        val rect = RectF(0f, 0f, bitmap.width.toFloat(), bitmap.height.toFloat())
-        val cornerRadius = 30f // 모서리 둥근 정도
+        val imageRect = RectF(0f, 0f, bitmap.width.toFloat(), bitmap.height.toFloat())
+        canvas.drawRoundRect(imageRect, cornerRadius, cornerRadius, imagePaint)
 
-        // 둥근 사각형 모양으로 원본 이미지를 그립니다.
-        canvas.drawRoundRect(rect, cornerRadius, cornerRadius, imagePaint)
-
-        // 이미지 위에 둥근 테두리를 그립니다.
         val borderRect = RectF(
-            borderPaint.strokeWidth / 2,
-            borderPaint.strokeWidth / 2,
-            bitmap.width - borderPaint.strokeWidth / 2,
-            bitmap.height - borderPaint.strokeWidth / 2
+            strokeWidth / 2,
+            strokeWidth / 2,
+            bitmap.width - strokeWidth / 2,
+            bitmap.height - strokeWidth / 2
         )
         canvas.drawRoundRect(borderRect, cornerRadius, cornerRadius, borderPaint)
+
+        if (isPackable) {
+            val iconBitmap = BitmapFactory.decodeResource(appContext.resources, R.drawable.ic_packable_bag)
+            val iconSize = (bitmap.width * 0.25f).toInt()
+            val scaledIcon = Bitmap.createScaledBitmap(iconBitmap, iconSize, iconSize, true)
+
+            val margin = bitmap.width * 0.08f
+            val left = bitmap.width - scaledIcon.width - margin
+            val top = bitmap.height - scaledIcon.height - margin
+
+            canvas.drawBitmap(scaledIcon, left, top, null)
+            iconBitmap.recycle()
+        }
 
         return output
     }
 
-    private fun updateWidgetImages(remoteViews: RemoteViews, items: List<ClothingItem>) {
+    private fun updateWidgetImages(remoteViews: RemoteViews, items: List<ClothingItem>, packableOuters: List<ClothingItem>) {
         val imageViews = listOf(R.id.iv_widget_item1, R.id.iv_widget_item2, R.id.iv_widget_item3)
         imageViews.forEach { viewId -> remoteViews.setViewVisibility(viewId, View.GONE) }
+
         items.forEachIndexed { index, item ->
             if (index < imageViews.size) {
                 val imagePath = if (item.useProcessedImage && item.processedImageUri != null) item.processedImageUri else item.imageUri
@@ -247,9 +295,26 @@ class WidgetUpdateWorker(private val appContext: Context, workerParams: WorkerPa
                     if (file.exists()) {
                         val originalBitmap = getResizedBitmap(file.absolutePath)
                         if (originalBitmap != null) {
-                            val framedBitmap = createFramedBitmap(originalBitmap)
+                            // ▼▼▼▼▼ 핵심 수정 2: 이미지 처리 파이프라인 변경 ▼▼▼▼▼
+                            // 1. 이미지를 중앙을 기준으로 잘라내어 다양한 크기의 정사각형으로 만듭니다.
+                            val croppedBitmap = createCenterCroppedSquareBitmap(originalBitmap)
+
+                            // 2. 다양한 크기의 정사각형을 최종 크기(256x256)의 정사각형으로 스케일링합니다.
+                            val scaledBitmap = Bitmap.createScaledBitmap(croppedBitmap, FINAL_IMAGE_SIZE, FINAL_IMAGE_SIZE, true)
+
+                            // 3. '챙겨갈 아우터' 여부를 확인합니다.
+                            val isPackable = packableOuters.any { it.id == item.id }
+
+                            // 4. 최종 크기로 통일된 비트맵에 테두리와 아이콘을 그립니다.
+                            val framedBitmap = createFramedBitmap(scaledBitmap, isPackable)
                             remoteViews.setImageViewBitmap(imageViews[index], framedBitmap)
                             remoteViews.setViewVisibility(imageViews[index], View.VISIBLE)
+
+                            // 메모리 관리를 위해 사용한 중간 비트맵들을 모두 정리합니다.
+                            if (!originalBitmap.isRecycled) originalBitmap.recycle()
+                            if (!croppedBitmap.isRecycled) croppedBitmap.recycle()
+                            if (!scaledBitmap.isRecycled) scaledBitmap.recycle()
+                            // ▲▲▲▲▲ 핵심 수정 2 ▲▲▲▲▲
                         }
                     }
                 } catch (e: Exception) {
