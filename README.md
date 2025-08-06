@@ -136,6 +136,7 @@ Database: Room (SQLite 기반 로컬 DB)
   - 백엔드 연동, 로컬 데이터 처리
 <br>
 - 2171429 이지원 [(CH4ER1)](https://github.com/CH4ER1)
+
   - UI/UX 디자인
   - 문서 작성
 
