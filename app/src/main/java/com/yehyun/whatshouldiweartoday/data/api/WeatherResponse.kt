@@ -37,7 +37,7 @@ data class Main(
 @Serializable
 data class Weather(
     @SerialName("main")
-    val main: String, // 예: "Rain", "Clouds", "Clear"
+    val main: String,
     @SerialName("description")
     val description: String,
     @SerialName("icon")

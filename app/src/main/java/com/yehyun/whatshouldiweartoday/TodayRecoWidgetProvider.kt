@@ -37,15 +37,11 @@ class TodayRecoWidgetProvider : AppWidgetProvider() {
 
     override fun onReceive(context: Context, intent: Intent) {
         super.onReceive(context, intent)
-        // ▼▼▼▼▼ 핵심 수정 부분 ▼▼▼▼▼
-        // 알림의 '취소' 버튼을 눌렀을 때의 동작을 처리합니다.
         if (intent.action == "ACTION_CANCEL_BATCH_ADD") {
             val workManager = WorkManager.getInstance(context)
-            // "batch_add"라는 고유 이름을 가진 작업을 취소합니다.
             workManager.cancelUniqueWork("batch_add")
-            return // 다른 로직은 실행하지 않고 종료
+            return
         }
-        // ▲▲▲▲▲ 핵심 수정 부분 ▲▲▲▲▲
 
         if (intent.action == Intent.ACTION_BOOT_COMPLETED || intent.action == "android.intent.action.MY_PACKAGE_REPLACED") {
             val appWidgetManager = AppWidgetManager.getInstance(context)
@@ -84,7 +80,9 @@ class TodayRecoWidgetProvider : AppWidgetProvider() {
                 "IS_TODAY" to isToday
             ))
             .build()
-        val uniqueWorkName = "one_time_widget_update_${appWidgetId}_$isToday"
+        // ▼▼▼▼▼ 핵심 수정: 작업의 고유 이름에서 isToday를 제거하여 위젯 ID별로 작업을 관리합니다. ▼▼▼▼▼
+        val uniqueWorkName = "one_time_widget_update_$appWidgetId"
+        // ▲▲▲▲▲ 핵심 수정 끝 ▲▲▲▲▲
         WorkManager.getInstance(context).enqueueUniqueWork(uniqueWorkName, ExistingWorkPolicy.REPLACE, workRequest)
     }
 

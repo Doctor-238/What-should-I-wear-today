@@ -29,17 +29,15 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import kotlin.math.abs
 
-// ▼▼▼▼▼ 핵심 수정 1: RecommendationResult 구조 변경 ▼▼▼▼▼
 data class RecommendationResult(
     val recommendedTops: List<ClothingItem>,
     val recommendedBottoms: List<ClothingItem>,
     val recommendedOuters: List<ClothingItem>,
     val bestCombination: List<ClothingItem>,
-    val packableOuters: List<ClothingItem>, // 변경: 단일 객체 -> 객체 리스트
+    val packableOuters: List<ClothingItem>,
     val umbrellaRecommendation: String,
     val isTempDifferenceSignificant: Boolean
 )
-// ▲▲▲▲▲ 핵심 수정 끝 ▲▲▲▲▲
 
 data class DailyWeatherSummary(
     val date: String,
@@ -198,7 +196,6 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         return DailyWeatherSummary("", maxTemp, minTemp, maxFeelsLike, minFeelsLike, weatherCondition, pop)
     }
 
-    // ▼▼▼▼▼ 핵심 수정 2: 홈 화면을 위한 추천 로직 ▼▼▼▼▼
     fun generateRecommendation(summary: DailyWeatherSummary, allClothes: List<ClothingItem>): RecommendationResult {
         val maxTempCriteria = (summary.maxTemp + summary.maxFeelsLike) / 2
         val minTempCriteria = (summary.minTemp + summary.minFeelsLike) / 2
@@ -211,7 +208,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             val itemMinTemp = adjustedTemp - temperatureTolerance
             val itemMaxTemp = adjustedTemp + temperatureTolerance
             val isFitForMaxTemp = maxTempCriteria in itemMinTemp+1..itemMaxTemp+2.5
-            val isFitForHotDay = maxTempCriteria > 33 && itemMaxTemp+2.5 >= 33
+            val isFitForHotDay = maxTempCriteria > 31 && itemMaxTemp+2.5 >= 31
             val isFitForFreezingDay = minTempCriteria < -3 && itemMinTemp+1 <= -3
             isFitForMaxTemp || isFitForHotDay || isFitForFreezingDay
         }
@@ -222,7 +219,6 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
         val isTempDifferenceSignificant = (maxTempCriteria - minTempCriteria) >= SIGNIFICANT_TEMP_DIFFERENCE
 
-        // '챙겨갈 아우터'를 여러 개 찾습니다.
         val packableOuters = if (isTempDifferenceSignificant) {
             allClothes.filter { it.category == "아우터" }
                 .filter {
@@ -235,7 +231,6 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             emptyList()
         }
 
-        // '챙겨갈 아우터'들을 기존 추천 목록에 중복되지 않게 추가합니다.
         packableOuters.forEach { po ->
             if (recommendedOuters.none { it.id == po.id }) {
                 recommendedOuters.add(po)
@@ -253,17 +248,18 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             else -> ""
         }
 
+        // ▼▼▼▼▼ 핵심 수정: 추천 목록을 suitableTemperature 기준으로 내림차순 정렬합니다. ▼▼▼▼▼
         return RecommendationResult(
-            recommendedTops,
-            recommendedBottoms,
-            recommendedOuters.sortedBy { it.suitableTemperature },
+            recommendedTops.sortedByDescending { it.suitableTemperature },
+            recommendedBottoms.sortedByDescending { it.suitableTemperature },
+            recommendedOuters.sortedByDescending { it.suitableTemperature },
             bestCombination,
-            packableOuters, // 찾은 '챙겨갈 아우터' 목록 전체를 전달
+            packableOuters,
             umbrellaRecommendation,
             isTempDifferenceSignificant
         )
+        // ▲▲▲▲▲ 핵심 수정 끝 ▲▲▲▲▲
     }
-    // ▲▲▲▲▲ 핵심 수정 끝 ▲▲▲▲▲
 
     fun requestTabSwitch(tabIndex: Int) {
         _switchToTab.value = tabIndex

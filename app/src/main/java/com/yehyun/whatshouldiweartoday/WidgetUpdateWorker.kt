@@ -8,7 +8,9 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.BitmapShader
 import android.graphics.Canvas
+import android.graphics.Matrix
 import android.graphics.Paint
+import android.graphics.Rect
 import android.graphics.RectF
 import android.graphics.Shader
 import android.util.Log
@@ -34,6 +36,7 @@ import kotlinx.coroutines.tasks.await
 import java.io.File
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import java.util.concurrent.CancellationException
 import kotlin.math.abs
 import kotlin.math.min
 
@@ -44,7 +47,6 @@ class WidgetUpdateWorker(private val appContext: Context, workerParams: WorkerPa
         private const val FINAL_IMAGE_SIZE = 256
     }
 
-    // ▼▼▼▼▼ 핵심 수정 1: 추천 로직을 별도 클래스로 분리하여 홈 화면과 100% 동일한 로직 보장 ▼▼▼▼▼
     private class RecommendationGenerator(private val context: Context) {
         companion object {
             private const val SIGNIFICANT_TEMP_DIFFERENCE = 12.0
@@ -64,7 +66,7 @@ class WidgetUpdateWorker(private val appContext: Context, workerParams: WorkerPa
                 val itemMinTemp = adjustedTemp - temperatureTolerance
                 val itemMaxTemp = adjustedTemp + temperatureTolerance
                 val isFitForMaxTemp = maxTempCriteria in itemMinTemp + 1..itemMaxTemp + 2.5
-                val isFitForHotDay = maxTempCriteria > 33 && itemMaxTemp + 2.5 >= 33
+                val isFitForHotDay = maxTempCriteria > 31 && itemMaxTemp + 2.5 >= 31
                 val isFitForFreezingDay = minTempCriteria < -3 && itemMinTemp + 1 <= -3
                 isFitForMaxTemp || isFitForHotDay || isFitForFreezingDay
             }
@@ -105,7 +107,6 @@ class WidgetUpdateWorker(private val appContext: Context, workerParams: WorkerPa
             )
         }
     }
-    // ▲▲▲▲▲ 핵심 수정 1 끝 ▲▲▲▲▲
 
     override suspend fun doWork(): Result {
         val appWidgetId = inputData.getInt(AppWidgetManager.EXTRA_APPWIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID)
@@ -122,31 +123,31 @@ class WidgetUpdateWorker(private val appContext: Context, workerParams: WorkerPa
 
             if (ActivityCompat.checkSelfPermission(appContext, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
                 errorMessage = "위치 권한을 허용해주세요!"
-                return Result.success()
-            }
-
-            val location = LocationServices.getFusedLocationProviderClient(appContext)
-                .getCurrentLocation(Priority.PRIORITY_BALANCED_POWER_ACCURACY, CancellationTokenSource().token).await()
-
-            if (location == null) {
-                errorMessage = "위치 정보를 가져올 수 없습니다. GPS를 켜주세요."
-                return Result.success()
-            }
-
-            val weatherRepo = WeatherRepository(WeatherApiService.create())
-            val clothingRepo = ClothingRepository(AppDatabase.getDatabase(appContext).clothingDao())
-            val apiKey = appContext.getString(R.string.openweathermap_api_key)
-            val weatherResponse = weatherRepo.getFiveDayForecast(location.latitude, location.longitude, apiKey)
-
-            if (weatherResponse.isSuccessful && weatherResponse.body() != null) {
-                val allClothes = clothingRepo.getAllItemsList()
-                resultPair = processAndRecommend(weatherResponse.body()!!, allClothes, isToday)
-                if (resultPair == null) {
-                    errorMessage = "날씨 정보가 없습니다."
-                }
             } else {
-                errorMessage = "날씨 정보 업데이트 실패"
+                val location = LocationServices.getFusedLocationProviderClient(appContext)
+                    .getCurrentLocation(Priority.PRIORITY_BALANCED_POWER_ACCURACY, CancellationTokenSource().token).await()
+
+                if (location == null) {
+                    errorMessage = "위치 정보를 가져올 수 없습니다. GPS를 켜주세요."
+                } else {
+                    val weatherRepo = WeatherRepository(WeatherApiService.create())
+                    val clothingRepo = ClothingRepository(AppDatabase.getDatabase(appContext).clothingDao())
+                    val apiKey = appContext.getString(R.string.openweathermap_api_key)
+                    val weatherResponse = weatherRepo.getFiveDayForecast(location.latitude, location.longitude, apiKey)
+
+                    if (weatherResponse.isSuccessful && weatherResponse.body() != null) {
+                        val allClothes = clothingRepo.getAllItemsList()
+                        resultPair = processAndRecommend(weatherResponse.body()!!, allClothes, isToday)
+                        if (resultPair == null) {
+                            errorMessage = "날씨 정보가 없습니다."
+                        }
+                    } else {
+                        errorMessage = "날씨 정보 업데이트 실패"
+                    }
+                }
             }
+        } catch (e: CancellationException) {
+            return Result.success()
         } catch (e: Exception) {
             Log.e("WidgetUpdateWorker", "Error updating widget", e)
             errorMessage = "업데이트 중 오류 발생"
@@ -154,7 +155,6 @@ class WidgetUpdateWorker(private val appContext: Context, workerParams: WorkerPa
             when {
                 errorMessage != null -> showError(appWidgetId, remoteViews, isToday, errorMessage)
                 resultPair != null -> showSuccessState(appWidgetId, remoteViews, isToday, resultPair.first, resultPair.second)
-                else -> showError(appWidgetId, remoteViews, isToday, "알 수 없는 오류")
             }
         }
         return Result.success()
@@ -178,7 +178,6 @@ class WidgetUpdateWorker(private val appContext: Context, workerParams: WorkerPa
         val summaryText = "최고:%.0f°(%.0f°) | 최저:%.0f°(%.0f°)".format(summary.maxTemp, summary.maxFeelsLike, summary.minTemp, summary.minFeelsLike)
         remoteViews.setTextViewText(R.id.tv_widget_weather_summary, summaryText)
 
-        // ▼▼▼▼▼ 핵심 수정 2: 홈 화면과 동일하게 bestCombination을 기준으로 위젯 UI 업데이트 ▼▼▼▼▼
         if (result.bestCombination.isNotEmpty()) {
             remoteViews.setViewVisibility(R.id.ll_widget_clothing_images, View.VISIBLE)
             remoteViews.setViewVisibility(R.id.tv_widget_no_reco, View.GONE)
@@ -188,7 +187,6 @@ class WidgetUpdateWorker(private val appContext: Context, workerParams: WorkerPa
             remoteViews.setViewVisibility(R.id.tv_widget_no_reco, View.VISIBLE)
             remoteViews.setTextViewText(R.id.tv_widget_no_reco, "추천할 옷이 없습니다.")
         }
-        // ▲▲▲▲▲ 핵심 수정 2 끝 ▲▲▲▲▲
         finalizeWidgetUpdate(appWidgetId, remoteViews, isToday)
     }
 
@@ -211,24 +209,9 @@ class WidgetUpdateWorker(private val appContext: Context, workerParams: WorkerPa
             weatherCondition = targetForecasts.firstOrNull()?.weather?.firstOrNull()?.description ?: "",
             precipitationProbability = (targetForecasts.maxOfOrNull { it.pop }?.times(100))?.toInt() ?: 0
         )
-        // ▼▼▼▼▼ 핵심 수정 3: 분리된 RecommendationGenerator를 사용하여 추천 결과 생성 ▼▼▼▼▼
         val recommendationGenerator = RecommendationGenerator(appContext)
         val recommendation = recommendationGenerator.generate(summary, allClothes)
-        // ▲▲▲▲▲ 핵심 수정 3 끝 ▲▲▲▲▲
         return Pair(summary, recommendation)
-    }
-
-    private fun getResizedBitmap(path: String, reqWidth: Int = 256, reqHeight: Int = 256): Bitmap? {
-        return try {
-            val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-            BitmapFactory.decodeFile(path, options)
-            options.inSampleSize = calculateInSampleSize(options, reqWidth, reqHeight)
-            options.inJustDecodeBounds = false
-            BitmapFactory.decodeFile(path, options)
-        } catch (e: Exception) {
-            Log.e("WidgetUpdateWorker", "Failed to create resized bitmap", e)
-            null
-        }
     }
 
     private fun calculateInSampleSize(options: BitmapFactory.Options, reqWidth: Int, reqHeight: Int): Int {
@@ -244,48 +227,82 @@ class WidgetUpdateWorker(private val appContext: Context, workerParams: WorkerPa
         return inSampleSize
     }
 
-    private fun createCenterCroppedSquareBitmap(source: Bitmap): Bitmap {
-        val size = min(source.width, source.height)
-        val x = (source.width - size) / 2
-        val y = (source.height - size) / 2
-        return Bitmap.createBitmap(source, x, y, size, size)
-    }
+    // ▼▼▼▼▼ 핵심 수정: 여러 이미지 처리 함수를 하나로 통합하여 최적화 ▼▼▼▼▼
+    private fun createWidgetBitmap(path: String, isPackable: Boolean): Bitmap? {
+        try {
+            val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeFile(path, options)
 
-    private fun createFramedBitmap(bitmap: Bitmap, isPackable: Boolean): Bitmap {
-        val output = Bitmap.createBitmap(bitmap.width, bitmap.height, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(output)
-        val imagePaint = Paint().apply {
-            isAntiAlias = true
-            shader = BitmapShader(bitmap, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP)
-        }
-        val strokeWidth = 8f
-        val cornerRadius = 24f
-        val borderPaint = Paint().apply {
-            isAntiAlias = true
-            color = ContextCompat.getColor(appContext, R.color.clothing_item_border)
-            style = Paint.Style.STROKE
-            this.strokeWidth = strokeWidth
-        }
-        val imageRect = RectF(0f, 0f, bitmap.width.toFloat(), bitmap.height.toFloat())
-        canvas.drawRoundRect(imageRect, cornerRadius, cornerRadius, imagePaint)
-        val borderRect = RectF(strokeWidth / 2, strokeWidth / 2, bitmap.width - strokeWidth / 2, bitmap.height - strokeWidth / 2)
-        canvas.drawRoundRect(borderRect, cornerRadius, cornerRadius, borderPaint)
-        if (isPackable) {
-            val iconBitmap = BitmapFactory.decodeResource(appContext.resources, R.drawable.ic_packable_bag)
-            if (iconBitmap != null) {
-                val iconSize = (bitmap.width * 0.25f).toInt()
-                val scaledIcon = Bitmap.createScaledBitmap(iconBitmap, iconSize, iconSize, true)
-                val margin = bitmap.width * 0.08f
-                val left = bitmap.width - scaledIcon.width - margin
-                val top = bitmap.height - scaledIcon.height - margin
-                canvas.drawBitmap(scaledIcon, left, top, null)
-                iconBitmap.recycle()
+            options.inSampleSize = calculateInSampleSize(options, FINAL_IMAGE_SIZE, FINAL_IMAGE_SIZE)
+            options.inJustDecodeBounds = false
+
+            val decodedBitmap = BitmapFactory.decodeFile(path, options) ?: return null
+
+            val finalBitmap = Bitmap.createBitmap(FINAL_IMAGE_SIZE, FINAL_IMAGE_SIZE, Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(finalBitmap)
+            val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
+
+            val srcWidth = decodedBitmap.width
+            val srcHeight = decodedBitmap.height
+            val dstSize = FINAL_IMAGE_SIZE.toFloat()
+
+            val srcRect: Rect
+            val scale: Float
+
+            if (srcWidth > srcHeight) {
+                scale = dstSize / srcHeight
+                val newWidth = srcHeight
+                val xOffset = (srcWidth - newWidth) / 2
+                srcRect = Rect(xOffset, 0, xOffset + newWidth, srcHeight)
+            } else {
+                scale = dstSize / srcWidth
+                val newHeight = srcWidth
+                val yOffset = (srcHeight - newHeight) / 2
+                srcRect = Rect(0, yOffset, srcWidth, yOffset + newHeight)
             }
+
+            val shader = BitmapShader(decodedBitmap, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP)
+            val matrix = Matrix()
+            matrix.setScale(scale, scale)
+            matrix.postTranslate(-srcRect.left * scale, -srcRect.top * scale)
+            shader.setLocalMatrix(matrix)
+            paint.shader = shader
+
+            val cornerRadius = 24f
+            canvas.drawRoundRect(RectF(0f, 0f, dstSize, dstSize), cornerRadius, cornerRadius, paint)
+
+            decodedBitmap.recycle()
+
+            val borderPaint = Paint().apply {
+                isAntiAlias = true
+                color = ContextCompat.getColor(appContext, R.color.clothing_item_border)
+                style = Paint.Style.STROKE
+                strokeWidth = 8f
+            }
+            val borderRect = RectF(borderPaint.strokeWidth / 2, borderPaint.strokeWidth / 2, dstSize - borderPaint.strokeWidth / 2, dstSize - borderPaint.strokeWidth / 2)
+            canvas.drawRoundRect(borderRect, cornerRadius, cornerRadius, borderPaint)
+
+            if (isPackable) {
+                val iconDrawable = ContextCompat.getDrawable(appContext, R.drawable.ic_packable_bag)
+                if (iconDrawable != null) {
+                    val iconSize = (dstSize * 0.25f).toInt()
+                    val margin = (dstSize * 0.08f).toInt()
+                    val left = (dstSize - iconSize - margin).toInt()
+                    val top = (dstSize - iconSize - margin).toInt()
+                    val right = (dstSize - margin).toInt()
+                    val bottom = (dstSize - margin).toInt()
+                    iconDrawable.setBounds(left, top, right, bottom)
+                    iconDrawable.draw(canvas)
+                }
+            }
+
+            return finalBitmap
+        } catch (e: Exception) {
+            Log.e("WidgetUpdateWorker", "Failed to create widget bitmap", e)
+            return null
         }
-        return output
     }
 
-    // ▼▼▼▼▼ 핵심 수정 4: 아이콘 표시를 위해 packableOuters 목록을 정확히 활용 ▼▼▼▼▼
     private fun updateWidgetImages(remoteViews: RemoteViews, items: List<ClothingItem>, packableOuters: List<ClothingItem>) {
         val imageViews = listOf(R.id.iv_widget_item1, R.id.iv_widget_item2, R.id.iv_widget_item3)
         imageViews.forEach { viewId -> remoteViews.setViewVisibility(viewId, View.GONE) }
@@ -294,21 +311,11 @@ class WidgetUpdateWorker(private val appContext: Context, workerParams: WorkerPa
             if (index < imageViews.size) {
                 val imagePath = if (item.useProcessedImage && item.processedImageUri != null) item.processedImageUri else item.imageUri
                 try {
-                    val file = File(imagePath)
-                    if (file.exists()) {
-                        val originalBitmap = getResizedBitmap(file.absolutePath)
-                        if (originalBitmap != null) {
-                            val croppedBitmap = createCenterCroppedSquareBitmap(originalBitmap)
-                            val scaledBitmap = Bitmap.createScaledBitmap(croppedBitmap, FINAL_IMAGE_SIZE, FINAL_IMAGE_SIZE, true)
-                            // '최적 조합'의 아이템이 '챙겨갈 아우터' 목록에 있는지 확인하여 아이콘 표시
-                            val isPackable = packableOuters.any { it.id == item.id }
-                            val framedBitmap = createFramedBitmap(scaledBitmap, isPackable)
-                            remoteViews.setImageViewBitmap(imageViews[index], framedBitmap)
-                            remoteViews.setViewVisibility(imageViews[index], View.VISIBLE)
-                            if (!originalBitmap.isRecycled) originalBitmap.recycle()
-                            if (!croppedBitmap.isRecycled) croppedBitmap.recycle()
-                            if (!scaledBitmap.isRecycled) scaledBitmap.recycle()
-                        }
+                    val isPackable = packableOuters.any { it.id == item.id }
+                    val widgetBitmap = createWidgetBitmap(imagePath, isPackable)
+                    if (widgetBitmap != null) {
+                        remoteViews.setImageViewBitmap(imageViews[index], widgetBitmap)
+                        remoteViews.setViewVisibility(imageViews[index], View.VISIBLE)
                     }
                 } catch (e: Exception) {
                     Log.e("WidgetUpdateWorker", "Image loading failed for widget", e)
@@ -316,5 +323,4 @@ class WidgetUpdateWorker(private val appContext: Context, workerParams: WorkerPa
             }
         }
     }
-    // ▲▲▲▲▲ 핵심 수정 4 끝 ▲▲▲▲▲
 }
