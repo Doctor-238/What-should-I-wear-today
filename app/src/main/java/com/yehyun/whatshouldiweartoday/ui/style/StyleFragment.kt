@@ -5,14 +5,12 @@ import android.transition.TransitionManager
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.view.animation.AlphaAnimation
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.Spinner
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.SearchView
-import androidx.constraintlayout.widget.ConstraintSet
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
@@ -25,6 +23,7 @@ import com.google.android.material.tabs.TabLayoutMediator
 import com.yehyun.whatshouldiweartoday.R
 import com.yehyun.whatshouldiweartoday.databinding.FragmentStyleBinding
 import com.yehyun.whatshouldiweartoday.ui.OnTabReselectedListener
+import com.yehyun.whatshouldiweartoday.ui.closet.ClothingListFragment
 import kotlinx.coroutines.launch
 
 class StyleFragment : Fragment(), OnTabReselectedListener {
@@ -35,9 +34,6 @@ class StyleFragment : Fragment(), OnTabReselectedListener {
     private val viewModel: StyleViewModel by viewModels()
     private lateinit var onBackPressedCallback: OnBackPressedCallback
 
-    private val normalConstraintSet = ConstraintSet()
-    private val deleteModeConstraintSet = ConstraintSet()
-
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
@@ -46,19 +42,8 @@ class StyleFragment : Fragment(), OnTabReselectedListener {
         return binding.root
     }
 
-    override fun onStop() {
-        super.onStop()
-        viewModel.resetDraggingState()
-    }
-
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
-        // 현재 제약조건(일반 모드)을 복제
-        normalConstraintSet.clone(binding.styleFragmentRoot)
-        // 삭제 모드용 제약조건을 설정하기 위해 복제
-        deleteModeConstraintSet.clone(binding.styleFragmentRoot)
-        setupDeleteModeConstraints()
 
         setupViewPagerAndTabs()
         setupSearch()
@@ -66,17 +51,6 @@ class StyleFragment : Fragment(), OnTabReselectedListener {
         setupBackButtonHandler()
         setupListeners()
         setupObservers()
-    }
-
-    private fun setupDeleteModeConstraints() {
-        deleteModeConstraintSet.apply {
-            // 경고 문구의 오른쪽 제약을 FAB가 아닌 부모의 오른쪽 끝으로 변경
-            connect(R.id.scroll_mode_alert_container, ConstraintSet.END, R.id.style_fragment_root, ConstraintSet.END)
-            // 경고 문구의 왼쪽 제약을 부모의 왼쪽 끝으로 변경
-            connect(R.id.scroll_mode_alert_container, ConstraintSet.START, R.id.style_fragment_root, ConstraintSet.START)
-            // 수평 바이어스를 0.5로 설정하여 정확히 중앙에 오도록 함
-            setHorizontalBias(R.id.scroll_mode_alert_container, 0.5f)
-        }
     }
 
     private fun setupListeners() {
@@ -108,17 +82,13 @@ class StyleFragment : Fragment(), OnTabReselectedListener {
                     .show()
             }
         }
-        binding.scrollModeAlertContainer.setOnClickListener {
-            viewModel.setDragging(false)
-        }
     }
 
     private fun setupObservers() {
         viewModel.currentTabState.observe(viewLifecycleOwner) { state ->
             if (_binding == null) return@observe
 
-            updateToolbarVisibilityAndConstraints(state.isDeleteMode)
-
+            updateToolbarVisibility(state.isDeleteMode)
             onBackPressedCallback.isEnabled = state.isDeleteMode
 
             binding.btnDeleteStyle.isEnabled = state.selectedItemIds.isNotEmpty()
@@ -138,50 +108,27 @@ class StyleFragment : Fragment(), OnTabReselectedListener {
         viewModel.isDeleteMode.observe(viewLifecycleOwner) { notifyAdapterDeleteModeChanged() }
         viewModel.selectedItems.observe(viewLifecycleOwner) { notifyAdapterSelectionChanged() }
 
+
         viewLifecycleOwner.lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.resetSearchEvent.collect {
-                    resetsearchViewStyle()
+                    resetsearchViewStyle() // 신호가 오면 스스로 함수 호출
                 }
             }
         }
-
-        viewModel.showDragAlert.observe(viewLifecycleOwner) { shouldShow ->
-            updateScrollAlertVisibility(shouldShow)
-        }
     }
 
-    private fun updateScrollAlertVisibility(isVisible: Boolean) {
+    private fun updateToolbarVisibility(isDeleteMode: Boolean) {
         if (_binding == null) return
-
-        val targetVisibility = if (isVisible) View.VISIBLE else View.GONE
-        if (binding.scrollModeAlertContainer.visibility == targetVisibility) return
-
-        val animation = if (isVisible) {
-            AlphaAnimation(0f, 1f)
-        } else {
-            AlphaAnimation(1f, 0f)
-        }
-        animation.duration = 300
-        binding.scrollModeAlertContainer.startAnimation(animation)
-        binding.scrollModeAlertContainer.visibility = targetVisibility
-    }
-
-    private fun updateToolbarVisibilityAndConstraints(isDeleteMode: Boolean) {
-        if (_binding == null) return
-
-        TransitionManager.beginDelayedTransition(binding.styleFragmentRoot)
-
+        TransitionManager.beginDelayedTransition(binding.toolbarContainerStyle)
         if (isDeleteMode) {
             binding.toolbarNormalStyle.visibility = View.GONE
             binding.toolbarDeleteStyle.visibility = View.VISIBLE
             binding.fabAddStyle.hide()
-            deleteModeConstraintSet.applyTo(binding.styleFragmentRoot)
         } else {
             binding.toolbarNormalStyle.visibility = View.VISIBLE
             binding.toolbarDeleteStyle.visibility = View.GONE
             binding.fabAddStyle.show()
-            normalConstraintSet.applyTo(binding.styleFragmentRoot)
         }
     }
 
@@ -257,7 +204,7 @@ class StyleFragment : Fragment(), OnTabReselectedListener {
     }
 
     private fun resetsearchViewStyle(){
-        val query=""
+        var query=""
         binding.searchViewDelete.setQuery(query, false)
         binding.searchViewStyle.setQuery(query, false)
     }
@@ -288,6 +235,8 @@ class StyleFragment : Fragment(), OnTabReselectedListener {
             override fun onNothingSelected(parent: AdapterView<*>?) {
 
             }
+
+
         }
     }
 

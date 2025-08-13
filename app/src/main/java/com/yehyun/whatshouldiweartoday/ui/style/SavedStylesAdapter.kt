@@ -16,15 +16,11 @@ import com.yehyun.whatshouldiweartoday.data.database.StyleWithItems
 import com.yehyun.whatshouldiweartoday.ui.home.RecommendationAdapter
 
 class SavedStylesAdapter(
+    private val onItemClicked: (StyleWithItems) -> Unit,
+    private val onItemLongClicked: (StyleWithItems) -> Unit,
     private val isDeleteMode: () -> Boolean,
     private val isItemSelected: (Long) -> Boolean
-) : ListAdapter<StyleWithItems, SavedStylesAdapter.StyleViewHolder>(diffUtil) {
-
-    // ▼▼▼▼▼ 핵심 수정: 외부에서 아이템을 가져올 수 있도록 이 함수를 추가합니다. ▼▼▼▼▼
-    fun getStyleAt(position: Int): StyleWithItems? {
-        return getItem(position)
-    }
-    // ▲▲▲▲▲ 핵심 수정 ▲▲▲▲▲
+) : ListAdapter<StyleWithItems, SavedStylesAdapter.StyleViewHolder>(diffUtil) { // RecyclerView.Adapter -> ListAdapter 로 변경
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): StyleViewHolder {
         val view = LayoutInflater.from(parent.context).inflate(R.layout.item_saved_style, parent, false)
@@ -33,7 +29,7 @@ class SavedStylesAdapter(
 
     override fun onBindViewHolder(holder: StyleViewHolder, position: Int) {
         val currentStyle = getItem(position)
-        holder.bind(currentStyle, isDeleteMode, isItemSelected)
+        holder.bind(currentStyle, onItemClicked, onItemLongClicked, isDeleteMode, isItemSelected)
     }
 
     override fun onBindViewHolder(holder: StyleViewHolder, position: Int, payloads: MutableList<Any>) {
@@ -62,6 +58,8 @@ class SavedStylesAdapter(
         @SuppressLint("ClickableViewAccessibility")
         fun bind(
             styleWithItems: StyleWithItems,
+            clickAction: (StyleWithItems) -> Unit,
+            longClickAction: (StyleWithItems) -> Unit,
             isDeleteMode: () -> Boolean,
             isItemSelected: (Long) -> Boolean
         ) {
@@ -76,6 +74,16 @@ class SavedStylesAdapter(
                     .thenBy { it.suitableTemperature }
             )
             itemsAdapter.submitList(sortedItems)
+
+            itemView.setOnClickListener {
+                clickAction(styleWithItems)
+            }
+            itemView.setOnLongClickListener {
+                if (!isDeleteMode()) {
+                    longClickAction(styleWithItems)
+                }
+                true
+            }
 
             itemsRecyclerView.setOnTouchListener { v, event ->
                 itemView.onTouchEvent(event)
@@ -104,6 +112,7 @@ class SavedStylesAdapter(
         }
     }
 
+    // ▼▼▼▼▼ 핵심 수정: DiffUtil 구현 추가 ▼▼▼▼▼
     companion object {
         val diffUtil = object : DiffUtil.ItemCallback<StyleWithItems>() {
             override fun areItemsTheSame(oldItem: StyleWithItems, newItem: StyleWithItems): Boolean {
@@ -115,4 +124,5 @@ class SavedStylesAdapter(
             }
         }
     }
+    // ▲▲▲▲▲ 핵심 수정 ▲▲▲▲▲
 }

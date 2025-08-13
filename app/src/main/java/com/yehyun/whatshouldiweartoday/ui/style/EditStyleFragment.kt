@@ -216,8 +216,16 @@ class EditStyleFragment : Fragment(R.layout.fragment_edit_style), OnTabReselecte
     private fun showSaveChangesDialog() {
         AlertDialog.Builder(requireContext())
             .setMessage("변경사항을 저장하시겠습니까?")
-            .setPositiveButton("예") { _, _ -> saveChangesAndExit() }
-            .setNegativeButton("아니오") { _, _ -> findNavController().popBackStack() }
+            .setPositiveButton("예") { _, _ ->
+                saveChangesAndExit()
+            }
+            .setNegativeButton("아니오") { _, _ ->
+                // 여러 줄의 코드를 실행하기 위해 중괄호로 묶어줍니다.
+                findNavController().popBackStack()
+                if (viewModel.selectedItems.value.isNullOrEmpty()) {
+                    viewModel.deleteStyle()
+                }
+            }
             .setCancelable(false)
             .show()
     }
