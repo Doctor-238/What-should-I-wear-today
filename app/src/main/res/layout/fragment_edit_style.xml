@@ -13,16 +13,9 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:navigationIcon="@drawable/ic_arrow_back">
-        <Button
-            android:id="@+id/button_save_style_edit"
-            style="@style/Widget.MaterialComponents.Button.TextButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="end"
-            android:layout_marginEnd="16dp"
-            android:text="저장하기" />
-    </com.google.android.material.appbar.MaterialToolbar>
+        app:menu="@menu/edit_style_menu"
+        app:navigationIcon="@drawable/ic_arrow_back"
+        app:titleCentered="true" />
 
     <ScrollView
         android:layout_width="0dp"
@@ -36,20 +29,30 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="16dp">
+            android:paddingBottom="4dp">
 
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/textInputLayout_edit_style_name"
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="스타일 이름"
+                android:layout_marginHorizontal="16dp"
+                android:layout_marginTop="16dp"
+                app:boxCornerRadiusBottomEnd="12dp"
+                app:boxCornerRadiusBottomStart="12dp"
+                app:boxCornerRadiusTopEnd="12dp"
+                app:boxCornerRadiusTopStart="12dp"
+                app:boxStrokeColor="@color/text_input_box_stroke_color"
                 app:counterEnabled="true"
-                app:counterMaxLength="20">
+                app:counterMaxLength="20"
+                app:hintTextColor="@color/tab_selected_text">
+
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/editText_edit_style_name"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:hint="스타일 이름을 입력하세요 (최대 20자)"
+                    android:inputType="text"
                     android:maxLength="20" />
             </com.google.android.material.textfield.TextInputLayout>
 
@@ -57,66 +60,141 @@
                 android:id="@+id/tv_season_label_edit"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
                 android:layout_marginTop="16dp"
-                android:text="계절"
+                android:text="계절 선택"
+                android:textSize="16sp"
                 android:textStyle="bold" />
+
             <com.google.android.material.chip.ChipGroup
                 android:id="@+id/chip_group_season_edit"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_marginHorizontal="16dp"
                 android:layout_marginTop="8dp"
+                app:chipSpacingHorizontal="8dp"
                 app:selectionRequired="true"
                 app:singleSelection="true">
-                <com.google.android.material.chip.Chip style="@style/Widget.MaterialComponents.Chip.Choice" android:id="@+id/chip_spring_edit" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="봄" />
-                <com.google.android.material.chip.Chip style="@style/Widget.MaterialComponents.Chip.Choice" android:id="@+id/chip_summer_edit" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="여름" />
-                <com.google.android.material.chip.Chip style="@style/Widget.MaterialComponents.Chip.Choice" android:id="@+id/chip_fall_edit" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="가을" />
-                <com.google.android.material.chip.Chip style="@style/Widget.MaterialComponents.Chip.Choice" android:id="@+id/chip_winter_edit" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="겨울" />
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chip_spring_edit"
+                    style="@style/Widget.MaterialComponents.Chip.Choice"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="봄"
+                    android:textColor="@color/chip_textcolor_selector"
+                    app:chipBackgroundColor="@color/chip_backgroundcolor_selector"
+                    app:chipStrokeColor="@color/fab_color_style_tab"
+                    app:chipStrokeWidth="2dp" />
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chip_summer_edit"
+                    style="@style/Widget.MaterialComponents.Chip.Choice"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="여름"
+                    android:textColor="@color/chip_textcolor_selector"
+                    app:chipBackgroundColor="@color/chip_backgroundcolor_selector"
+                    app:chipStrokeColor="@color/fab_color_style_tab"
+                    app:chipStrokeWidth="2dp" />
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chip_fall_edit"
+                    style="@style/Widget.MaterialComponents.Chip.Choice"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="가을"
+                    android:textColor="@color/chip_textcolor_selector"
+                    app:chipBackgroundColor="@color/chip_backgroundcolor_selector"
+                    app:chipStrokeColor="@color/fab_color_style_tab"
+                    app:chipStrokeWidth="2dp" />
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chip_winter_edit"
+                    style="@style/Widget.MaterialComponents.Chip.Choice"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="겨울"
+                    android:textColor="@color/chip_textcolor_selector"
+                    app:chipBackgroundColor="@color/chip_backgroundcolor_selector"
+                    app:chipStrokeColor="@color/fab_color_style_tab"
+                    app:chipStrokeWidth="2dp" />
             </com.google.android.material.chip.ChipGroup>
 
             <TextView
                 android:id="@+id/tv_selected_items_label"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
                 android:layout_marginTop="16dp"
                 android:text="현재 스타일 (0/10)"
+                android:textSize="16sp"
                 android:textStyle="bold" />
+
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/rv_selected_items"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_marginHorizontal="12dp"
                 android:layout_marginTop="8dp"
-                android:orientation="horizontal"
-                app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager" />
+                android:minHeight="110dp"
+                android:nestedScrollingEnabled="false"
+                app:layoutManager="androidx.recyclerview.widget.GridLayoutManager"
+                app:spanCount="3"
+                tools:itemCount="3"
+                tools:listitem="@layout/item_clothing_selectable"/>
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
                 android:layout_marginTop="24dp"
                 android:text="옷장에서 아이템 추가/제거"
+                android:textSize="16sp"
                 android:textStyle="bold" />
 
             <com.google.android.material.tabs.TabLayout
                 android:id="@+id/tab_layout_edit_style_category"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                app:tabMode="scrollable" />
+                app:tabBackground="@android:color/white"
+                app:tabGravity="fill"
+                app:tabIndicator="@drawable/tab_indicator_custom"
+                app:tabIndicatorAnimationMode="linear"
+                app:tabIndicatorColor="@color/tab_selected_text"
+                app:tabIndicatorFullWidth="false"
+                app:tabIndicatorGravity="bottom"
+                app:tabMode="scrollable"
+                app:tabSelectedTextColor="@color/tab_selected_text"
+                app:tabTextColor="@color/tab_unselected_text" />
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="@color/bottom_nav_background" />
 
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/rv_all_items_for_edit"
                 android:layout_width="match_parent"
-                android:layout_height="300dp"
-                android:layout_marginTop="8dp"
+                android:layout_height="220dp"
+                android:layout_marginHorizontal="12dp"
+                android:nestedScrollingEnabled="true"
                 app:layoutManager="androidx.recyclerview.widget.GridLayoutManager"
-                app:spanCount="4" />
+                app:spanCount="4"
+                tools:listitem="@layout/item_clothing_selectable" />
 
             <Button
                 android:id="@+id/button_delete_style"
                 style="@style/Widget.Material3.Button.OutlinedButton"
-                android:layout_width="match_parent"
+                android:layout_width="wrap_content"
                 android:layout_height="60dp"
-                android:layout_marginTop="32dp"
-                android:text="이 스타일 삭제하기"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="4dp"
+                android:paddingHorizontal="48dp"
+                android:text="삭제하기"
+                android:textStyle="bold"
                 android:textColor="?attr/colorError"
+                app:cornerRadius="24dp"
                 app:strokeColor="?attr/colorError" />
         </LinearLayout>
     </ScrollView>

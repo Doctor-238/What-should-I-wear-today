@@ -6,6 +6,7 @@ import android.text.TextWatcher
 import android.view.View
 import android.widget.Button
 import android.widget.FrameLayout
+import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
@@ -15,6 +16,7 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
+import androidx.recyclerview.widget.DefaultItemAnimator
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.chip.Chip
@@ -36,6 +38,10 @@ class SaveStyleFragment : Fragment(R.layout.fragment_save_style), OnTabReselecte
     private lateinit var buttonSave: Button
     private lateinit var onBackPressedCallback: OnBackPressedCallback
     private lateinit var loadingOverlay: FrameLayout
+    private lateinit var recyclerView: RecyclerView
+    private var nameTextWatcher: TextWatcher? = null
+    private val defaultItemAnimator = DefaultItemAnimator()
+    private lateinit var scrollView: ScrollView
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -46,6 +52,13 @@ class SaveStyleFragment : Fragment(R.layout.fragment_save_style), OnTabReselecte
         editTextName = view.findViewById(R.id.editText_style_name)
         buttonSave = view.findViewById(R.id.button_save_style_final)
         loadingOverlay = view.findViewById(R.id.loading_overlay)
+        recyclerView = view.findViewById(R.id.rv_clothing_selection)
+        scrollView = view.findViewById(R.id.scroll_view_content)
+
+        // ▼▼▼▼▼ 핵심 수정: 10 -> 9 ▼▼▼▼▼
+        tvSelectionGuide.text = "스타일에 포함할 옷을 선택하세요 (0/9)"
+        // ▲▲▲▲▲ 핵심 수정 ▲▲▲▲▲
+
 
         setupRecyclerView(view)
         setupListeners(view)
@@ -65,30 +78,35 @@ class SaveStyleFragment : Fragment(R.layout.fragment_save_style), OnTabReselecte
         }
         tabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
             override fun onTabSelected(tab: TabLayout.Tab?) {
+                recyclerView.itemAnimator = null
                 viewModel.setClothingFilter(tab?.text.toString())
             }
             override fun onTabUnselected(tab: TabLayout.Tab?) {}
-            override fun onTabReselected(tab: TabLayout.Tab?) {}
+            override fun onTabReselected(tab: TabLayout.Tab?) {
+                recyclerView.smoothScrollToPosition(0)
+            }
         })
     }
 
     private fun setupRecyclerView(view: View) {
-        // ▼▼▼▼▼ 핵심 수정: 생성자에서 클릭 리스너를 제거합니다. ▼▼▼▼▼
-        adapter = SaveStyleAdapter()
-        val recyclerView = view.findViewById<RecyclerView>(R.id.rv_clothing_selection)
+        adapter = SaveStyleAdapter { itemId ->
+            viewModel.selectedItems.value?.any { it.id == itemId } ?: false
+        }
         recyclerView.adapter = adapter
+        recyclerView.itemAnimator = defaultItemAnimator
 
-        // ▼▼▼▼▼ 핵심 수정: RecyclerItemClickListener를 추가하여 클릭 이벤트를 처리합니다. ▼▼▼▼▼
         recyclerView.addOnItemTouchListener(RecyclerItemClickListener(
             context = requireContext(),
             recyclerView = recyclerView,
             onItemClick = { _, position ->
-                adapter.getItem(position)?.let { item ->
+                adapter.currentList.getOrNull(position)?.let { item ->
+                    scrollView.smoothScrollTo(0, 0)
+                    recyclerView.itemAnimator = defaultItemAnimator
                     viewModel.toggleItemSelected(item)
                 }
             },
             onItemLongClick = { _, position ->
-                adapter.getItem(position)?.let { item ->
+                adapter.currentList.getOrNull(position)?.let { item ->
                     val action = SaveStyleFragmentDirections.actionSaveStyleFragmentToEditClothingFragment(item.id)
                     findNavController().navigate(action)
                 }
@@ -102,14 +120,21 @@ class SaveStyleFragment : Fragment(R.layout.fragment_save_style), OnTabReselecte
         }
 
         viewModel.selectedItems.observe(viewLifecycleOwner) { items ->
-            adapter.setSelectedItems(items.map { it.id }.toSet())
-            tvSelectionGuide.text = "스타일에 포함할 옷을 선택하세요 (${items.size}/10)"
+            // ▼▼▼▼▼ 핵심 수정: 10 -> 9 ▼▼▼▼▼
+            tvSelectionGuide.text = "스타일에 포함할 옷을 선택하세요 (${items.size}/9)"
+            // ▲▲▲▲▲ 핵심 수정 ▲▲▲▲▲
+            updateSaveButtonState()
+
+            for (i in 0 until adapter.itemCount) {
+                adapter.notifyItemChanged(i, "SELECTION_CHANGED")
+            }
         }
 
         viewModel.styleName.observe(viewLifecycleOwner) { name ->
             if (editTextName.text.toString() != name) {
                 editTextName.setText(name)
             }
+            updateSaveButtonState()
         }
 
         viewModel.selectedSeason.observe(viewLifecycleOwner) { season ->
@@ -117,6 +142,7 @@ class SaveStyleFragment : Fragment(R.layout.fragment_save_style), OnTabReselecte
                 val chip = chipGroupSeason.getChildAt(i) as Chip
                 chip.isChecked = (chip.text == season)
             }
+            updateSaveButtonState()
         }
 
         viewModel.isSaveComplete.observe(viewLifecycleOwner) { isComplete ->
@@ -133,8 +159,19 @@ class SaveStyleFragment : Fragment(R.layout.fragment_save_style), OnTabReselecte
 
         viewModel.isLoading.observe(viewLifecycleOwner) { isLoading ->
             loadingOverlay.isVisible = isLoading
-            buttonSave.isEnabled = !isLoading
+            if (!isLoading) {
+                updateSaveButtonState()
+            } else {
+                buttonSave.isEnabled = false
+            }
         }
+    }
+
+    private fun updateSaveButtonState() {
+        val isNameValid = !viewModel.styleName.value.isNullOrEmpty()
+        val isSeasonSelected = !viewModel.selectedSeason.value.isNullOrEmpty()
+        val areItemsSelected = viewModel.selectedItems.value?.isNotEmpty() == true
+        buttonSave.isEnabled = isNameValid && isSeasonSelected && areItemsSelected
     }
 
     private fun setupListeners(view: View) {
@@ -158,13 +195,14 @@ class SaveStyleFragment : Fragment(R.layout.fragment_save_style), OnTabReselecte
             handleBackButton()
         }
 
-        editTextName.addTextChangedListener(object: TextWatcher {
+        nameTextWatcher = object: TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
                 viewModel.setStyleName(s.toString())
             }
             override fun afterTextChanged(s: Editable?) {}
-        })
+        }
+        editTextName.addTextChangedListener(nameTextWatcher)
 
         chipGroupSeason.setOnCheckedChangeListener { group, checkedId ->
             val chip = group.findViewById<Chip>(checkedId)
@@ -207,6 +245,6 @@ class SaveStyleFragment : Fragment(R.layout.fragment_save_style), OnTabReselecte
     override fun onDestroyView() {
         super.onDestroyView()
         onBackPressedCallback.remove()
-        editTextName.removeTextChangedListener(null)
+        nameTextWatcher?.let { editTextName.removeTextChangedListener(it) }
     }
 }
