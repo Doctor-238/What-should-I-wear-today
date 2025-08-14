@@ -1,3 +1,5 @@
+// main/java/com/yehyun/whatshouldiweartoday/ui/style/StyleFragment.kt
+
 package com.yehyun.whatshouldiweartoday.ui.style
 
 import android.os.Bundle
@@ -23,7 +25,6 @@ import com.google.android.material.tabs.TabLayoutMediator
 import com.yehyun.whatshouldiweartoday.R
 import com.yehyun.whatshouldiweartoday.databinding.FragmentStyleBinding
 import com.yehyun.whatshouldiweartoday.ui.OnTabReselectedListener
-import com.yehyun.whatshouldiweartoday.ui.closet.ClothingListFragment
 import kotlinx.coroutines.launch
 
 class StyleFragment : Fragment(), OnTabReselectedListener {
@@ -84,6 +85,7 @@ class StyleFragment : Fragment(), OnTabReselectedListener {
         }
     }
 
+    // ▼▼▼▼▼ 핵심 수정: 누락되었던 모든 메서드를 여기에 복원합니다. ▼▼▼▼▼
     private fun setupObservers() {
         viewModel.currentTabState.observe(viewLifecycleOwner) { state ->
             if (_binding == null) return@observe
@@ -153,7 +155,8 @@ class StyleFragment : Fragment(), OnTabReselectedListener {
         }.attach()
 
         binding.tabLayoutStyleSeason.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
-            override fun onTabSelected(tab: TabLayout.Tab?) {}
+            override fun onTabSelected(tab: TabLayout.Tab?) {
+            }
             override fun onTabUnselected(tab: TabLayout.Tab?) {}
             override fun onTabReselected(tab: TabLayout.Tab?) {
                 tab?.position?.let { position ->
@@ -235,8 +238,6 @@ class StyleFragment : Fragment(), OnTabReselectedListener {
             override fun onNothingSelected(parent: AdapterView<*>?) {
 
             }
-
-
         }
     }
 
@@ -273,10 +274,14 @@ class StyleFragment : Fragment(), OnTabReselectedListener {
             }
         }
     }
+    // ▲▲▲▲▲ 핵심 수정 ▲▲▲▲▲
 
     override fun onDestroyView() {
         super.onDestroyView()
         onBackPressedCallback.remove()
         _binding = null
     }
+
+
+
 }
