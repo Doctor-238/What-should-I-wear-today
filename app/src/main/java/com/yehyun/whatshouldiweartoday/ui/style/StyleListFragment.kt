@@ -78,11 +78,8 @@ class StyleListFragment : Fragment() {
                     }
                 }
             }
-        ).apply {
-            (parentFragment as? OnDragStateChangedListener)?.let {
-                setOnDragStateChangedListener(it)
-            }
-        }
+        )
+
         binding.recyclerViewStyleList.addOnItemTouchListener(itemClickListener!!)
     }
 
@@ -131,9 +128,6 @@ class StyleListFragment : Fragment() {
     }
     // ▲▲▲▲▲ 핵심 수정 ▲▲▲▲▲
 
-    fun cancelItemClickListenerDragState() {
-        itemClickListener?.cancelDragState()
-    }
 
     override fun onDestroyView() {
         super.onDestroyView()
