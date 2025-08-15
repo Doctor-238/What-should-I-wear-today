@@ -176,12 +176,16 @@
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/rv_all_items_for_edit"
                 android:layout_width="match_parent"
-                android:layout_height="220dp"
+                android:layout_height="300dp"
                 android:layout_marginHorizontal="12dp"
                 android:nestedScrollingEnabled="true"
                 app:layoutManager="androidx.recyclerview.widget.GridLayoutManager"
                 app:spanCount="4"
                 tools:listitem="@layout/item_clothing_selectable" />
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="@color/bottom_nav_background" />
 
             <Button
                 android:id="@+id/button_delete_style"

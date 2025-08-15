@@ -50,6 +50,11 @@ class EditStyleFragment : Fragment(R.layout.fragment_edit_style), OnTabReselecte
     private val defaultItemAnimator = DefaultItemAnimator()
 
 
+    override fun onResume() {
+        super.onResume()
+        viewModel.refreshCurrentStyle()
+    }
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         toolbar = view.findViewById(R.id.toolbar_edit_style)
@@ -221,7 +226,10 @@ class EditStyleFragment : Fragment(R.layout.fragment_edit_style), OnTabReselecte
                     findNavController().navigate(action)
                 }
             }
+
         ))
+
+
 
         // ▼▼▼▼▼ 핵심 수정: 두 RecyclerView에 터치 리스너를 추가합니다. ▼▼▼▼▼
         addScrollTouchListener(rvSelectedItems)
