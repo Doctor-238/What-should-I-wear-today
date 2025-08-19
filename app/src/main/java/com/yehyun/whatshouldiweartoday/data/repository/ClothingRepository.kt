@@ -31,7 +31,6 @@ class ClothingRepository(private val clothingDao: ClothingDao) {
                 itemprocessedImageUri.delete()
             }
         } catch (e: Exception) {
-            // 파일 삭제 중 오류가 발생할 경우를 대비한 예외 처리입니다.
             e.printStackTrace()
         }
         clothingDao.delete(item)

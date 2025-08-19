@@ -18,7 +18,6 @@ class RecommendationAdapter(
 ) : RecyclerView.Adapter<RecommendationAdapter.RecommendationViewHolder>() {
 
     private var items: List<ClothingItem> = listOf()
-    // ▼▼▼▼▼ 핵심 수정: ID 목록 -> 객체 목록으로 변경 ▼▼▼▼▼
     private var packableOuters: List<ClothingItem> = emptyList()
 
     fun submitList(newItems: List<ClothingItem>, packableOuters: List<ClothingItem> = emptyList()) {
@@ -26,7 +25,6 @@ class RecommendationAdapter(
         this.packableOuters = packableOuters
         notifyDataSetChanged()
     }
-    // ▲▲▲▲▲ 핵심 수정 끝 ▲▲▲▲▲
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecommendationViewHolder {
         val view = LayoutInflater.from(parent.context).inflate(R.layout.item_recommendation_clothing_square, parent, false)
@@ -47,10 +45,8 @@ class RecommendationAdapter(
             }
         }
 
-        // ▼▼▼▼▼ 핵심 수정: 현재 아이템이 '챙겨갈 아우터' 목록에 있는지 ID로 확인 ▼▼▼▼▼
         val isPackable = packableOuters.any { it.id == currentItem.id }
         holder.bind(currentItem, isPackable)
-        // ▲▲▲▲▲ 핵심 수정 끝 ▲▲▲▲▲
     }
 
     override fun getItemCount(): Int = items.size

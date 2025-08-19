@@ -1,5 +1,3 @@
-// 파일 경로: app/src/main/java/com/yehyun/whatshouldiweartoday/MainActivity.kt
-
 package com.yehyun.whatshouldiweartoday
 
 import android.appwidget.AppWidgetManager
@@ -23,10 +21,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var navView: BottomNavigationView
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        // ▼▼▼▼▼ 핵심 수정 부분 ▼▼▼▼▼
-        // 스플래시 화면 API를 호출합니다. 반드시 super.onCreate() 및 setContentView() 보다 먼저 와야 합니다.
         installSplashScreen()
-        // ▲▲▲▲▲ 핵심 수정 부분 ▲▲▲▲▲
 
         super.onCreate(savedInstanceState)
         AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
@@ -50,27 +45,11 @@ class MainActivity : AppCompatActivity() {
         }
 
         updateAllWidgets()
-        // [수정] 앱 실행 시 특정 화면으로 이동시키는 로직을 제거합니다.
-        // handleIntent(intent)
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        // [수정] 앱 실행 시 특정 화면으로 이동시키는 로직을 제거합니다.
-        // handleIntent(intent)
     }
-
-    /*
-    [수정] 특정 탭으로 이동하는 기능 자체를 제거했으므로, 이 함수는 더 이상 필요하지 않습니다.
-    private fun handleIntent(intent: Intent) {
-        if (intent.hasExtra("destination")) {
-            val destinationId = intent.getIntExtra("destination", R.id.navigation_closet)
-            navView.post {
-                navController.navigate(destinationId)
-            }
-        }
-    }
-    */
 
     private fun updateAllWidgets() {
         val appWidgetManager = AppWidgetManager.getInstance(this)

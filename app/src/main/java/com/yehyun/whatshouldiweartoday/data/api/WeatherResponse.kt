@@ -3,7 +3,6 @@ package com.yehyun.whatshouldiweartoday.data.api
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
-// OpenWeatherMap API의 5일/3시간 예보 응답 구조에 맞춘 데이터 클래스
 @Serializable
 data class WeatherResponse(
     @SerialName("list")

@@ -55,9 +55,7 @@ class SaveStyleFragment : Fragment(R.layout.fragment_save_style), OnTabReselecte
         recyclerView = view.findViewById(R.id.rv_clothing_selection)
         scrollView = view.findViewById(R.id.scroll_view_content)
 
-        // ▼▼▼▼▼ 핵심 수정: 10 -> 9 ▼▼▼▼▼
         tvSelectionGuide.text = "스타일에 포함할 옷을 선택하세요 (0/9)"
-        // ▲▲▲▲▲ 핵심 수정 ▲▲▲▲▲
 
 
         setupRecyclerView(view)
@@ -110,7 +108,10 @@ class SaveStyleFragment : Fragment(R.layout.fragment_save_style), OnTabReselecte
                     val action = SaveStyleFragmentDirections.actionSaveStyleFragmentToEditClothingFragment(item.id)
                     findNavController().navigate(action)
                 }
-            }
+            },
+            // ▼▼▼▼▼ 핵심 수정 ▼▼▼▼▼
+            onLongDragStateChanged = {}
+            // ▲▲▲▲▲ 핵심 수정 ▲▲▲▲▲
         ))
     }
 
@@ -120,9 +121,7 @@ class SaveStyleFragment : Fragment(R.layout.fragment_save_style), OnTabReselecte
         }
 
         viewModel.selectedItems.observe(viewLifecycleOwner) { items ->
-            // ▼▼▼▼▼ 핵심 수정: 10 -> 9 ▼▼▼▼▼
             tvSelectionGuide.text = "스타일에 포함할 옷을 선택하세요 (${items.size}/9)"
-            // ▲▲▲▲▲ 핵심 수정 ▲▲▲▲▲
             updateSaveButtonState()
 
             for (i in 0 until adapter.itemCount) {

@@ -1,4 +1,3 @@
-// 파일 경로: app/src/main/java/com/yehyun/whatshouldiweartoday/ui/closet/EditClothingViewModel.kt
 package com.yehyun.whatshouldiweartoday.ui.closet
 
 import android.app.Application
@@ -151,9 +150,6 @@ class EditClothingViewModel(application: Application) : AndroidViewModel(applica
             viewModelScope.launch {
                 try {
                     repository.delete(itemToDelete)
-                    // ▼▼▼▼▼ 핵심 수정: 버그를 유발하는 고아 스타일 삭제 로직을 제거합니다. ▼▼▼▼▼
-                    // styleDao.deleteOrphanedStyles()
-                    // ▲▲▲▲▲ 핵심 수정 ▲▲▲▲▲
                     _isDeleteComplete.postValue(true)
                 } finally {
                     _isProcessing.postValue(false)

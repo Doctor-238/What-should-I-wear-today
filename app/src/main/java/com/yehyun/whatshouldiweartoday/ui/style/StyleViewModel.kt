@@ -50,6 +50,9 @@ class StyleViewModel(application: Application) : AndroidViewModel(application) {
     private val _currentTabIndex = MutableLiveData(0)
     val currentTabState = MediatorLiveData<StyleTabState>()
 
+    private val _longDragStateByTab = MutableLiveData<Map<Int, Boolean>>(emptyMap())
+    val longDragStateByTab: LiveData<Map<Int, Boolean>> = _longDragStateByTab
+
     init {
         val styleDao = AppDatabase.getDatabase(application).styleDao()
         repository = StyleRepository(styleDao)
@@ -86,6 +89,13 @@ class StyleViewModel(application: Application) : AndroidViewModel(application) {
         _categorizedStyles.values.forEach {
             currentTabState.addSource(it, stateObserver)
         }
+    }
+
+    fun setLongDragStateForTab(tabIndex: Int, isDragging: Boolean) {
+        val currentMap = _longDragStateByTab.value ?: emptyMap()
+        val newMap = currentMap.toMutableMap()
+        newMap[tabIndex] = isDragging
+        _longDragStateByTab.value = newMap
     }
 
     fun getStylesForSeason(season: String): LiveData<List<StyleWithItems>> {

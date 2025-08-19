@@ -7,7 +7,6 @@ import androidx.room.Relation
 data class StyleWithItems(
     @Embedded val style: SavedStyle,
 
-    // [수정 완료] Room이 길을 잃지 않도록, 연결고리의 정보를 명확하게 알려줍니다.
     @Relation(
         parentColumn = "styleId",      // 부모 테이블(SavedStyle)의 연결 컬럼
         entityColumn = "id",          // 자식 테이블(ClothingItem)의 연결 컬럼

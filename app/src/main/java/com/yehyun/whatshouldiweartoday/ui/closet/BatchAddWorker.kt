@@ -1,4 +1,3 @@
-// app/src/main/java/com/yehyun/whatshouldiweartoday/ui/closet/BatchAddWorker.kt
 
 package com.yehyun.whatshouldiweartoday.ui.closet
 
@@ -14,7 +13,10 @@ import android.os.Build
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.exifinterface.media.ExifInterface
-import androidx.work.*
+import androidx.work.CoroutineWorker
+import androidx.work.ForegroundInfo
+import androidx.work.WorkerParameters
+import androidx.work.workDataOf
 import com.google.ai.client.generativeai.GenerativeModel
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.segmentation.Segmentation
@@ -28,14 +30,16 @@ import com.yehyun.whatshouldiweartoday.ai.AiModelProvider
 import com.yehyun.whatshouldiweartoday.data.database.AppDatabase
 import com.yehyun.whatshouldiweartoday.data.database.ClothingItem
 import com.yehyun.whatshouldiweartoday.data.preference.SettingsManager
-import kotlinx.coroutines.*
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.tasks.await
 import kotlinx.serialization.json.Json
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Date
+import java.util.Locale
 
 class BatchAddWorker(private val context: Context, workerParams: WorkerParameters) : CoroutineWorker(context, workerParams) {
 
@@ -51,7 +55,7 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
         const val OUTPUT_SUCCESS_COUNT = "success_count"
         const val OUTPUT_FAILURE_COUNT = "failure_count"
         private const val FOREGROUND_NOTIFICATION_ID = 1
-        private const val COMPLETE_NOTIFICATION_ID = 2 // 완료 알림 ID 분리
+        private const val COMPLETE_NOTIFICATION_ID = 2
     }
 
     override suspend fun getForegroundInfo(): ForegroundInfo {

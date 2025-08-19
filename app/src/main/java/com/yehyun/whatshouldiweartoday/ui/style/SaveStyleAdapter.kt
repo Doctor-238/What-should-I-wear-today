@@ -1,6 +1,5 @@
 package com.yehyun.whatshouldiweartoday.ui.style
 
-import android.graphics.Color
 import android.net.Uri
 import android.util.TypedValue
 import android.view.LayoutInflater

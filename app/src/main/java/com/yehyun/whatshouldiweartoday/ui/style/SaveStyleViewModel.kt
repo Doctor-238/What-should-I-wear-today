@@ -20,10 +20,8 @@ class SaveStyleViewModel(application: Application) : AndroidViewModel(applicatio
     private val _clothingCategory = MutableLiveData("전체")
     val filteredClothes = MediatorLiveData<List<ClothingItem>>()
 
-    // ▼▼▼▼▼ 핵심 수정: 정렬 방식에 따라 LiveData를 분리합니다. ▼▼▼▼▼
     private val allClothesLatestOrder: LiveData<List<ClothingItem>>
     private val allClothesTempOrder: LiveData<List<ClothingItem>>
-    // ▲▲▲▲▲ 핵심 수정 ▲▲▲▲▲
 
     val selectedItems = MutableLiveData<MutableList<ClothingItem>>()
     val styleName = MutableLiveData<String>()
@@ -46,11 +44,9 @@ class SaveStyleViewModel(application: Application) : AndroidViewModel(applicatio
         clothingRepository = ClothingRepository(db.clothingDao())
         styleRepository = StyleRepository(db.styleDao())
 
-        // ▼▼▼▼▼ 핵심 수정: 각 정렬 방식에 맞는 데이터를 가져오도록 초기화합니다. ▼▼▼▼▼
         allClothesLatestOrder = clothingRepository.getItems("전체", "", "최신순")
         allClothesTempOrder = clothingRepository.getItems("전체", "", "온도 내림차순")
 
-        // MediatorLiveData가 두 LiveData를 모두 관찰하도록 설정합니다.
         filteredClothes.addSource(allClothesLatestOrder) { clothesList ->
             validateSelectedItems(clothesList)
             filter()
@@ -61,7 +57,6 @@ class SaveStyleViewModel(application: Application) : AndroidViewModel(applicatio
         }
         filteredClothes.addSource(_clothingCategory) { filter() }
         filteredClothes.addSource(selectedItems) { filter() }
-        // ▲▲▲▲▲ 핵심 수정 ▲▲▲▲▲
     }
 
     private fun validateSelectedItems(currentClothes: List<ClothingItem>?) {
@@ -77,13 +72,11 @@ class SaveStyleViewModel(application: Application) : AndroidViewModel(applicatio
 
     private fun filter() {
         val category = _clothingCategory.value ?: "전체"
-        // ▼▼▼▼▼ 핵심 수정: 카테고리에 따라 원본 데이터 소스를 선택합니다. ▼▼▼▼▼
         val clothes = if (category == "전체") {
             allClothesLatestOrder.value ?: emptyList()
         } else {
             allClothesTempOrder.value ?: emptyList()
         }
-        // ▲▲▲▲▲ 핵심 수정 ▲▲▲▲▲
 
         val categoryFiltered = if (category == "전체") {
             clothes
@@ -125,7 +118,6 @@ class SaveStyleViewModel(application: Application) : AndroidViewModel(applicatio
         if (initialItemIds != null) return
 
         initialItemIds = ids.toSet()
-        // '전체' 탭의 정렬 기준인 최신순 데이터를 사용하여 아이템을 가져옵니다.
         val observer = object : androidx.lifecycle.Observer<List<ClothingItem>> {
             override fun onChanged(all: List<ClothingItem>) {
                 val preselected = all.filter { it.id in ids }.toMutableList()

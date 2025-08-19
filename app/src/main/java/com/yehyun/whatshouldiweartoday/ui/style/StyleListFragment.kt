@@ -1,5 +1,3 @@
-// main/java/com/yehyun/whatshouldiweartoday/ui/style/StyleListFragment.kt
-
 package com.yehyun.whatshouldiweartoday.ui.style
 
 import android.os.Bundle
@@ -24,11 +22,24 @@ class StyleListFragment : Fragment() {
     private lateinit var adapter: SavedStylesAdapter
     private var season: String? = null
     private var itemClickListener: RecyclerItemClickListener? = null
+    private var tabIndex: Int = 0
+
+    fun resetDragState() {
+        itemClickListener?.isDragging = false
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         arguments?.let {
             season = it.getString(ARG_SEASON)
+            tabIndex = when (season) {
+                "전체" -> 0
+                "봄" -> 1
+                "여름" -> 2
+                "가을" -> 3
+                "겨울" -> 4
+                else -> 0
+            }
         }
     }
 
@@ -77,13 +88,15 @@ class StyleListFragment : Fragment() {
                         viewModel.enterDeleteMode(longClickedStyle.style.styleId)
                     }
                 }
+            },
+            onLongDragStateChanged = { isLongDragging ->
+                viewModel.setLongDragStateForTab(tabIndex, isLongDragging)
             }
         )
 
         binding.recyclerViewStyleList.addOnItemTouchListener(itemClickListener!!)
     }
 
-    // ▼▼▼▼▼ 핵심 수정: 누락되었던 observeViewModel 메서드를 복원합니다. ▼▼▼▼▼
     private fun observeViewModel() {
         val seasonToObserve = season ?: "전체"
 
@@ -99,7 +112,6 @@ class StyleListFragment : Fragment() {
             }
         }
     }
-    // ▲▲▲▲▲ 핵심 수정 ▲▲▲▲▲
 
     fun notifyAdapter(payload: String) {
         if (::adapter.isInitialized) {
@@ -107,7 +119,6 @@ class StyleListFragment : Fragment() {
         }
     }
 
-    // ▼▼▼▼▼ 핵심 수정: 누락되었던 scrollToTop 메서드를 복원합니다. ▼▼▼▼▼
     fun scrollToTop() {
         if (isAdded && _binding != null) {
             binding.recyclerViewStyleList.smoothScrollToPosition(0)
@@ -126,7 +137,6 @@ class StyleListFragment : Fragment() {
             }
         }
     }
-    // ▲▲▲▲▲ 핵심 수정 ▲▲▲▲▲
 
 
     override fun onDestroyView() {

@@ -1,6 +1,5 @@
 package com.yehyun.whatshouldiweartoday.ui.style
 
-import android.content.Context
 import android.graphics.Color
 import android.graphics.Typeface
 import android.os.Bundle
@@ -149,7 +148,6 @@ class EditStyleFragment : Fragment(R.layout.fragment_edit_style), OnTabReselecte
         }
     }
 
-    // ▼▼▼▼▼ 핵심 수정: 스크롤과 클릭 이벤트를 분리하는 TouchListener를 설정하는 함수 ▼▼▼▼▼
     private fun addScrollTouchListener(recyclerView: RecyclerView) {
         val touchSlop = ViewConfiguration.get(requireContext()).scaledTouchSlop
         var startX = 0f
@@ -161,19 +159,16 @@ class EditStyleFragment : Fragment(R.layout.fragment_edit_style), OnTabReselecte
                     MotionEvent.ACTION_DOWN -> {
                         startX = e.x
                         startY = e.y
-                        // 부모 뷰(ScrollView)가 터치 이벤트를 가로채지 못하도록 설정
                         rv.parent.requestDisallowInterceptTouchEvent(true)
                     }
                     MotionEvent.ACTION_MOVE -> {
                         val dx = abs(e.x - startX)
                         val dy = abs(e.y - startY)
-                        // 수직 스크롤이 확실할 경우, 부모 뷰가 이벤트를 가져가도록 허용
                         if (dy > touchSlop && dy > dx) {
                             rv.parent.requestDisallowInterceptTouchEvent(false)
                         }
                     }
                 }
-                // 이 리스너는 이벤트를 가로채지만 소비하지는 않으므로 항상 false 반환
                 return false
             }
             override fun onTouchEvent(rv: RecyclerView, e: MotionEvent) {}
@@ -181,7 +176,6 @@ class EditStyleFragment : Fragment(R.layout.fragment_edit_style), OnTabReselecte
         }
         recyclerView.addOnItemTouchListener(touchListener)
     }
-    // ▲▲▲▲▲ 핵심 수정 ▲▲▲▲▲
 
     private fun setupAdapters(view: View) {
         val rvSelectedItems = view.findViewById<RecyclerView>(R.id.rv_selected_items)
@@ -203,7 +197,8 @@ class EditStyleFragment : Fragment(R.layout.fragment_edit_style), OnTabReselecte
                     val action = EditStyleFragmentDirections.actionEditStyleFragmentToEditClothingFragment(it.id)
                     findNavController().navigate(action)
                 }
-            }
+            },
+            onLongDragStateChanged = {}
         ))
 
         val rvAllItems = view.findViewById<RecyclerView>(R.id.rv_all_items_for_edit)
@@ -225,16 +220,14 @@ class EditStyleFragment : Fragment(R.layout.fragment_edit_style), OnTabReselecte
                     val action = EditStyleFragmentDirections.actionEditStyleFragmentToEditClothingFragment(item.id)
                     findNavController().navigate(action)
                 }
-            }
-
+            },
+            onLongDragStateChanged = {}
         ))
 
 
 
-        // ▼▼▼▼▼ 핵심 수정: 두 RecyclerView에 터치 리스너를 추가합니다. ▼▼▼▼▼
         addScrollTouchListener(rvSelectedItems)
         addScrollTouchListener(rvAllItems)
-        // ▲▲▲▲▲ 핵심 수정 ▲▲▲▲▲
     }
 
     private fun setupListeners() {

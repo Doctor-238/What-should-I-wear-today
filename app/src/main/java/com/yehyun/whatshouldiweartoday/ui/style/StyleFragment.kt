@@ -1,5 +1,3 @@
-// main/java/com/yehyun/whatshouldiweartoday/ui/style/StyleFragment.kt
-
 package com.yehyun.whatshouldiweartoday.ui.style
 
 import android.os.Bundle
@@ -7,6 +5,8 @@ import android.transition.TransitionManager
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.animation.AccelerateInterpolator
+import android.view.animation.DecelerateInterpolator
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.Spinner
@@ -54,6 +54,14 @@ class StyleFragment : Fragment(), OnTabReselectedListener {
         setupObservers()
     }
 
+    override fun onResume() {
+        super.onResume()
+        if (_binding != null) {
+            binding.scrollModeAlertContainer.animate().cancel()
+            binding.scrollModeAlertContainer.visibility = View.GONE
+        }
+    }
+
     private fun setupListeners() {
         binding.fabAddStyle.setOnClickListener {
             findNavController().navigate(R.id.action_global_saveStyleFragment)
@@ -85,7 +93,6 @@ class StyleFragment : Fragment(), OnTabReselectedListener {
         }
     }
 
-    // ▼▼▼▼▼ 핵심 수정: 누락되었던 모든 메서드를 여기에 복원합니다. ▼▼▼▼▼
     private fun setupObservers() {
         viewModel.currentTabState.observe(viewLifecycleOwner) { state ->
             if (_binding == null) return@observe
@@ -109,6 +116,12 @@ class StyleFragment : Fragment(), OnTabReselectedListener {
 
         viewModel.isDeleteMode.observe(viewLifecycleOwner) { notifyAdapterDeleteModeChanged() }
         viewModel.selectedItems.observe(viewLifecycleOwner) { notifyAdapterSelectionChanged() }
+
+        viewModel.longDragStateByTab.observe(viewLifecycleOwner) { stateMap ->
+            val currentTabIndex = binding.viewPagerStyle.currentItem
+            val shouldShow = stateMap[currentTabIndex] ?: false
+            showScrollModeAlert(shouldShow)
+        }
 
 
         viewLifecycleOwner.lifecycleScope.launch {
@@ -134,6 +147,7 @@ class StyleFragment : Fragment(), OnTabReselectedListener {
         }
     }
 
+
     private fun updateSelectAllIcon(isChecked: Boolean) {
         if (_binding == null) return
         if (isChecked) {
@@ -143,6 +157,26 @@ class StyleFragment : Fragment(), OnTabReselectedListener {
         }
     }
 
+    fun showScrollModeAlert(show: Boolean) {
+        _binding?.scrollModeAlertContainer?.apply {
+            if (show && visibility != View.VISIBLE) {
+                alpha = 0f
+                visibility = View.VISIBLE
+                animate()
+                    .alpha(1f)
+                    .setDuration(300)
+                    .setInterpolator(DecelerateInterpolator())
+                    .start()
+            } else if (!show && visibility == View.VISIBLE) {
+                animate()
+                    .alpha(0f)
+                    .setDuration(300)
+                    .setInterpolator(AccelerateInterpolator())
+                    .withEndAction { visibility = View.GONE }
+                    .start()
+            }
+        }
+    }
 
     private fun setupViewPagerAndTabs() {
         val seasons = listOf("전체", "봄", "여름", "가을", "겨울")
@@ -156,11 +190,26 @@ class StyleFragment : Fragment(), OnTabReselectedListener {
 
         binding.tabLayoutStyleSeason.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
             override fun onTabSelected(tab: TabLayout.Tab?) {
+                val currentTabIndex = tab?.position ?: 0
+                val shouldShow = viewModel.longDragStateByTab.value?.get(currentTabIndex) ?: false
+                showScrollModeAlert(shouldShow)
             }
-            override fun onTabUnselected(tab: TabLayout.Tab?) {}
+            override fun onTabUnselected(tab: TabLayout.Tab?) {
+                tab?.position?.let { position ->
+                    // ViewModel 상태 업데이트
+                    viewModel.setLongDragStateForTab(position, false)
+                    // Fragment의 isDragging 상태 직접 초기화
+                    val fragment = (binding.viewPagerStyle.adapter as? StyleViewPagerAdapter)?.getFragment(position) as? StyleListFragment
+                    fragment?.resetDragState()
+                }
+            }
             override fun onTabReselected(tab: TabLayout.Tab?) {
                 tab?.position?.let { position ->
                     (childFragmentManager.findFragmentByTag("f$position") as? StyleListFragment)?.scrollToTop()
+                    viewModel.setLongDragStateForTab(position, false)
+                    // Fragment의 isDragging 상태 직접 초기화
+                    val fragment = (binding.viewPagerStyle.adapter as? StyleViewPagerAdapter)?.getFragment(position) as? StyleListFragment
+                    fragment?.resetDragState()
                 }
             }
         })
@@ -274,7 +323,6 @@ class StyleFragment : Fragment(), OnTabReselectedListener {
             }
         }
     }
-    // ▲▲▲▲▲ 핵심 수정 ▲▲▲▲▲
 
     override fun onDestroyView() {
         super.onDestroyView()

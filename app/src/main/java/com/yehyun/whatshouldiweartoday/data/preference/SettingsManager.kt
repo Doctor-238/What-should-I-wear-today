@@ -1,5 +1,3 @@
-// 파일 경로: app/src/main/java/com/yehyun/whatshouldiweartoday/data/preference/SettingsManager.kt
-
 package com.yehyun.whatshouldiweartoday.data.preference
 
 import android.content.Context
@@ -11,37 +9,37 @@ class SettingsManager(context: Context) {
 
     var temperatureRange: String
         get() = prefs.getString(KEY_TEMP_RANGE, TEMP_RANGE_NORMAL) ?: TEMP_RANGE_NORMAL
-        set(value) { // [수정] set을 블록 형태로 변경
+        set(value) {
             prefs.edit().putString(KEY_TEMP_RANGE, value).commit()
         }
 
     var constitutionLevel: Int
         get() = prefs.getInt(KEY_CONSTITUTION, 3)
-        set(value) { // [수정] set을 블록 형태로 변경
+        set(value) {
             prefs.edit().putInt(KEY_CONSTITUTION, value).commit()
         }
 
     var sensitivityLevel: Int
         get() = prefs.getInt(KEY_SENSITIVITY, 3)
-        set(value) { // [수정] set을 블록 형태로 변경
+        set(value) {
             prefs.edit().putInt(KEY_SENSITIVITY, value).commit()
         }
 
     var aiModel: String
         get() = prefs.getString(KEY_AI_MODEL, AI_MODEL_ACCURATE) ?: AI_MODEL_ACCURATE
-        set(value) { // [수정] set을 블록 형태로 변경
+        set(value) {
             prefs.edit().putString(KEY_AI_MODEL, value).commit()
         }
 
     var closetSortType: String
         get() = prefs.getString(KEY_CLOSET_SORT_TYPE, "최신순") ?: "최신순"
-        set(value) { // [수정] set을 블록 형태로 변경
+        set(value) {
             prefs.edit().putString(KEY_CLOSET_SORT_TYPE, value).commit()
         }
 
     var styleSortType: String
         get() = prefs.getString(KEY_STYLE_SORT_TYPE, "최신순") ?: "최신순"
-        set(value) { // [수정] set을 블록 형태로 변경
+        set(value) {
             prefs.edit().putString(KEY_STYLE_SORT_TYPE, value).commit()
         }
 
@@ -69,7 +67,7 @@ class SettingsManager(context: Context) {
             4 -> 0.01f
             2 -> 0.0000000001f
             1 -> 0.00000000000001f
-            else -> 0.000001f
+            else -> 0.000001f // NORMAL
         }
     }
 
@@ -82,7 +80,7 @@ class SettingsManager(context: Context) {
     }
 
     fun getAiModelName(): String {
-        return if (aiModel == AI_MODEL_FAST) "gemini-2.5-flash-lite-preview-06-17" else "gemini-2.5-flash"
+        return if (aiModel == AI_MODEL_FAST) "gemini-2.5-flash-lite" else "gemini-2.5-flash"
     }
 
     fun resetToDefaults() {

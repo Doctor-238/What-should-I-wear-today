@@ -157,12 +157,10 @@ class SettingsFragment : Fragment(), OnTabReselectedListener {
         binding.cardReset.setOnClickListener { showResetConfirmDialog() }
     }
 
-    // ▼▼▼▼▼ 최종 수정의 핵심: translationX 사용 ▼▼▼▼▼
     private fun updateFakeThumbPosition(slider: Slider, fakeThumb: ImageView, animate: Boolean = true) {
         val trackWidth = slider.trackWidth
         val percentage = (slider.value - slider.valueFrom) / (slider.valueTo - slider.valueFrom)
 
-        // 조절 바의 최종 X 위치 계산: (슬라이더 트랙 전체 너비 * 현재 값의 비율) - (조절 바 너비의 절반)
         val targetX = trackWidth * percentage
 
         if (animate) {
@@ -176,7 +174,6 @@ class SettingsFragment : Fragment(), OnTabReselectedListener {
             fakeThumb.translationX = targetX
         }
     }
-    // ▲▲▲▲▲ 최종 수정의 핵심 ▲▲▲▲▲
 
 
     private fun updateConstitutionLabel(level: Int) {

@@ -1,4 +1,3 @@
-// app/src/main/java/com/yehyun/whatshouldiweartoday/ui/closet/EditClothingFragment.kt
 package com.yehyun.whatshouldiweartoday.ui.closet
 
 import android.graphics.Color

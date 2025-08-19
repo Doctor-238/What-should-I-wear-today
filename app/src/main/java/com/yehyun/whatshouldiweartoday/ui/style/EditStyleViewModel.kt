@@ -21,10 +21,8 @@ class EditStyleViewModel(application: Application) : AndroidViewModel(applicatio
     private val _clothingCategory = MutableLiveData("전체")
     val filteredClothes = MediatorLiveData<List<ClothingItem>>()
 
-    // ▼▼▼▼▼ 핵심 수정: 정렬 방식에 따라 LiveData를 분리합니다. ▼▼▼▼▼
     private val allClothesLatestOrder: LiveData<List<ClothingItem>>
     private val allClothesTempOrder: LiveData<List<ClothingItem>>
-    // ▲▲▲▲▲ 핵심 수정 ▲▲▲▲▲
 
     private var originalStyle: SavedStyle? = null
     private var initialItemIds: Set<Int>? = null
@@ -54,11 +52,9 @@ class EditStyleViewModel(application: Application) : AndroidViewModel(applicatio
         styleRepository = StyleRepository(db.styleDao())
         clothingRepository = ClothingRepository(db.clothingDao())
 
-        // ▼▼▼▼▼ 핵심 수정: 각 정렬 방식에 맞는 데이터를 가져오도록 초기화합니다. ▼▼▼▼▼
         allClothesLatestOrder = clothingRepository.getItems("전체", "", "최신순")
         allClothesTempOrder = clothingRepository.getItems("전체", "", "온도 내림차순")
 
-        // MediatorLiveData가 두 LiveData와 다른 소스들을 모두 관찰하도록 설정합니다.
         filteredClothes.addSource(allClothesLatestOrder) { clothesList ->
             validateSelectedItems(clothesList)
             filter()
@@ -69,7 +65,6 @@ class EditStyleViewModel(application: Application) : AndroidViewModel(applicatio
         }
         filteredClothes.addSource(_clothingCategory) { filter() }
         filteredClothes.addSource(selectedItems) { filter() }
-        // ▲▲▲▲▲ 핵심 수정 ▲▲▲▲▲
     }
 
     private fun validateSelectedItems(currentClothes: List<ClothingItem>?) {
@@ -86,13 +81,11 @@ class EditStyleViewModel(application: Application) : AndroidViewModel(applicatio
 
     private fun filter() {
         val category = _clothingCategory.value ?: "전체"
-        // ▼▼▼▼▼ 핵심 수정: 카테고리에 따라 원본 데이터 소스를 선택합니다. ▼▼▼▼▼
         val clothes = if (category == "전체") {
             allClothesLatestOrder.value ?: emptyList()
         } else {
             allClothesTempOrder.value ?: emptyList()
         }
-        // ▲▲▲▲▲ 핵심 수정 ▲▲▲▲▲
 
         val selectedIdsSet = selectedItems.value?.map { it.id }?.toSet() ?: emptySet()
 

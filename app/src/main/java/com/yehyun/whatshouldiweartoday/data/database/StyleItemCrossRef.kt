@@ -9,7 +9,6 @@ import androidx.room.Index
     primaryKeys = ["styleId", "clothingId"],
     indices = [Index(value = ["clothingId"])],
     foreignKeys = [
-        // [추가] clothingId가 삭제되면, 이 연결고리도 함께 삭제됩니다.
         ForeignKey(
             entity = ClothingItem::class,
             parentColumns = ["id"],

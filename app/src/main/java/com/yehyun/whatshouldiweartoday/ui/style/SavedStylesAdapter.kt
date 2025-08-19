@@ -41,9 +41,7 @@ class SavedStylesAdapter(
             for (payload in payloads) {
                 when (payload) {
                     "DELETE_MODE_CHANGED" -> holder.updateDeleteModeUI(isDeleteMode())
-                    // ▼▼▼▼▼ 핵심 수정: isItemSelected 람다를 호출하여 Boolean 값을 전달하도록 수정 ▼▼▼▼▼
                     "SELECTION_CHANGED" -> holder.updateSelectionUI(isItemSelected(getItem(position).style.styleId))
-                    // ▲▲▲▲▲ 핵심 수정 ▲▲▲▲▲
                 }
             }
         }

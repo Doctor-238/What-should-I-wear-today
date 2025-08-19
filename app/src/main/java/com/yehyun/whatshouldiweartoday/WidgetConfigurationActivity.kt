@@ -56,7 +56,6 @@ class WidgetConfigurationActivity : AppCompatActivity() {
         }
     }
 
-    // [핵심] 액티비티가 파괴될 때 세션을 리셋합니다.
     override fun onDestroy() {
         super.onDestroy()
         dialog?.dismiss()

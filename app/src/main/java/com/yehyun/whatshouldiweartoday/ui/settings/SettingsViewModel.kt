@@ -1,5 +1,3 @@
-// app/src/main/java/com/yehyun/whatshouldiweartoday/ui/settings/SettingsViewModel.kt
-
 package com.yehyun.whatshouldiweartoday.ui.settings
 
 import android.app.Application

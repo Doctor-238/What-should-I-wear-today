@@ -70,7 +70,7 @@ class HomeFragment : Fragment(), OnTabReselectedListener {
         super.onViewCreated(view, savedInstanceState)
         binding.ivSettings.setOnClickListener { findNavController().navigate(R.id.action_navigation_home_to_settingsFragment) }
 
-        setupSwipeRefreshLayout() // ▼▼▼▼▼ 핵심 수정: 새로고침 로직 설정 분리 ▼▼▼▼▼
+        setupSwipeRefreshLayout()
         setupCustomTabs()
         setupViewPager()
 
@@ -79,26 +79,20 @@ class HomeFragment : Fragment(), OnTabReselectedListener {
         observeViewModel()
     }
 
-    // ▼▼▼▼▼ 핵심 수정: SwipeRefreshLayout 설정 함수 ▼▼▼▼▼
     private fun setupSwipeRefreshLayout() {
         binding.swipeRefreshLayout.setOnRefreshListener {
             checkAndRefresh()
         }
 
-        // OnChildScrollUpCallback 설정. SwipeRefreshLayout에 스크롤 상태를 알려주는 가장 확실한 방법.
         binding.swipeRefreshLayout.setOnChildScrollUpCallback(object : SwipeRefreshLayout.OnChildScrollUpCallback {
             override fun canChildScrollUp(parent: SwipeRefreshLayout, child: View?): Boolean {
                 val currentPosition = binding.viewPagerHome.currentItem
                 val currentFragment = childFragmentManager.findFragmentByTag("f$currentPosition") as? RecommendationFragment
 
-                // 현재 프래그먼트가 위로 스크롤할 수 있는지 여부를 반환
-                // canScrollUp()이 true를 반환하면 -> "아직 스크롤할 내용 남았음" -> 새로고침 안 함
-                // canScrollUp()이 false를 반환하면 -> "스크롤 맨 위임" -> 새로고침 함
                 return currentFragment?.canScrollUp() ?: false
             }
         })
     }
-    // ▲▲▲▲▲ 핵심 수정 끝 ▲▲▲▲▲
 
     override fun onResume() {
         super.onResume()
@@ -121,13 +115,10 @@ class HomeFragment : Fragment(), OnTabReselectedListener {
             }
         }
 
-        // ▼▼▼▼▼ 핵심 수정: isRefreshing 상태만 제어하도록 단순화 ▼▼▼▼▼
         homeViewModel.isLoading.observe(viewLifecycleOwner) { isLoading ->
             binding.swipeRefreshLayout.isRefreshing = isLoading
         }
 
-        // 스크롤 관련 옵저버 모두 제거
-        // ▲▲▲▲▲ 핵심 수정 끝 ▲▲▲▲▲
 
         homeViewModel.switchToTab.observe(viewLifecycleOwner) { tabIndex ->
             tabIndex?.let {
