@@ -93,9 +93,9 @@ class WidgetUpdateWorker(private val appContext: Context, workerParams: WorkerPa
                 recommendedOuters.add(po)
             }
 
-            val bestTop = recommendedTops.minByOrNull { abs(it.suitableTemperature - maxTempCriteria) }
-            val bestBottom = recommendedBottoms.minByOrNull { abs(it.suitableTemperature - maxTempCriteria) }
-            val bestOuter = recommendedOuters.minByOrNull { abs(it.suitableTemperature - maxTempCriteria) }
+            val bestTop = recommendedTops.minByOrNull { abs(it.suitableTemperature + settingsManager.getTemperatureTolerance() - 1 - maxTempCriteria) }
+            val bestBottom = recommendedBottoms.minByOrNull { abs(it.suitableTemperature + settingsManager.getTemperatureTolerance() - 1 - maxTempCriteria) }
+            val bestOuter = recommendedOuters.minByOrNull { abs(it.suitableTemperature + settingsManager.getTemperatureTolerance() - 1 - maxTempCriteria) }
             val bestCombination = listOfNotNull(bestTop, bestBottom, bestOuter)
 
             return RecommendationResult(

@@ -237,9 +237,9 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
 
-        val bestTop = recommendedTops.minByOrNull { abs(it.suitableTemperature - maxTempCriteria) }
-        val bestBottom = recommendedBottoms.minByOrNull { abs(it.suitableTemperature - maxTempCriteria) }
-        val bestOuter = recommendedOuters.minByOrNull { abs(it.suitableTemperature - maxTempCriteria) }
+        val bestTop = recommendedTops.minByOrNull { abs(it.suitableTemperature + settingsManager.getTemperatureTolerance() - 1 - maxTempCriteria) }
+        val bestBottom = recommendedBottoms.minByOrNull { abs(it.suitableTemperature + settingsManager.getTemperatureTolerance() - 1 - maxTempCriteria) }
+        val bestOuter = recommendedOuters.minByOrNull { abs(it.suitableTemperature + settingsManager.getTemperatureTolerance() - 1 - maxTempCriteria) }
         val bestCombination = listOfNotNull(bestTop, bestBottom, bestOuter)
 
         val umbrellaRecommendation = when {
