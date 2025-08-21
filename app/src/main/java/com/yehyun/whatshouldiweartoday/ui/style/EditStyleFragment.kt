@@ -312,7 +312,7 @@ class EditStyleFragment : Fragment(R.layout.fragment_edit_style), OnTabReselecte
             return
         }
         if (viewModel.selectedItems.value.isNullOrEmpty()) {
-            Toast.makeText(context, "스타일에 추가된 옷이 없습니다. 스타일을 삭제하시겠습니까?", Toast.LENGTH_LONG).show()
+            Toast.makeText(context, "스타일에 추가된 옷이 없습니다.", Toast.LENGTH_LONG).show()
             return
         }
         val selectedSeasonId = chipGroupSeason.checkedChipId
