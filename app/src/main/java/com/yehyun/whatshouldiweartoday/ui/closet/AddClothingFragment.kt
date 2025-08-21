@@ -1,17 +1,18 @@
-// app/src/main/java/com/yehyun/whatshouldiweartoday/ui/closet/AddClothingFragment.kt
 package com.yehyun.whatshouldiweartoday.ui.closet
 
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Color
+import android.graphics.Matrix
+import android.graphics.drawable.GradientDrawable
 import android.net.Uri
 import android.os.Bundle
-import android.provider.MediaStore
 import android.view.View
 import android.view.inputmethod.InputMethodManager
 import android.widget.Button
 import android.widget.FrameLayout
+import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.ProgressBar
 import android.widget.TextView
@@ -23,6 +24,7 @@ import androidx.cardview.widget.CardView
 import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.core.widget.addTextChangedListener
+import androidx.exifinterface.media.ExifInterface
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
@@ -32,10 +34,6 @@ import com.google.android.material.textfield.TextInputEditText
 import com.yehyun.whatshouldiweartoday.R
 import com.yehyun.whatshouldiweartoday.ui.OnTabReselectedListener
 import kotlinx.serialization.Serializable
-import android.graphics.Matrix
-import android.graphics.drawable.GradientDrawable
-import android.widget.ImageButton
-import androidx.exifinterface.media.ExifInterface
 import java.io.InputStream
 
 

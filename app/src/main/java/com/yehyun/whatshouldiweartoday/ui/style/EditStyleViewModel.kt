@@ -1,4 +1,3 @@
-// 파일 경로: app/src/main/java/com/yehyun/whatshouldiweartoday/ui/style/EditStyleViewModel.kt
 package com.yehyun.whatshouldiweartoday.ui.style
 
 import android.app.Application
@@ -21,7 +20,9 @@ class EditStyleViewModel(application: Application) : AndroidViewModel(applicatio
 
     private val _clothingCategory = MutableLiveData("전체")
     val filteredClothes = MediatorLiveData<List<ClothingItem>>()
-    private val allClothes: LiveData<List<ClothingItem>>
+
+    private val allClothesLatestOrder: LiveData<List<ClothingItem>>
+    private val allClothesTempOrder: LiveData<List<ClothingItem>>
 
     private var originalStyle: SavedStyle? = null
     private var initialItemIds: Set<Int>? = null
@@ -51,9 +52,14 @@ class EditStyleViewModel(application: Application) : AndroidViewModel(applicatio
         styleRepository = StyleRepository(db.styleDao())
         clothingRepository = ClothingRepository(db.clothingDao())
 
-        allClothes = clothingRepository.getItems("전체", "", "최신순")
+        allClothesLatestOrder = clothingRepository.getItems("전체", "", "최신순")
+        allClothesTempOrder = clothingRepository.getItems("전체", "", "온도 내림차순")
 
-        filteredClothes.addSource(allClothes) { clothesList ->
+        filteredClothes.addSource(allClothesLatestOrder) { clothesList ->
+            validateSelectedItems(clothesList)
+            filter()
+        }
+        filteredClothes.addSource(allClothesTempOrder) { clothesList ->
             validateSelectedItems(clothesList)
             filter()
         }
@@ -67,7 +73,7 @@ class EditStyleViewModel(application: Application) : AndroidViewModel(applicatio
             val existingIds = clothes.map { it.id }.toSet()
             val selectionChanged = selected.removeAll { it.id !in existingIds }
             if (selectionChanged) {
-                _selectedItems.postValue(selected)
+                postSortedSelectedItems(selected)
                 checkForChanges()
             }
         }
@@ -75,7 +81,13 @@ class EditStyleViewModel(application: Application) : AndroidViewModel(applicatio
 
     private fun filter() {
         val category = _clothingCategory.value ?: "전체"
-        val clothes = allClothes.value ?: emptyList()
+        val clothes = if (category == "전체") {
+            allClothesLatestOrder.value ?: emptyList()
+        } else {
+            allClothesTempOrder.value ?: emptyList()
+        }
+
+        val selectedIdsSet = selectedItems.value?.map { it.id }?.toSet() ?: emptySet()
 
         val categoryFiltered = if (category == "전체") {
             clothes
@@ -83,15 +95,9 @@ class EditStyleViewModel(application: Application) : AndroidViewModel(applicatio
             clothes.filter { it.category == category }
         }
 
-        val selectedIdsSet = selectedItems.value?.map { it.id }?.toSet() ?: emptySet()
-        val selectionOrderMap = selectedItems.value?.mapIndexed { index, item -> item.id to index }?.toMap() ?: emptyMap()
+        val finalFiltered = categoryFiltered.filter { it.id !in selectedIdsSet }
 
-        val sortedList = categoryFiltered.sortedWith(
-            compareByDescending<ClothingItem> { it.id in selectedIdsSet }
-                .thenBy { selectionOrderMap[it.id] }
-        )
-
-        filteredClothes.value = sortedList
+        filteredClothes.value = finalFiltered
     }
 
     fun loadStyleIfNeeded(styleId: Long) {
@@ -108,7 +114,7 @@ class EditStyleViewModel(application: Application) : AndroidViewModel(applicatio
                 originalStyle = styleWithItems.style
                 initialItemIds = styleWithItems.items.map { it.id }.toSet()
 
-                _selectedItems.postValue(styleWithItems.items.toMutableList())
+                postSortedSelectedItems(styleWithItems.items.toMutableList())
                 currentStyleName.postValue(styleWithItems.style.styleName)
                 currentSeason.postValue(styleWithItems.style.season)
                 toolbarTitle.postValue("'${styleWithItems.style.styleName}' 수정")
@@ -118,6 +124,17 @@ class EditStyleViewModel(application: Application) : AndroidViewModel(applicatio
                 _isDeleteComplete.postValue(true)
             }
         }
+    }
+
+    private fun postSortedSelectedItems(items: MutableList<ClothingItem>) {
+        val categoryOrder = mapOf(
+            "상의" to 1, "하의" to 2, "아우터" to 3, "신발" to 4,
+            "가방" to 5, "모자" to 6, "기타" to 7
+        )
+        val sortedList = items.sortedWith(
+            compareBy { categoryOrder[it.category] ?: 8 }
+        ).toMutableList()
+        _selectedItems.postValue(sortedList)
     }
 
     fun setClothingFilter(category: String) {
@@ -133,18 +150,11 @@ class EditStyleViewModel(application: Application) : AndroidViewModel(applicatio
         if (isSelected) {
             currentList.removeAll { it.id == item.id }
         } else {
-            if (currentList.size < 10) {
+            if (currentList.size < 9) {
                 currentList.add(item)
             }
         }
-        _selectedItems.value = currentList
-        checkForChanges()
-    }
-
-    fun removeSelectedItem(item: ClothingItem) {
-        val currentList = _selectedItems.value ?: mutableListOf()
-        currentList.remove(item)
-        _selectedItems.value = currentList
+        postSortedSelectedItems(currentList)
         checkForChanges()
     }
 
@@ -188,12 +198,10 @@ class EditStyleViewModel(application: Application) : AndroidViewModel(applicatio
             return
         }
 
-        // ▼▼▼▼▼ 핵심 수정: 아이템이 비어있으면 삭제 로직을 호출합니다. ▼▼▼▼▼
         if (items.isNullOrEmpty()) {
             deleteStyle()
             return
         }
-        // ▲▲▲▲▲ 핵심 수정 ▲▲▲▲▲
 
         _isProcessing.value = true
         viewModelScope.launch {

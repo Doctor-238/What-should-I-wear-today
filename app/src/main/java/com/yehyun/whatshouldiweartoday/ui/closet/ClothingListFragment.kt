@@ -1,4 +1,3 @@
-// 파일 경로: app/src/main/java/com/yehyun/whatshouldiweartoday/ui/closet/ClothingListFragment.kt
 package com.yehyun.whatshouldiweartoday.ui.closet
 
 import android.os.Bundle

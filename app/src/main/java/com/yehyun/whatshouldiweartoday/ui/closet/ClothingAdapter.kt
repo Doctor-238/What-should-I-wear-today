@@ -1,4 +1,3 @@
-// 파일 경로: app/src/main/java/com/yehyun/whatshouldiweartoday/ui/closet/ClothingAdapter.kt
 package com.yehyun.whatshouldiweartoday.ui.closet
 
 import android.graphics.Color
@@ -57,7 +56,6 @@ class ClothingAdapter(
         private val nameTextView: TextView = itemView.findViewById(R.id.tv_clothing_name)
         private val tempTextView: TextView = itemView.findViewById(R.id.tv_clothing_temp)
         private val colorView: View = itemView.findViewById(R.id.view_clothing_color)
-        // ▼▼▼▼▼ CheckBox를 ImageView로 변경하고 ID를 교체합니다 ▼▼▼▼▼
         private val deleteCheckbox: ImageView = itemView.findViewById(R.id.iv_delete_checkbox)
 
         fun bind(
@@ -117,7 +115,6 @@ class ClothingAdapter(
         }
 
         fun updateDeleteModeUI(isDelete: Boolean) {
-            // ▼▼▼▼▼ 애니메이션 대상을 deleteCheckbox(ImageView)로 변경합니다 ▼▼▼▼▼
             if (isDelete && deleteCheckbox.visibility == View.GONE) {
                 deleteCheckbox.visibility = View.VISIBLE
                 deleteCheckbox.startAnimation(AnimationUtils.loadAnimation(itemView.context, R.anim.scale_in))
@@ -128,7 +125,6 @@ class ClothingAdapter(
         }
 
         fun updateSelectionUI(isSelected: Boolean) {
-            // ▼▼▼▼▼ isChecked 대신 setImageResource를 사용하여 아이콘을 직접 교체합니다 ▼▼▼▼▼
             if (isSelected) {
                 deleteCheckbox.setImageResource(R.drawable.ic_checkbox_checked_custom)
             } else {

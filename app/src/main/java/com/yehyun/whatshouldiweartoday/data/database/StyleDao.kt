@@ -1,7 +1,12 @@
 package com.yehyun.whatshouldiweartoday.data.database
 
 import androidx.lifecycle.LiveData
-import androidx.room.*
+import androidx.room.Dao
+import androidx.room.Delete
+import androidx.room.Insert
+import androidx.room.Query
+import androidx.room.Transaction
+import androidx.room.Update
 
 @Dao
 interface StyleDao {
@@ -36,11 +41,9 @@ interface StyleDao {
     @Query("SELECT * FROM saved_styles WHERE styleName LIKE '%' || :query || '%' ORDER BY styleName DESC")
     fun getStylesOrderByNameDesc(query: String): LiveData<List<StyleWithItems>>
 
-    // ▼▼▼▼▼ 핵심 수정: ViewModel에서 사용할 함수 추가 ▼▼▼▼▼
     @Transaction
     @Query("SELECT * FROM saved_styles")
     fun getAllStylesWithItems(): LiveData<List<StyleWithItems>>
-    // ▲▲▲▲▲ 핵심 수정 ▲▲▲▲▲
 
     @Update
     suspend fun updateStyle(style: SavedStyle)

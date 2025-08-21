@@ -12,11 +12,9 @@ class StyleRepository(private val styleDao: StyleDao) {
         styleDao.insertStyleWithItems(style, items)
     }
 
-    // ▼▼▼▼▼ 핵심 수정: ViewModel에서 사용할 함수 추가 ▼▼▼▼▼
     fun getAllStylesWithItems(): LiveData<List<StyleWithItems>> {
         return styleDao.getAllStylesWithItems()
     }
-    // ▲▲▲▲▲ 핵심 수정 ▲▲▲▲▲
 
     fun getStyles(query: String, sortType: String): LiveData<List<StyleWithItems>> {
         return when (sortType) {

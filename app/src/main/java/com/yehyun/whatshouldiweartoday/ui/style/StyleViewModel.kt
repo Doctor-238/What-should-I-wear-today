@@ -12,8 +12,6 @@ import com.yehyun.whatshouldiweartoday.data.database.StyleWithItems
 import com.yehyun.whatshouldiweartoday.data.preference.SettingsManager
 import com.yehyun.whatshouldiweartoday.data.repository.StyleRepository
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
@@ -52,12 +50,8 @@ class StyleViewModel(application: Application) : AndroidViewModel(application) {
     private val _currentTabIndex = MutableLiveData(0)
     val currentTabState = MediatorLiveData<StyleTabState>()
 
-    private val _isDragging = MutableLiveData(false)
-    val isDragging: LiveData<Boolean> = _isDragging
-
-    private val _showDragAlert = MutableLiveData(false)
-    val showDragAlert: LiveData<Boolean> = _showDragAlert
-    private var dragAlertJob: Job? = null
+    private val _longDragStateByTab = MutableLiveData<Map<Int, Boolean>>(emptyMap())
+    val longDragStateByTab: LiveData<Map<Int, Boolean>> = _longDragStateByTab
 
     init {
         val styleDao = AppDatabase.getDatabase(application).styleDao()
@@ -97,17 +91,12 @@ class StyleViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    // ▼▼▼ 드래그 상태를 리셋하는 함수 추가 ▼▼▼
-    fun resetDraggingState() {
-        dragAlertJob?.cancel()
-        if (_isDragging.value == true) {
-            _isDragging.value = false
-        }
-        if (_showDragAlert.value == true) {
-            _showDragAlert.value = false
-        }
+    fun setLongDragStateForTab(tabIndex: Int, isDragging: Boolean) {
+        val currentMap = _longDragStateByTab.value ?: emptyMap()
+        val newMap = currentMap.toMutableMap()
+        newMap[tabIndex] = isDragging
+        _longDragStateByTab.value = newMap
     }
-    // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
 
     fun getStylesForSeason(season: String): LiveData<List<StyleWithItems>> {
         return _categorizedStyles[season] ?: MutableLiveData()
@@ -155,24 +144,6 @@ class StyleViewModel(application: Application) : AndroidViewModel(application) {
         if (_sortType.value != sortType) {
             _sortType.value = sortType
             _sortTypeChanged.value = Unit
-        }
-    }
-
-    fun setDragging(dragging: Boolean) {
-        if (_isDragging.value == dragging) return
-
-        _isDragging.value = dragging
-
-        if (dragging) {
-            dragAlertJob = viewModelScope.launch {
-                delay(500L)
-                if (_isDragging.value == true) {
-                    _showDragAlert.postValue(true)
-                }
-            }
-        } else {
-            dragAlertJob?.cancel()
-            _showDragAlert.value = false
         }
     }
 

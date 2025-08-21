@@ -109,7 +109,6 @@ class RecommendationFragment : Fragment(R.layout.fragment_recommendation) {
         }
     }
 
-    // ▼▼▼▼▼ 핵심 수정: 어댑터에 객체 목록을 전달 ▼▼▼▼▼
     private fun bindRecommendationData(view: View, result: RecommendationResult) {
         val rvTops = view.findViewById<RecyclerView>(R.id.rv_tops)
         val rvBottoms = view.findViewById<RecyclerView>(R.id.rv_bottoms)
@@ -133,7 +132,6 @@ class RecommendationFragment : Fragment(R.layout.fragment_recommendation) {
         } else {
             cardBestCombination.isVisible = false
         }
-        // ▲▲▲▲▲ 핵심 수정 끝 ▲▲▲▲▲
 
         view.findViewById<TextView>(R.id.tv_no_tops).isVisible = result.recommendedTops.isEmpty()
         view.findViewById<TextView>(R.id.tv_no_bottoms).isVisible = result.recommendedBottoms.isEmpty()

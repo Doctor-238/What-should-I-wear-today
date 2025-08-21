@@ -80,9 +80,7 @@ class TodayRecoWidgetProvider : AppWidgetProvider() {
                 "IS_TODAY" to isToday
             ))
             .build()
-        // ▼▼▼▼▼ 핵심 수정: 작업의 고유 이름에서 isToday를 제거하여 위젯 ID별로 작업을 관리합니다. ▼▼▼▼▼
         val uniqueWorkName = "one_time_widget_update_$appWidgetId"
-        // ▲▲▲▲▲ 핵심 수정 끝 ▲▲▲▲▲
         WorkManager.getInstance(context).enqueueUniqueWork(uniqueWorkName, ExistingWorkPolicy.REPLACE, workRequest)
     }
 

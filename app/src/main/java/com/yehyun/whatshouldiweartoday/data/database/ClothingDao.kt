@@ -39,7 +39,6 @@ interface ClothingDao {
     suspend fun getAllItemsLists(): List<ClothingItem>
 
 
-    // [확인] 전체 초기화를 위한 함수
     @Query("DELETE FROM clothing_items")
     suspend fun clearAll()
 }

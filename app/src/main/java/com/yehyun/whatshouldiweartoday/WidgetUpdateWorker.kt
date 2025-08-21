@@ -33,12 +33,10 @@ import com.yehyun.whatshouldiweartoday.data.repository.WeatherRepository
 import com.yehyun.whatshouldiweartoday.ui.home.DailyWeatherSummary
 import com.yehyun.whatshouldiweartoday.ui.home.RecommendationResult
 import kotlinx.coroutines.tasks.await
-import java.io.File
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.concurrent.CancellationException
 import kotlin.math.abs
-import kotlin.math.min
 
 class WidgetUpdateWorker(private val appContext: Context, workerParams: WorkerParameters) :
     CoroutineWorker(appContext, workerParams) {
@@ -93,9 +91,9 @@ class WidgetUpdateWorker(private val appContext: Context, workerParams: WorkerPa
                 recommendedOuters.add(po)
             }
 
-            val bestTop = recommendedTops.minByOrNull { abs(it.suitableTemperature - maxTempCriteria) }
-            val bestBottom = recommendedBottoms.minByOrNull { abs(it.suitableTemperature - maxTempCriteria) }
-            val bestOuter = recommendedOuters.minByOrNull { abs(it.suitableTemperature - maxTempCriteria) }
+            val bestTop = recommendedTops.minByOrNull { abs(it.suitableTemperature + settingsManager.getTemperatureTolerance() - 1 - maxTempCriteria) }
+            val bestBottom = recommendedBottoms.minByOrNull { abs(it.suitableTemperature + settingsManager.getTemperatureTolerance() - 1 - maxTempCriteria) }
+            val bestOuter = recommendedOuters.minByOrNull { abs(it.suitableTemperature + settingsManager.getTemperatureTolerance() - 1 - maxTempCriteria) }
             val bestCombination = listOfNotNull(bestTop, bestBottom, bestOuter)
 
             return RecommendationResult(
@@ -227,7 +225,6 @@ class WidgetUpdateWorker(private val appContext: Context, workerParams: WorkerPa
         return inSampleSize
     }
 
-    // ▼▼▼▼▼ 핵심 수정: 여러 이미지 처리 함수를 하나로 통합하여 최적화 ▼▼▼▼▼
     private fun createWidgetBitmap(path: String, isPackable: Boolean): Bitmap? {
         try {
             val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }

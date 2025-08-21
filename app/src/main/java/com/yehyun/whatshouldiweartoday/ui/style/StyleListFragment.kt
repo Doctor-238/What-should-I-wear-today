@@ -21,12 +21,25 @@ class StyleListFragment : Fragment() {
     private val viewModel: StyleViewModel by viewModels({ requireParentFragment() })
     private lateinit var adapter: SavedStylesAdapter
     private var season: String? = null
-    private lateinit var itemClickListener: RecyclerItemClickListener
+    private var itemClickListener: RecyclerItemClickListener? = null
+    private var tabIndex: Int = 0
+
+    fun resetDragState() {
+        itemClickListener?.isDragging = false
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         arguments?.let {
             season = it.getString(ARG_SEASON)
+            tabIndex = when (season) {
+                "전체" -> 0
+                "봄" -> 1
+                "여름" -> 2
+                "가을" -> 3
+                "겨울" -> 4
+                else -> 0
+            }
         }
     }
 
@@ -71,15 +84,17 @@ class StyleListFragment : Fragment() {
             },
             onItemLongClick = { _, position ->
                 adapter.getStyleAt(position)?.let { longClickedStyle ->
-                    viewModel.enterDeleteMode(longClickedStyle.style.styleId)
+                    if (viewModel.isDeleteMode.value != true) {
+                        viewModel.enterDeleteMode(longClickedStyle.style.styleId)
+                    }
                 }
+            },
+            onLongDragStateChanged = { isLongDragging ->
+                viewModel.setLongDragStateForTab(tabIndex, isLongDragging)
             }
-        ).apply {
-            onDragStateChanged = { isDragging ->
-                viewModel.setDragging(isDragging)
-            }
-        }
-        binding.recyclerViewStyleList.addOnItemTouchListener(itemClickListener)
+        )
+
+        binding.recyclerViewStyleList.addOnItemTouchListener(itemClickListener!!)
     }
 
     private fun observeViewModel() {
@@ -96,12 +111,6 @@ class StyleListFragment : Fragment() {
                 binding.recyclerViewStyleList.visibility = View.VISIBLE
             }
         }
-
-        viewModel.isDragging.observe(viewLifecycleOwner) { isDragging ->
-            if (!isDragging) {
-                itemClickListener.cancelDrag()
-            }
-        }
     }
 
     fun notifyAdapter(payload: String) {
@@ -112,7 +121,6 @@ class StyleListFragment : Fragment() {
 
     fun scrollToTop() {
         if (isAdded && _binding != null) {
-            itemClickListener.cancelDrag()
             binding.recyclerViewStyleList.smoothScrollToPosition(0)
 
             (binding.recyclerViewStyleList.layoutManager as? LinearLayoutManager)?.let { layoutManager ->
@@ -130,8 +138,11 @@ class StyleListFragment : Fragment() {
         }
     }
 
+
     override fun onDestroyView() {
         super.onDestroyView()
+        itemClickListener?.let { binding.recyclerViewStyleList.removeOnItemTouchListener(it) }
+        itemClickListener = null
         binding.recyclerViewStyleList.adapter = null
         _binding = null
     }

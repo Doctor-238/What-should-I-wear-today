@@ -1,4 +1,3 @@
-// 파일 경로: app/src/main/java/com/yehyun/whatshouldiweartoday/ui/closet/ClosetFragment.kt
 package com.yehyun.whatshouldiweartoday.ui.closet
 
 import android.Manifest
@@ -36,7 +35,6 @@ import com.google.android.material.tabs.TabLayoutMediator
 import com.yehyun.whatshouldiweartoday.R
 import com.yehyun.whatshouldiweartoday.databinding.FragmentClosetBinding
 import com.yehyun.whatshouldiweartoday.ui.OnTabReselectedListener
-import com.yehyun.whatshouldiweartoday.ui.style.StyleListFragment
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -44,7 +42,8 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Date
+import java.util.Locale
 
 class ClosetFragment : Fragment(), OnTabReselectedListener {
 
@@ -150,14 +149,14 @@ class ClosetFragment : Fragment(), OnTabReselectedListener {
         viewModel.currentTabState.observe(viewLifecycleOwner) { state ->
             if (_binding == null) return@observe
 
-            // 1. 툴바 가시성 업데이트
+            // 툴바 가시성 업데이트
             updateToolbarVisibility(state.isDeleteMode)
             onBackPressedCallback.isEnabled = state.isDeleteMode
 
-            // 2. 삭제 버튼 상태 업데이트
+            // 삭제 버튼 상태 업데이트
             binding.btnDelete.isEnabled = state.selectedItemIds.isNotEmpty()
 
-            // 3. '전체 선택' 아이콘 상태 업데이트
+            // '전체 선택' 아이콘 상태 업데이트
             if (state.isDeleteMode) {
                 if (state.items.isEmpty()) {
                     binding.ivSelectAll.isEnabled = false
@@ -224,7 +223,6 @@ class ClosetFragment : Fragment(), OnTabReselectedListener {
             }
         })
 
-        // ▼▼▼▼▼ 핵심 수정 부분 ▼▼▼▼▼
         binding.viewPagerCloset.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
             override fun onPageSelected(position: Int) {
                 super.onPageSelected(position)
@@ -243,7 +241,6 @@ class ClosetFragment : Fragment(), OnTabReselectedListener {
                 }
             }
         })
-        // ▲▲▲▲▲ 핵심 수정 부분 ▲▲▲▲▲
 
         binding.ivSelectAll.setOnClickListener {
             val currentState = viewModel.currentTabState.value ?: return@setOnClickListener
@@ -416,7 +413,6 @@ class ClosetFragment : Fragment(), OnTabReselectedListener {
         requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, onBackPressedCallback)
     }
 
-    // ▼▼▼▼▼ 핵심 수정 부분 ▼▼▼▼▼
     override fun onTabReselected() {
         if (viewModel.isDeleteMode.value == true) {
             viewModel.exitDeleteMode()
@@ -444,7 +440,6 @@ class ClosetFragment : Fragment(), OnTabReselectedListener {
             }
         }
     }
-    // ▲▲▲▲▲ 핵심 수정 부분 ▲▲▲▲▲
 
     override fun onDestroyView() {
         super.onDestroyView()

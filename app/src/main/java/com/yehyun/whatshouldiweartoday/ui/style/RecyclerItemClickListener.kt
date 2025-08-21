@@ -13,35 +13,43 @@ class RecyclerItemClickListener(
     context: Context,
     private val recyclerView: RecyclerView,
     private val onItemClick: (view: View, position: Int) -> Unit,
-    private val onItemLongClick: (view: View, position: Int) -> Unit
+    private val onItemLongClick: (view: View, position: Int) -> Unit,
+    private val onLongDragStateChanged: (isLongDragging: Boolean) -> Unit
 ) : RecyclerView.OnItemTouchListener {
 
     private val handler = Handler(Looper.getMainLooper())
     private var touchedView: View? = null
-    private var isDragging = false
+    var isDragging = false
     private var initialX = 0f
     private var initialY = 0f
     private val touchSlop = ViewConfiguration.get(context).scaledTouchSlop
     private val longPressTimeout = ViewConfiguration.getLongPressTimeout().toLong()
 
     var isRecyclerViewBusy = false
-    var onDragStateChanged: ((Boolean) -> Unit)? = null
+
+    // 롱 드래그 감지를 위한 프로퍼티
+    private val longDragHandler = Handler(Looper.getMainLooper())
+    private var longDragRunnable: Runnable? = null
+    private var isLongDragActive = false
 
     init {
         recyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
             override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
                 super.onScrollStateChanged(recyclerView, newState)
-                val newDraggingState = newState != RecyclerView.SCROLL_STATE_IDLE
-                if (isDragging != newDraggingState) {
-                    isDragging = newDraggingState
-                    onDragStateChanged?.invoke(isDragging)
-                }
 
-                if (newDraggingState) {
+                if (newState != RecyclerView.SCROLL_STATE_IDLE) {
                     handler.removeCallbacks(longPressRunnable)
                     if (touchedView != null) {
                         touchedView?.isPressed = false
                         touchedView = null
+                    }
+                    isDragging = true
+                } else {
+                    isDragging = false
+                    longDragRunnable?.let { longDragHandler.removeCallbacks(it) }
+                    if (isLongDragActive) {
+                        isLongDragActive = false
+                        onLongDragStateChanged(false)
                     }
                 }
             }
@@ -59,19 +67,6 @@ class RecyclerItemClickListener(
             }
         }
     }
-
-    fun cancelDrag() {
-        if (isDragging) {
-            isDragging = false
-            onDragStateChanged?.invoke(false)
-        }
-        handler.removeCallbacks(longPressRunnable)
-        if (touchedView != null) {
-            touchedView?.isPressed = false
-            touchedView = null
-        }
-    }
-
 
     override fun onInterceptTouchEvent(rv: RecyclerView, e: MotionEvent): Boolean {
         if (isRecyclerViewBusy) {
@@ -109,7 +104,13 @@ class RecyclerItemClickListener(
                 if (dx > touchSlop || dy > touchSlop) {
                     if (!isDragging) {
                         isDragging = true
-                        onDragStateChanged?.invoke(true)
+                        longDragRunnable = Runnable {
+                            if (isDragging) { // 0.5초 후에도 드래그 중이면
+                                isLongDragActive = true
+                                onLongDragStateChanged(true) // 알림 표시 콜백 호출
+                            }
+                        }
+                        longDragHandler.postDelayed(longDragRunnable!!, 500)
                     }
                     handler.removeCallbacks(longPressRunnable)
                     touchedView?.isPressed = false
@@ -120,9 +121,12 @@ class RecyclerItemClickListener(
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                 handler.removeCallbacks(longPressRunnable)
                 val wasDragging = isDragging
-                if (isDragging) {
-                    isDragging = false
-                    onDragStateChanged?.invoke(false)
+                isDragging = false
+
+                longDragRunnable?.let { longDragHandler.removeCallbacks(it) }
+                if (isLongDragActive) {
+                    isLongDragActive = false
+                    onLongDragStateChanged(false)
                 }
 
                 touchedView?.let { view ->

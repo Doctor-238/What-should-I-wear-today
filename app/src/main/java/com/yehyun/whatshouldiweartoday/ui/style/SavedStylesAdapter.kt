@@ -20,11 +20,9 @@ class SavedStylesAdapter(
     private val isItemSelected: (Long) -> Boolean
 ) : ListAdapter<StyleWithItems, SavedStylesAdapter.StyleViewHolder>(diffUtil) {
 
-    // ▼▼▼▼▼ 핵심 수정: 외부에서 아이템을 가져올 수 있도록 이 함수를 추가합니다. ▼▼▼▼▼
     fun getStyleAt(position: Int): StyleWithItems? {
         return getItem(position)
     }
-    // ▲▲▲▲▲ 핵심 수정 ▲▲▲▲▲
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): StyleViewHolder {
         val view = LayoutInflater.from(parent.context).inflate(R.layout.item_saved_style, parent, false)

@@ -1,4 +1,3 @@
-// app/src/main/java/com/yehyun/whatshouldiweartoday/ui/closet/AddClothingViewModel.kt
 package com.yehyun.whatshouldiweartoday.ui.closet
 
 import android.app.Application
@@ -19,8 +18,12 @@ import com.yehyun.whatshouldiweartoday.ai.AiModelProvider
 import com.yehyun.whatshouldiweartoday.data.database.AppDatabase
 import com.yehyun.whatshouldiweartoday.data.database.ClothingItem
 import com.yehyun.whatshouldiweartoday.data.preference.SettingsManager
-import kotlinx.coroutines.*
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import java.io.File
 import java.io.FileOutputStream

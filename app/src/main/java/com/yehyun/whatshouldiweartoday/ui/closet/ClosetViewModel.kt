@@ -1,4 +1,3 @@
-// 파일 경로: app/src/main/java/com/yehyun/whatshouldiweartoday/ui/closet/ClosetViewModel.kt
 package com.yehyun.whatshouldiweartoday.ui.closet
 
 import android.app.Application
@@ -23,7 +22,6 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 import java.io.File
 
-// 현재 탭의 모든 상태를 담는 데이터 클래스
 data class CurrentTabState(
     val items: List<ClothingItem> = emptyList(),
     val selectedItemIds: Set<Int> = emptySet(),
@@ -33,9 +31,7 @@ data class CurrentTabState(
 class ClosetViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository: ClothingRepository
-    // ▼▼▼▼▼ 핵심 수정 2: styleDao 멤버 변수 추가 ▼▼▼▼▼
     private val styleDao: StyleDao
-    // ▲▲▲▲▲ 핵심 수정 2 ▲▲▲▲▲
     private val settingsManager = SettingsManager(application)
     val workManager: WorkManager = WorkManager.getInstance(application)
     val batchAddWorkInfo: LiveData<List<WorkInfo>> = workManager.getWorkInfosForUniqueWorkLiveData("batch_add")
@@ -59,16 +55,13 @@ class ClosetViewModel(application: Application) : AndroidViewModel(application) 
     private val _resetSearchEvent = MutableSharedFlow<Unit>()
     val resetSearchEvent = _resetSearchEvent.asSharedFlow()
 
-    // 현재 탭 인덱스와 상태를 관리할 LiveData
     private val _currentTabIndex = MutableLiveData(0)
     val currentTabState = MediatorLiveData<CurrentTabState>()
 
     init {
         val db = AppDatabase.getDatabase(application)
         val clothingDao = db.clothingDao()
-        // ▼▼▼▼▼ 핵심 수정 3: styleDao 초기화 ▼▼▼▼▼
         styleDao = db.styleDao()
-        // ▲▲▲▲▲ 핵심 수정 3 ▲▲▲▲▲
         repository = ClothingRepository(clothingDao)
 
         allClothes = repository.getItems("전체", "", "최신순")
@@ -86,7 +79,6 @@ class ClosetViewModel(application: Application) : AndroidViewModel(application) 
 
         filterTrigger.observeForever { }
 
-        // currentTabState 설정 로직
         val stateObserver = Observer<Any> {
             val tabIndex = _currentTabIndex.value ?: 0
             val category = categories.getOrNull(tabIndex) ?: "전체"
@@ -128,8 +120,14 @@ class ClosetViewModel(application: Application) : AndroidViewModel(application) 
                 "오래된 순" -> filtered.sortedBy { it.timestamp }
                 "이름 오름차순" -> filtered.sortedBy { it.name }
                 "이름 내림차순" -> filtered.sortedByDescending { it.name }
-                "온도 오름차순" -> filtered.sortedBy { it.suitableTemperature }
-                "온도 내림차순" -> filtered.sortedByDescending { it.suitableTemperature }
+                "온도 오름차순" -> filtered.sortedWith(
+                    compareBy<ClothingItem> { it.category !in listOf("상의", "하의", "아우터") }
+                        .thenBy { it.suitableTemperature }
+                )
+                "온도 내림차순" -> filtered.sortedWith(
+                    compareBy<ClothingItem> { it.category !in listOf("상의", "하의", "아우터") }
+                        .thenByDescending { it.suitableTemperature }
+                )
                 else -> filtered.sortedByDescending { it.timestamp } // "최신순"
             }
 
@@ -225,9 +223,7 @@ class ClosetViewModel(application: Application) : AndroidViewModel(application) 
                 }
                 repository.delete(item)
             }
-            // ▼▼▼▼▼ 핵심 수정 4: 옷 삭제 후 비어있는 스타일 정리하는 로직 추가 ▼▼▼▼▼
             styleDao.deleteOrphanedStyles()
-            // ▲▲▲▲▲ 핵심 수정 4 ▲▲▲▲▲
         }
         exitDeleteMode()
     }

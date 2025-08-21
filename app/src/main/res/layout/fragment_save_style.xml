@@ -32,7 +32,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:paddingBottom="88dp">
+            android:paddingBottom="4dp">
 
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/textInputLayout_style_name"
@@ -140,39 +140,53 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                app:tabMode="scrollable" />
+                app:tabBackground="@android:color/white"
+                app:tabGravity="fill"
+                app:tabIndicator="@drawable/tab_indicator_custom"
+                app:tabIndicatorAnimationMode="linear"
+                app:tabIndicatorColor="@color/tab_selected_text"
+                app:tabIndicatorFullWidth="false"
+                app:tabIndicatorGravity="bottom"
+                app:tabMode="scrollable"
+                app:tabSelectedTextColor="@color/tab_selected_text"
+                app:tabTextColor="@color/tab_unselected_text" />
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="@color/bottom_nav_background" />
 
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/rv_clothing_selection"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginHorizontal="16dp"
-                android:layout_marginTop="16dp"
-                android:nestedScrollingEnabled="false"
+                android:layout_height="300dp"
+                android:nestedScrollingEnabled="true"
+                android:layout_marginHorizontal="12dp"
                 app:layoutManager="androidx.recyclerview.widget.GridLayoutManager"
                 app:spanCount="4"
                 tools:listitem="@layout/item_clothing_selectable" />
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="@color/bottom_nav_background" />
+
+            <Button
+                android:id="@+id/button_save_style_final"
+                style="@style/Widget.Material3.Button.UnelevatedButton"
+                android:layout_width="wrap_content"
+                android:layout_height="60dp"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="4dp"
+                android:enabled="false"
+                android:paddingHorizontal="48dp"
+                android:text="저장하기"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                app:backgroundTint="@color/fab_color_style_tab"
+                app:cornerRadius="24dp" />
 
         </LinearLayout>
-
     </ScrollView>
-
-    <Button
-        android:id="@+id/button_save_style_final"
-        style="@style/Widget.Material3.Button.UnelevatedButton"
-        android:layout_width="wrap_content"
-        android:layout_height="60dp"
-        android:enabled="false"
-        android:paddingHorizontal="48dp"
-        android:text="저장하기"
-        android:textSize="16sp"
-        android:textStyle="bold"
-        app:backgroundTint="@color/fab_color_style_tab"
-        app:cornerRadius="24dp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent" />
-
 
     <FrameLayout
         android:id="@+id/loading_overlay"

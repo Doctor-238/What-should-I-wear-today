@@ -5,7 +5,6 @@ import android.annotation.SuppressLint
 import android.app.Application
 import android.content.pm.PackageManager
 import android.location.Location
-import android.os.Looper
 import android.util.Log
 import androidx.core.app.ActivityCompat
 import androidx.lifecycle.AndroidViewModel
@@ -237,9 +236,9 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
 
-        val bestTop = recommendedTops.minByOrNull { abs(it.suitableTemperature - maxTempCriteria) }
-        val bestBottom = recommendedBottoms.minByOrNull { abs(it.suitableTemperature - maxTempCriteria) }
-        val bestOuter = recommendedOuters.minByOrNull { abs(it.suitableTemperature - maxTempCriteria) }
+        val bestTop = recommendedTops.minByOrNull { abs(it.suitableTemperature + settingsManager.getTemperatureTolerance() - 1 - maxTempCriteria) }
+        val bestBottom = recommendedBottoms.minByOrNull { abs(it.suitableTemperature + settingsManager.getTemperatureTolerance() - 1 - maxTempCriteria) }
+        val bestOuter = recommendedOuters.minByOrNull { abs(it.suitableTemperature + settingsManager.getTemperatureTolerance() - 1 - maxTempCriteria) }
         val bestCombination = listOfNotNull(bestTop, bestBottom, bestOuter)
 
         val umbrellaRecommendation = when {
@@ -248,7 +247,6 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             else -> ""
         }
 
-        // ▼▼▼▼▼ 핵심 수정: 추천 목록을 suitableTemperature 기준으로 내림차순 정렬합니다. ▼▼▼▼▼
         return RecommendationResult(
             recommendedTops.sortedByDescending { it.suitableTemperature },
             recommendedBottoms.sortedByDescending { it.suitableTemperature },
@@ -258,7 +256,6 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             umbrellaRecommendation,
             isTempDifferenceSignificant
         )
-        // ▲▲▲▲▲ 핵심 수정 끝 ▲▲▲▲▲
     }
 
     fun requestTabSwitch(tabIndex: Int) {

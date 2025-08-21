@@ -1,4 +1,3 @@
-// 파일 경로: app/src/main/java/com/yehyun/whatshouldiweartoday/ui/closet/ClosetViewPagerAdapter.kt
 package com.yehyun.whatshouldiweartoday.ui.closet
 
 import androidx.fragment.app.Fragment
@@ -12,12 +11,10 @@ class ClosetViewPagerAdapter(fragment: Fragment, private val categories: List<St
         return ClothingListFragment.newInstance(categories[position])
     }
 
-    // ▼▼▼ 오류 해결을 위해 이 함수를 추가합니다 ▼▼▼
     fun getCategory(position: Int): String {
         if (position >= 0 && position < categories.size) {
             return categories[position]
         }
         return "전체" // 기본값
     }
-    // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
 }
