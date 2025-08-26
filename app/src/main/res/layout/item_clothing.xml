@@ -37,11 +37,22 @@
                     android:id="@+id/iv_clothing_item"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:scaleType="centerCrop"
                     android:background="@color/white"
+                    android:scaleType="centerCrop"
                     tools:src="@tools:sample/backgrounds/scenic" />
 
             </com.google.android.material.card.MaterialCardView>
+
+            <ImageView
+                android:id="@+id/icon_packable"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:layout_margin="8dp"
+                android:src="@drawable/ic_packable_bag"
+                android:visibility="gone"
+                app:layout_constraintBottom_toBottomOf="@id/image_container"
+                app:layout_constraintEnd_toEndOf="@id/image_container"
+                tools:visibility="visible" />
 
             <TextView
                 android:id="@+id/tv_clothing_name"
@@ -87,12 +98,12 @@
             android:id="@+id/iv_delete_checkbox"
             android:layout_width="32dp"
             android:layout_height="32dp"
+            android:layout_gravity="top|end"
             android:layout_marginTop="4dp"
             android:layout_marginEnd="4dp"
             android:padding="4dp"
-            android:visibility="gone"
             android:src="@drawable/ic_checkbox_unchecked_custom"
-            android:layout_gravity="top|end"
+            android:visibility="gone"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent"
             tools:visibility="visible" />

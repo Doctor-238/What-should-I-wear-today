@@ -5,6 +5,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.DefaultItemAnimator
@@ -12,6 +13,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.yehyun.whatshouldiweartoday.R
 import com.yehyun.whatshouldiweartoday.databinding.FragmentStyleListBinding
+import com.yehyun.whatshouldiweartoday.ui.home.HomeViewModel
 
 class StyleListFragment : Fragment() {
 
@@ -19,6 +21,7 @@ class StyleListFragment : Fragment() {
     private val binding get() = _binding!!
 
     private val viewModel: StyleViewModel by viewModels({ requireParentFragment() })
+    private val homeViewModel: HomeViewModel by activityViewModels() // HomeViewModel 추가
     private lateinit var adapter: SavedStylesAdapter
     private var season: String? = null
     private var itemClickListener: RecyclerItemClickListener? = null
@@ -110,6 +113,14 @@ class StyleListFragment : Fragment() {
                 binding.emptyStyleContainer.visibility = View.GONE
                 binding.recyclerViewStyleList.visibility = View.VISIBLE
             }
+        }
+
+        homeViewModel.todayRecommendedClothingIds.observe(viewLifecycleOwner) { ids ->
+            adapter.setRecommendedIds(ids)
+        }
+
+        homeViewModel.todayRecommendation.observe(viewLifecycleOwner) { result ->
+            result?.let { adapter.setPackableOuters(it.packableOuters) }
         }
     }
 

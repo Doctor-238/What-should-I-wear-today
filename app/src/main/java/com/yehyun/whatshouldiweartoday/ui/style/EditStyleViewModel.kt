@@ -27,6 +27,7 @@ class EditStyleViewModel(application: Application) : AndroidViewModel(applicatio
     private var originalStyle: SavedStyle? = null
     private var initialItemIds: Set<Int>? = null
     private var currentStyleId: Long? = null
+    private var isInitialLoadComplete = false
 
     val currentStyleName = MutableLiveData<String>()
     val currentSeason = MutableLiveData<String>()
@@ -101,18 +102,17 @@ class EditStyleViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     fun loadStyleIfNeeded(styleId: Long) {
-        if (originalStyle != null && currentStyleId == styleId) return
+        if (isInitialLoadComplete && currentStyleId == styleId) return
         this.currentStyleId = styleId
-        refreshCurrentStyle()
-    }
 
-    fun refreshCurrentStyle() {
-        val styleId = currentStyleId ?: return
         viewModelScope.launch {
             val styleWithItems = styleRepository.getStyleByIdSuspend(styleId)
             if (styleWithItems != null) {
-                originalStyle = styleWithItems.style
-                initialItemIds = styleWithItems.items.map { it.id }.toSet()
+                if (!isInitialLoadComplete) {
+                    originalStyle = styleWithItems.style.copy()
+                    initialItemIds = styleWithItems.items.map { it.id }.toSet()
+                    isInitialLoadComplete = true
+                }
 
                 postSortedSelectedItems(styleWithItems.items.toMutableList())
                 currentStyleName.postValue(styleWithItems.style.styleName)
@@ -123,6 +123,14 @@ class EditStyleViewModel(application: Application) : AndroidViewModel(applicatio
             } else {
                 _isDeleteComplete.postValue(true)
             }
+        }
+    }
+
+    fun onFragmentResume() {
+        if (!isInitialLoadComplete) return
+        viewModelScope.launch {
+            val allCurrentClothes = clothingRepository.getAllItemsList()
+            validateSelectedItems(allCurrentClothes)
         }
     }
 

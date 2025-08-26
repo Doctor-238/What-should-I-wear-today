@@ -13,6 +13,7 @@ import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
@@ -25,10 +26,12 @@ import com.google.android.material.tabs.TabLayout
 import com.google.android.material.textfield.TextInputEditText
 import com.yehyun.whatshouldiweartoday.R
 import com.yehyun.whatshouldiweartoday.ui.OnTabReselectedListener
+import com.yehyun.whatshouldiweartoday.ui.home.HomeViewModel
 
 class SaveStyleFragment : Fragment(R.layout.fragment_save_style), OnTabReselectedListener {
 
     private val viewModel: SaveStyleViewModel by viewModels()
+    private val homeViewModel: HomeViewModel by activityViewModels() // HomeViewModel 추가
     private val args: SaveStyleFragmentArgs by navArgs()
     private lateinit var adapter: SaveStyleAdapter
     private lateinit var tabLayout: TabLayout
@@ -42,6 +45,8 @@ class SaveStyleFragment : Fragment(R.layout.fragment_save_style), OnTabReselecte
     private var nameTextWatcher: TextWatcher? = null
     private val defaultItemAnimator = DefaultItemAnimator()
     private lateinit var scrollView: ScrollView
+
+    private var recommendedIdsSet: Set<Int> = emptySet()
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -87,9 +92,15 @@ class SaveStyleFragment : Fragment(R.layout.fragment_save_style), OnTabReselecte
     }
 
     private fun setupRecyclerView(view: View) {
-        adapter = SaveStyleAdapter { itemId ->
-            viewModel.selectedItems.value?.any { it.id == itemId } ?: false
-        }
+        adapter = SaveStyleAdapter(
+            isItemSelected = { itemId ->
+                viewModel.selectedItems.value?.any { it.id == itemId } ?: false
+            },
+            isItemRecommended = { itemId ->
+                recommendedIdsSet.contains(itemId)
+            },
+            showRecommendedBorder = false
+        )
         recyclerView.adapter = adapter
         recyclerView.itemAnimator = defaultItemAnimator
 
@@ -109,15 +120,18 @@ class SaveStyleFragment : Fragment(R.layout.fragment_save_style), OnTabReselecte
                     findNavController().navigate(action)
                 }
             },
-            // ▼▼▼▼▼ 핵심 수정 ▼▼▼▼▼
             onLongDragStateChanged = {}
-            // ▲▲▲▲▲ 핵심 수정 ▲▲▲▲▲
         ))
     }
 
     private fun observeViewModel() {
         viewModel.filteredClothes.observe(viewLifecycleOwner) { clothes ->
             adapter.submitList(clothes)
+        }
+
+        homeViewModel.todayRecommendedClothingIds.observe(viewLifecycleOwner) { ids ->
+            recommendedIdsSet = ids
+            adapter.notifyDataSetChanged()
         }
 
         viewModel.selectedItems.observe(viewLifecycleOwner) { items ->

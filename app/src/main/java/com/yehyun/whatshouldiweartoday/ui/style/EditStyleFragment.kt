@@ -16,6 +16,7 @@ import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
 import androidx.core.widget.addTextChangedListener
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
@@ -29,11 +30,13 @@ import com.google.android.material.tabs.TabLayout
 import com.google.android.material.textfield.TextInputEditText
 import com.yehyun.whatshouldiweartoday.R
 import com.yehyun.whatshouldiweartoday.ui.OnTabReselectedListener
+import com.yehyun.whatshouldiweartoday.ui.home.HomeViewModel
 import kotlin.math.abs
 
 class EditStyleFragment : Fragment(R.layout.fragment_edit_style), OnTabReselectedListener {
 
     private val viewModel: EditStyleViewModel by viewModels()
+    private val homeViewModel: HomeViewModel by activityViewModels() // HomeViewModel 추가
     private val args: EditStyleFragmentArgs by navArgs()
     private lateinit var tabLayout: TabLayout
 
@@ -48,10 +51,11 @@ class EditStyleFragment : Fragment(R.layout.fragment_edit_style), OnTabReselecte
     private var nameTextWatcher: TextWatcher? = null
     private val defaultItemAnimator = DefaultItemAnimator()
 
+    private var recommendedIdsSet: Set<Int> = emptySet()
 
     override fun onResume() {
         super.onResume()
-        viewModel.refreshCurrentStyle()
+        viewModel.onFragmentResume()
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -78,6 +82,12 @@ class EditStyleFragment : Fragment(R.layout.fragment_edit_style), OnTabReselecte
     private fun observeViewModel() {
         viewModel.toolbarTitle.observe(viewLifecycleOwner) { title ->
             toolbar.title = title
+        }
+
+        homeViewModel.todayRecommendedClothingIds.observe(viewLifecycleOwner) { ids ->
+            recommendedIdsSet = ids
+            adapterForAll.notifyDataSetChanged()
+            adapterForSelected.notifyDataSetChanged()
         }
 
         viewModel.currentStyleName.observe(viewLifecycleOwner) { name ->
@@ -181,7 +191,11 @@ class EditStyleFragment : Fragment(R.layout.fragment_edit_style), OnTabReselecte
         val rvSelectedItems = view.findViewById<RecyclerView>(R.id.rv_selected_items)
         rvSelectedItems.layoutManager = GridLayoutManager(context, 3)
         rvSelectedItems.itemAnimator = DefaultItemAnimator()
-        adapterForSelected = SaveStyleAdapter { false }
+        adapterForSelected = SaveStyleAdapter(
+            isItemSelected = { false },
+            isItemRecommended = { itemId -> recommendedIdsSet.contains(itemId) },
+            showRecommendedBorder = true
+        )
         rvSelectedItems.adapter = adapterForSelected
 
         rvSelectedItems.addOnItemTouchListener(RecyclerItemClickListener(
@@ -203,7 +217,11 @@ class EditStyleFragment : Fragment(R.layout.fragment_edit_style), OnTabReselecte
 
         val rvAllItems = view.findViewById<RecyclerView>(R.id.rv_all_items_for_edit)
         rvAllItems.itemAnimator = DefaultItemAnimator()
-        adapterForAll = SaveStyleAdapter { false }
+        adapterForAll = SaveStyleAdapter(
+            isItemSelected = { false },
+            isItemRecommended = { itemId -> recommendedIdsSet.contains(itemId) },
+            showRecommendedBorder = true
+        )
         rvAllItems.adapter = adapterForAll
 
         rvAllItems.addOnItemTouchListener(RecyclerItemClickListener(
@@ -287,7 +305,9 @@ class EditStyleFragment : Fragment(R.layout.fragment_edit_style), OnTabReselecte
             }
             .setNegativeButton("아니오") { _, _ ->
                 if (viewModel.selectedItems.value.isNullOrEmpty()) {
-                    viewModel.deleteStyle()}
+                    viewModel.deleteStyle()
+                    return@setNegativeButton
+                }
                 findNavController().popBackStack()
             }
             .setCancelable(true)
