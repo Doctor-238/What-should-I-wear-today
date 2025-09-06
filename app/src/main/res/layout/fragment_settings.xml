@@ -472,18 +472,29 @@
                     android:textColor="@color/text_primary"
                     android:textSize="16sp"
                     android:textStyle="bold"
-                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintBottom_toBottomOf="@+id/switch_show_reco_icon"
                     app:layout_constraintEnd_toStartOf="@+id/switch_show_reco_icon"
                     app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toTopOf="parent" />
+                    app:layout_constraintTop_toTopOf="@+id/switch_show_reco_icon" />
 
                 <com.google.android.material.switchmaterial.SwitchMaterial
                     android:id="@+id/switch_show_reco_icon"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    app:layout_constraintBottom_toBottomOf="parent"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintTop_toTopOf="parent" />
+
+                <TextView
+                    android:id="@+id/tv_reco_icon_note"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:text="※ 스타일, 옷 화면에서 날씨 추천 표시 여부를 바꿀 수 있습니다."
+                    android:textColor="@color/text_tertiary"
+                    android:textSize="12sp"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/switch_show_reco_icon" />
 
             </androidx.constraintlayout.widget.ConstraintLayout>
         </com.google.android.material.card.MaterialCardView>
