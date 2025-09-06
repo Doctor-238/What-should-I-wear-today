@@ -129,6 +129,11 @@ class StyleListFragment : Fragment() {
             adapter.notifyItemRangeChanged(0, adapter.itemCount, payload)
         }
     }
+    fun notifyAdapterRefresh() {
+        if (::adapter.isInitialized) {
+            adapter.notifyDataSetChanged()
+        }
+    }
 
     fun scrollToTop() {
         if (isAdded && _binding != null) {

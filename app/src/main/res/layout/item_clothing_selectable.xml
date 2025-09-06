@@ -18,13 +18,28 @@
         app:strokeColor="@color/weather_card_blue_bg"
         app:strokeWidth="1.5dp">
 
-        <ImageView
-            android:id="@+id/item_image_selectable"
+        <FrameLayout
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:background="@color/white"
-            android:scaleType="centerCrop"
-            tools:src="@tools:sample/backgrounds/scenic" />
+            android:layout_height="match_parent">
+
+            <ImageView
+                android:id="@+id/item_image_selectable"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@color/white"
+                android:scaleType="centerCrop"
+                tools:src="@tools:sample/backgrounds/scenic" />
+
+            <ImageView
+                android:id="@+id/icon_special"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:layout_gravity="bottom|end"
+                android:layout_margin="4dp"
+                android:visibility="gone"
+                tools:src="@drawable/sun"
+                tools:visibility="visible" />
+        </FrameLayout>
 
     </com.google.android.material.card.MaterialCardView>
 </androidx.constraintlayout.widget.ConstraintLayout>

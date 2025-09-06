@@ -14,10 +14,12 @@ import android.widget.ImageView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import com.google.android.material.slider.Slider
 import com.yehyun.whatshouldiweartoday.R
+import com.yehyun.whatshouldiweartoday.MainViewModel
 import com.yehyun.whatshouldiweartoday.data.preference.SettingsManager
 import com.yehyun.whatshouldiweartoday.databinding.FragmentSettingsBinding
 import com.yehyun.whatshouldiweartoday.ui.OnTabReselectedListener
@@ -29,6 +31,7 @@ class SettingsFragment : Fragment(), OnTabReselectedListener {
 
     private lateinit var settingsManager: SettingsManager
     private val viewModel: SettingsViewModel by viewModels()
+    private val mainViewModel: MainViewModel by activityViewModels()
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -101,7 +104,6 @@ class SettingsFragment : Fragment(), OnTabReselectedListener {
     }
 
     private fun setupSliders() {
-        // 뷰가 완전히 그려진 후에 초기 위치를 설정
         binding.sliderConstitution.post {
             updateFakeThumbPosition(binding.sliderConstitution, binding.thumbConstitutionFake, false)
         }
@@ -114,6 +116,8 @@ class SettingsFragment : Fragment(), OnTabReselectedListener {
 
         binding.sliderSensitivity.value = settingsManager.sensitivityLevel.toFloat()
         updateSensitivityLabel(settingsManager.sensitivityLevel)
+
+        binding.switchShowRecoIcon.isChecked = settingsManager.showRecommendationIcon
     }
 
     private fun setupListeners() {
@@ -123,6 +127,7 @@ class SettingsFragment : Fragment(), OnTabReselectedListener {
         binding.spinnerTempRange.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
                 settingsManager.temperatureRange = (parent?.getItemAtPosition(position) as? String) ?: SettingsManager.TEMP_RANGE_NORMAL
+                mainViewModel.notifySettingsChanged()
             }
             override fun onNothingSelected(parent: AdapterView<*>?) {}
         }
@@ -131,6 +136,7 @@ class SettingsFragment : Fragment(), OnTabReselectedListener {
             override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
                 settingsManager.aiModel = if (position == 0) SettingsManager.AI_MODEL_FAST else SettingsManager.AI_MODEL_ACCURATE
                 updateAiModelLabel(settingsManager.aiModel)
+                mainViewModel.notifySettingsChanged()
             }
             override fun onNothingSelected(p0: AdapterView<*>?) {}
         }
@@ -140,6 +146,7 @@ class SettingsFragment : Fragment(), OnTabReselectedListener {
             settingsManager.constitutionLevel = level
             updateConstitutionLabel(level)
             updateFakeThumbPosition(slider, binding.thumbConstitutionFake)
+            mainViewModel.notifySettingsChanged()
         }
 
         binding.sliderSensitivity.addOnChangeListener { slider, value, _ ->
@@ -155,6 +162,11 @@ class SettingsFragment : Fragment(), OnTabReselectedListener {
         }
 
         binding.cardReset.setOnClickListener { showResetConfirmDialog() }
+
+        binding.switchShowRecoIcon.setOnCheckedChangeListener { _, isChecked ->
+            settingsManager.showRecommendationIcon = isChecked
+            mainViewModel.notifySettingsChanged()
+        }
     }
 
     private fun updateFakeThumbPosition(slider: Slider, fakeThumb: ImageView, animate: Boolean = true) {
@@ -164,13 +176,11 @@ class SettingsFragment : Fragment(), OnTabReselectedListener {
         val targetX = trackWidth * percentage
 
         if (animate) {
-            // "translationX" 속성을 현재 위치에서 목표 위치까지 애니메이션
             val animator = ObjectAnimator.ofFloat(fakeThumb, "translationX", fakeThumb.translationX, targetX)
             animator.duration = 150
             animator.interpolator = DecelerateInterpolator()
             animator.start()
         } else {
-            // 애니메이션 없이 즉시 위치 설정
             fakeThumb.translationX = targetX
         }
     }

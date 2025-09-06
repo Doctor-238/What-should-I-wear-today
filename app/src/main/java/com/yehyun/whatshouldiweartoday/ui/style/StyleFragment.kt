@@ -14,6 +14,7 @@ import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.SearchView
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
@@ -22,6 +23,7 @@ import androidx.navigation.fragment.findNavController
 import androidx.viewpager2.widget.ViewPager2
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
+import com.yehyun.whatshouldiweartoday.MainViewModel
 import com.yehyun.whatshouldiweartoday.R
 import com.yehyun.whatshouldiweartoday.databinding.FragmentStyleBinding
 import com.yehyun.whatshouldiweartoday.ui.OnTabReselectedListener
@@ -33,6 +35,7 @@ class StyleFragment : Fragment(), OnTabReselectedListener {
     private val binding get() = _binding!!
 
     private val viewModel: StyleViewModel by viewModels()
+    private val mainViewModel: MainViewModel by activityViewModels()
     private lateinit var onBackPressedCallback: OnBackPressedCallback
 
     override fun onCreateView(
@@ -127,11 +130,26 @@ class StyleFragment : Fragment(), OnTabReselectedListener {
         viewLifecycleOwner.lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.resetSearchEvent.collect {
-                    resetsearchViewStyle() // 신호가 오면 스스로 함수 호출
+                    resetsearchViewStyle()
                 }
             }
         }
+
+        mainViewModel.settingsChangedEvent.observe(viewLifecycleOwner) { event ->
+            event.getContentIfNotHandled()?.let {
+                notifyAllAdapters()
+            }
+        }
     }
+
+    private fun notifyAllAdapters() {
+        if (_binding == null || binding.viewPagerStyle.adapter == null) return
+        for (i in 0 until binding.viewPagerStyle.adapter!!.itemCount) {
+            val fragment = childFragmentManager.findFragmentByTag("f$i") as? StyleListFragment
+            fragment?.notifyAdapterRefresh()
+        }
+    }
+
 
     private fun updateToolbarVisibility(isDeleteMode: Boolean) {
         if (_binding == null) return
@@ -196,9 +214,7 @@ class StyleFragment : Fragment(), OnTabReselectedListener {
             }
             override fun onTabUnselected(tab: TabLayout.Tab?) {
                 tab?.position?.let { position ->
-                    // ViewModel 상태 업데이트
                     viewModel.setLongDragStateForTab(position, false)
-                    // Fragment의 isDragging 상태 직접 초기화
                     val fragment = (binding.viewPagerStyle.adapter as? StyleViewPagerAdapter)?.getFragment(position) as? StyleListFragment
                     fragment?.resetDragState()
                 }
@@ -207,7 +223,6 @@ class StyleFragment : Fragment(), OnTabReselectedListener {
                 tab?.position?.let { position ->
                     (childFragmentManager.findFragmentByTag("f$position") as? StyleListFragment)?.scrollToTop()
                     viewModel.setLongDragStateForTab(position, false)
-                    // Fragment의 isDragging 상태 직접 초기화
                     val fragment = (binding.viewPagerStyle.adapter as? StyleViewPagerAdapter)?.getFragment(position) as? StyleListFragment
                     fragment?.resetDragState()
                 }

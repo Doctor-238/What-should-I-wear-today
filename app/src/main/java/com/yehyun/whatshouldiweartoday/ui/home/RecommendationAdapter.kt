@@ -1,6 +1,5 @@
 package com.yehyun.whatshouldiweartoday.ui.home
 
-import android.graphics.Color
 import android.net.Uri
 import android.util.TypedValue
 import android.view.LayoutInflater
@@ -14,6 +13,7 @@ import com.bumptech.glide.Glide
 import com.google.android.material.card.MaterialCardView
 import com.yehyun.whatshouldiweartoday.R
 import com.yehyun.whatshouldiweartoday.data.database.ClothingItem
+import com.yehyun.whatshouldiweartoday.data.preference.SettingsManager
 import java.io.File
 
 class RecommendationAdapter(
@@ -64,26 +64,33 @@ class RecommendationAdapter(
 
     class RecommendationViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val imageView: ImageView = itemView.findViewById(R.id.item_image_recommend_square)
-        private val iconView: ImageView = itemView.findViewById(R.id.icon_packable)
+        private val iconView: ImageView = itemView.findViewById(R.id.icon_special)
         private val cardView: MaterialCardView = itemView as MaterialCardView
+        private val settingsManager = SettingsManager(itemView.context)
 
         fun bind(item: ClothingItem, isPackable: Boolean, isRecommended: Boolean) {
             val imageToShow = if (item.useProcessedImage && item.processedImageUri != null) item.processedImageUri else item.imageUri
             Glide.with(itemView.context).load(Uri.fromFile(File(imageToShow))).into(imageView)
-            iconView.isVisible = isPackable
+
+            if (settingsManager.showRecommendationIcon) {
+                if (isPackable) {
+                    iconView.setImageResource(R.drawable.ic_packable_bag)
+                    iconView.isVisible = true
+                } else if (isRecommended) {
+                    iconView.setImageResource(R.drawable.sun)
+                    iconView.isVisible = true
+                } else {
+                    iconView.isVisible = false
+                }
+            } else {
+                iconView.isVisible = false
+            }
 
             val context = itemView.context
-            if (isRecommended) {
-                cardView.strokeColor = ContextCompat.getColor(context, R.color.temp_high_red)
-                cardView.strokeWidth = TypedValue.applyDimension(
-                    TypedValue.COMPLEX_UNIT_DIP, 3.5f, context.resources.displayMetrics
-                ).toInt()
-            } else {
-                cardView.strokeColor = ContextCompat.getColor(context, R.color.weather_card_blue_bg)
-                cardView.strokeWidth = TypedValue.applyDimension(
-                    TypedValue.COMPLEX_UNIT_DIP, 1.5f, context.resources.displayMetrics
-                ).toInt()
-            }
+            cardView.strokeColor = ContextCompat.getColor(context, R.color.weather_card_blue_bg)
+            cardView.strokeWidth = TypedValue.applyDimension(
+                TypedValue.COMPLEX_UNIT_DIP, 1.5f, context.resources.displayMetrics
+            ).toInt()
         }
     }
 }

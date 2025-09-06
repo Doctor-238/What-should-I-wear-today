@@ -24,6 +24,7 @@ import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.textfield.TextInputEditText
+import com.yehyun.whatshouldiweartoday.MainViewModel
 import com.yehyun.whatshouldiweartoday.R
 import com.yehyun.whatshouldiweartoday.ui.OnTabReselectedListener
 import com.yehyun.whatshouldiweartoday.ui.home.HomeViewModel
@@ -31,7 +32,8 @@ import com.yehyun.whatshouldiweartoday.ui.home.HomeViewModel
 class SaveStyleFragment : Fragment(R.layout.fragment_save_style), OnTabReselectedListener {
 
     private val viewModel: SaveStyleViewModel by viewModels()
-    private val homeViewModel: HomeViewModel by activityViewModels() // HomeViewModel 추가
+    private val homeViewModel: HomeViewModel by activityViewModels()
+    private val mainViewModel: MainViewModel by activityViewModels()
     private val args: SaveStyleFragmentArgs by navArgs()
     private lateinit var adapter: SaveStyleAdapter
     private lateinit var tabLayout: TabLayout
@@ -47,6 +49,7 @@ class SaveStyleFragment : Fragment(R.layout.fragment_save_style), OnTabReselecte
     private lateinit var scrollView: ScrollView
 
     private var recommendedIdsSet: Set<Int> = emptySet()
+    private var packableIdsSet: Set<Int> = emptySet()
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -99,7 +102,9 @@ class SaveStyleFragment : Fragment(R.layout.fragment_save_style), OnTabReselecte
             isItemRecommended = { itemId ->
                 recommendedIdsSet.contains(itemId)
             },
-            showRecommendedBorder = false
+            isItemPackable = { itemId ->
+                packableIdsSet.contains(itemId)
+            }
         )
         recyclerView.adapter = adapter
         recyclerView.itemAnimator = defaultItemAnimator
@@ -131,6 +136,11 @@ class SaveStyleFragment : Fragment(R.layout.fragment_save_style), OnTabReselecte
 
         homeViewModel.todayRecommendedClothingIds.observe(viewLifecycleOwner) { ids ->
             recommendedIdsSet = ids
+            adapter.notifyDataSetChanged()
+        }
+
+        homeViewModel.todayRecommendation.observe(viewLifecycleOwner) { result ->
+            packableIdsSet = result?.packableOuters?.map { it.id }?.toSet() ?: emptySet()
             adapter.notifyDataSetChanged()
         }
 
@@ -176,6 +186,12 @@ class SaveStyleFragment : Fragment(R.layout.fragment_save_style), OnTabReselecte
                 updateSaveButtonState()
             } else {
                 buttonSave.isEnabled = false
+            }
+        }
+
+        mainViewModel.settingsChangedEvent.observe(viewLifecycleOwner) { event ->
+            event.getContentIfNotHandled()?.let {
+                adapter.notifyDataSetChanged()
             }
         }
     }

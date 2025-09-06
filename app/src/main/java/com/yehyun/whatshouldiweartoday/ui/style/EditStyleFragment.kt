@@ -28,6 +28,7 @@ import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.textfield.TextInputEditText
+import com.yehyun.whatshouldiweartoday.MainViewModel
 import com.yehyun.whatshouldiweartoday.R
 import com.yehyun.whatshouldiweartoday.ui.OnTabReselectedListener
 import com.yehyun.whatshouldiweartoday.ui.home.HomeViewModel
@@ -36,7 +37,8 @@ import kotlin.math.abs
 class EditStyleFragment : Fragment(R.layout.fragment_edit_style), OnTabReselectedListener {
 
     private val viewModel: EditStyleViewModel by viewModels()
-    private val homeViewModel: HomeViewModel by activityViewModels() // HomeViewModel 추가
+    private val homeViewModel: HomeViewModel by activityViewModels()
+    private val mainViewModel: MainViewModel by activityViewModels()
     private val args: EditStyleFragmentArgs by navArgs()
     private lateinit var tabLayout: TabLayout
 
@@ -52,6 +54,7 @@ class EditStyleFragment : Fragment(R.layout.fragment_edit_style), OnTabReselecte
     private val defaultItemAnimator = DefaultItemAnimator()
 
     private var recommendedIdsSet: Set<Int> = emptySet()
+    private var packableIdsSet: Set<Int> = emptySet()
 
     override fun onResume() {
         super.onResume()
@@ -86,6 +89,12 @@ class EditStyleFragment : Fragment(R.layout.fragment_edit_style), OnTabReselecte
 
         homeViewModel.todayRecommendedClothingIds.observe(viewLifecycleOwner) { ids ->
             recommendedIdsSet = ids
+            adapterForAll.notifyDataSetChanged()
+            adapterForSelected.notifyDataSetChanged()
+        }
+
+        homeViewModel.todayRecommendation.observe(viewLifecycleOwner) { result ->
+            packableIdsSet = result?.packableOuters?.map { it.id }?.toSet() ?: emptySet()
             adapterForAll.notifyDataSetChanged()
             adapterForSelected.notifyDataSetChanged()
         }
@@ -156,6 +165,13 @@ class EditStyleFragment : Fragment(R.layout.fragment_edit_style), OnTabReselecte
                 findNavController().popBackStack()
             }
         }
+
+        mainViewModel.settingsChangedEvent.observe(viewLifecycleOwner) { event ->
+            event.getContentIfNotHandled()?.let {
+                adapterForAll.notifyDataSetChanged()
+                adapterForSelected.notifyDataSetChanged()
+            }
+        }
     }
 
     private fun addScrollTouchListener(recyclerView: RecyclerView) {
@@ -194,7 +210,7 @@ class EditStyleFragment : Fragment(R.layout.fragment_edit_style), OnTabReselecte
         adapterForSelected = SaveStyleAdapter(
             isItemSelected = { false },
             isItemRecommended = { itemId -> recommendedIdsSet.contains(itemId) },
-            showRecommendedBorder = true
+            isItemPackable = { itemId -> packableIdsSet.contains(itemId) }
         )
         rvSelectedItems.adapter = adapterForSelected
 
@@ -220,7 +236,7 @@ class EditStyleFragment : Fragment(R.layout.fragment_edit_style), OnTabReselecte
         adapterForAll = SaveStyleAdapter(
             isItemSelected = { false },
             isItemRecommended = { itemId -> recommendedIdsSet.contains(itemId) },
-            showRecommendedBorder = true
+            isItemPackable = { itemId -> packableIdsSet.contains(itemId) }
         )
         rvAllItems.adapter = adapterForAll
 

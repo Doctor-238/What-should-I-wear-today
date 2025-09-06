@@ -101,6 +101,12 @@ class ClothingListFragment : Fragment() {
         }
     }
 
+    fun notifyAdapterRefresh() {
+        if (::adapter.isInitialized) {
+            adapter.notifyDataSetChanged()
+        }
+    }
+
 
     private fun observeViewModel() {
         viewModel.getClothesForCategory(category).observe(viewLifecycleOwner) { items ->

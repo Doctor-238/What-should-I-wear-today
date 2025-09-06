@@ -23,7 +23,7 @@
             tools:src="@tools:sample/backgrounds/scenic" />
 
         <ImageView
-            android:id="@+id/icon_packable"
+            android:id="@+id/icon_special"
             android:layout_width="24dp"
             android:layout_height="24dp"
             android:layout_gravity="bottom|end"

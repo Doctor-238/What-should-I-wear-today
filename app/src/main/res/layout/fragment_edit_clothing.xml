@@ -53,6 +53,17 @@
                     android:layout_height="match_parent"
                     android:scaleType="fitCenter"
                     tools:src="@tools:sample/backgrounds/scenic" />
+
+                <ImageView
+                    android:id="@+id/icon_special_edit"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:layout_gravity="bottom|end"
+                    android:layout_margin="8dp"
+                    android:visibility="gone"
+                    tools:src="@drawable/sun"
+                    tools:visibility="visible"/>
+
             </FrameLayout>
 
             <com.google.android.material.card.MaterialCardView

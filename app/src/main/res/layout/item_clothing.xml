@@ -44,7 +44,7 @@
             </com.google.android.material.card.MaterialCardView>
 
             <ImageView
-                android:id="@+id/icon_packable"
+                android:id="@+id/icon_special"
                 android:layout_width="24dp"
                 android:layout_height="24dp"
                 android:layout_margin="8dp"
