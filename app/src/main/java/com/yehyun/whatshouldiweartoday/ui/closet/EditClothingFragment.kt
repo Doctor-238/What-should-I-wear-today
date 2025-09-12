@@ -60,6 +60,8 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
     private lateinit var buttonTempDecrease: ImageButton
     private lateinit var iconSpecialEdit: ImageView
 
+    private var toast: Toast? = null
+
     override fun onResume() {
         super.onResume()
         viewModel.currentClothingItem.value?.let { updateTemperatureDisplay(it) }
@@ -138,7 +140,7 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
 
         viewModel.isDeleteComplete.observe(viewLifecycleOwner) { isComplete ->
             if (isComplete) {
-                Toast.makeText(context, "삭제되었습니다.", Toast.LENGTH_SHORT).show()
+                showToast("삭제되었습니다.")
                 findNavController().popBackStack()
             }
         }
@@ -302,10 +304,16 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
 
     private fun trySaveChanges() {
         if (viewModel.currentClothingItem.value?.name.isNullOrBlank()) {
-            Toast.makeText(context, "옷 이름을 입력해주세요.", Toast.LENGTH_SHORT).show()
+            showToast("옷 이름을 입력해주세요.")
         } else {
             viewModel.saveChanges()
         }
+    }
+
+    private fun showToast(message: String) {
+        toast?.cancel()
+        toast = Toast.makeText(context, message, Toast.LENGTH_SHORT)
+        toast?.show()
     }
 
     private fun showDeleteConfirmDialog() {
@@ -324,5 +332,6 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
     override fun onDestroyView() {
         super.onDestroyView()
         onBackPressedCallback.remove()
+        toast?.cancel()
     }
 }

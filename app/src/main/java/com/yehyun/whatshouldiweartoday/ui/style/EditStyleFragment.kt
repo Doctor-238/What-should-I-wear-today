@@ -55,6 +55,7 @@ class EditStyleFragment : Fragment(R.layout.fragment_edit_style), OnTabReselecte
 
     private var recommendedIdsSet: Set<Int> = emptySet()
     private var packableIdsSet: Set<Int> = emptySet()
+    private var toast: Toast? = null
 
     override fun onResume() {
         super.onResume()
@@ -154,14 +155,14 @@ class EditStyleFragment : Fragment(R.layout.fragment_edit_style), OnTabReselecte
 
         viewModel.isUpdateComplete.observe(viewLifecycleOwner) { isComplete ->
             if (isComplete) {
-                Toast.makeText(context, "저장되었습니다.", Toast.LENGTH_SHORT).show()
+                showToast("저장되었습니다.")
                 findNavController().popBackStack()
             }
         }
 
         viewModel.isDeleteComplete.observe(viewLifecycleOwner) { isComplete ->
             if (isComplete) {
-                Toast.makeText(context, "'${viewModel.getOriginalStyleName()}' 스타일이 삭제되었습니다.", Toast.LENGTH_SHORT).show()
+                showToast("'${viewModel.getOriginalStyleName()}' 스타일이 삭제되었습니다.")
                 findNavController().popBackStack()
             }
         }
@@ -313,6 +314,12 @@ class EditStyleFragment : Fragment(R.layout.fragment_edit_style), OnTabReselecte
         }
     }
 
+    private fun showToast(message: String, duration: Int = Toast.LENGTH_SHORT) {
+        toast?.cancel()
+        toast = Toast.makeText(context, message, duration)
+        toast?.show()
+    }
+
     private fun showSaveChangesDialog() {
         AlertDialog.Builder(requireContext())
             .setMessage("변경사항을 저장하시겠습니까?")
@@ -341,16 +348,16 @@ class EditStyleFragment : Fragment(R.layout.fragment_edit_style), OnTabReselecte
     private fun saveChangesAndExit() {
         val styleName = editTextName.text.toString().trim()
         if (styleName.isEmpty()) {
-            Toast.makeText(context, "스타일 이름을 입력해주세요.", Toast.LENGTH_SHORT).show()
+            showToast("스타일 이름을 입력해주세요.")
             return
         }
         if (viewModel.selectedItems.value.isNullOrEmpty()) {
-            Toast.makeText(context, "스타일에 추가된 옷이 없습니다.", Toast.LENGTH_LONG).show()
+            showToast("스타일에 추가된 옷이 없습니다.", Toast.LENGTH_LONG)
             return
         }
         val selectedSeasonId = chipGroupSeason.checkedChipId
         if (selectedSeasonId == View.NO_ID) {
-            Toast.makeText(context, "계절을 선택해주세요.", Toast.LENGTH_SHORT).show()
+            showToast("계절을 선택해주세요.")
             return
         }
         viewModel.updateStyle()
@@ -378,6 +385,7 @@ class EditStyleFragment : Fragment(R.layout.fragment_edit_style), OnTabReselecte
         super.onDestroyView()
         nameTextWatcher?.let { editTextName.removeTextChangedListener(it) }
         onBackPressedCallback.remove()
+        toast?.cancel()
     }
 
     override fun onTabReselected() {

@@ -59,6 +59,8 @@ class ClosetFragment : Fragment(), OnTabReselectedListener {
     private lateinit var onBackPressedCallback: OnBackPressedCallback
     private var pendingScrollToTop = false
 
+    private var toast: Toast? = null
+
 
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -69,7 +71,7 @@ class ClosetFragment : Fragment(), OnTabReselectedListener {
             if (!shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS)) {
                 showGoToSettingsDialog()
             } else {
-                Toast.makeText(requireContext(), "알림 권한이 거부되어 기능을 실행할 수 없습니다.", Toast.LENGTH_SHORT).show()
+                showToast("알림 권한이 거부되어 기능을 실행할 수 없습니다.")
             }
         }
     }
@@ -84,7 +86,7 @@ class ClosetFragment : Fragment(), OnTabReselectedListener {
                 if (copiedImagePaths.isNotEmpty()) {
                     startBatchAddWorker(copiedImagePaths.toTypedArray())
                 } else {
-                    Toast.makeText(requireContext(), "이미지를 처리하는 데 실패했습니다.", Toast.LENGTH_SHORT).show()
+                    showToast("이미지를 처리하는 데 실패했습니다.")
                     binding.fabBatchAdd.hideProgress()
                 }
             }
@@ -304,7 +306,7 @@ class ClosetFragment : Fragment(), OnTabReselectedListener {
                 startActivity(intent)
             }
             .setNegativeButton("아니오") { _, _ ->
-                Toast.makeText(requireContext(), "알림 권한이 거부되어 기능을 실행할 수 없습니다.", Toast.LENGTH_SHORT).show()
+                showToast("알림 권한이 거부되어 기능을 실행할 수 없습니다.")
             }
             .show()
     }
@@ -423,6 +425,12 @@ class ClosetFragment : Fragment(), OnTabReselectedListener {
         requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, onBackPressedCallback)
     }
 
+    private fun showToast(message: String) {
+        toast?.cancel()
+        toast = Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT)
+        toast?.show()
+    }
+
     override fun onTabReselected() {
         if (viewModel.isDeleteMode.value == true) {
             viewModel.exitDeleteMode()
@@ -453,6 +461,7 @@ class ClosetFragment : Fragment(), OnTabReselectedListener {
     override fun onDestroyView() {
         super.onDestroyView()
         onBackPressedCallback.remove()
+        toast?.cancel()
         _binding = null
     }
 }

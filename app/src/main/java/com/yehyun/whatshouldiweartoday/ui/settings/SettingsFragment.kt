@@ -32,6 +32,7 @@ class SettingsFragment : Fragment(), OnTabReselectedListener {
     private lateinit var settingsManager: SettingsManager
     private val viewModel: SettingsViewModel by viewModels()
     private val mainViewModel: MainViewModel by activityViewModels()
+    private var toast: Toast? = null
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -59,7 +60,7 @@ class SettingsFragment : Fragment(), OnTabReselectedListener {
 
         viewModel.resetComplete.observe(viewLifecycleOwner) { isComplete ->
             if (isComplete) {
-                Toast.makeText(requireContext(), "모든 데이터가 초기화되었습니다. 앱을 다시 시작합니다.", Toast.LENGTH_LONG).show()
+                showToast("모든 데이터가 초기화되었습니다. 앱을 다시 시작합니다.", Toast.LENGTH_LONG)
                 val packageManager = requireContext().packageManager
                 val intent = packageManager.getLaunchIntentForPackage(requireContext().packageName)
                 val componentName = intent!!.component
@@ -72,6 +73,12 @@ class SettingsFragment : Fragment(), OnTabReselectedListener {
 
     override fun onTabReselected() {
         findNavController().popBackStack()
+    }
+
+    private fun showToast(message: String, duration: Int = Toast.LENGTH_SHORT) {
+        toast?.cancel()
+        toast = Toast.makeText(requireContext(), message, duration)
+        toast?.show()
     }
 
     private fun showResetConfirmDialog() {
@@ -204,6 +211,7 @@ class SettingsFragment : Fragment(), OnTabReselectedListener {
 
     override fun onDestroyView() {
         super.onDestroyView()
+        toast?.cancel()
         _binding = null
     }
 }

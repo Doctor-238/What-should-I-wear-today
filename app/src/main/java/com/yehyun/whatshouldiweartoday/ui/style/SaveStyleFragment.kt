@@ -50,6 +50,7 @@ class SaveStyleFragment : Fragment(R.layout.fragment_save_style), OnTabReselecte
 
     private var recommendedIdsSet: Set<Int> = emptySet()
     private var packableIdsSet: Set<Int> = emptySet()
+    private var toast: Toast? = null
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -170,7 +171,7 @@ class SaveStyleFragment : Fragment(R.layout.fragment_save_style), OnTabReselecte
 
         viewModel.isSaveComplete.observe(viewLifecycleOwner) { isComplete ->
             if (isComplete) {
-                Toast.makeText(requireContext(), "'${viewModel.styleName.value}' 스타일이 저장되었습니다.", Toast.LENGTH_SHORT).show()
+                showToast("'${viewModel.styleName.value}' 스타일이 저장되었습니다.")
                 viewModel.resetAllState()
                 findNavController().popBackStack()
             }
@@ -206,15 +207,15 @@ class SaveStyleFragment : Fragment(R.layout.fragment_save_style), OnTabReselecte
     private fun setupListeners(view: View) {
         buttonSave.setOnClickListener {
             if (viewModel.styleName.value.isNullOrEmpty()){
-                Toast.makeText(requireContext(), "스타일 이름을 입력해주세요.", Toast.LENGTH_SHORT).show()
+                showToast("스타일 이름을 입력해주세요.")
                 return@setOnClickListener
             }
             if (viewModel.selectedSeason.value.isNullOrEmpty()){
-                Toast.makeText(requireContext(), "계절을 선택해주세요.", Toast.LENGTH_SHORT).show()
+                showToast("계절을 선택해주세요.")
                 return@setOnClickListener
             }
             if (viewModel.selectedItems.value.isNullOrEmpty()){
-                Toast.makeText(requireContext(), "하나 이상의 옷을 선택해주세요.", Toast.LENGTH_SHORT).show()
+                showToast("하나 이상의 옷을 선택해주세요.")
                 return@setOnClickListener
             }
             viewModel.saveStyle()
@@ -256,6 +257,12 @@ class SaveStyleFragment : Fragment(R.layout.fragment_save_style), OnTabReselecte
         }
     }
 
+    private fun showToast(message: String) {
+        toast?.cancel()
+        toast = Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT)
+        toast?.show()
+    }
+
     private fun showCancelDialog() {
         AlertDialog.Builder(requireContext())
             .setMessage("작업을 취소하시겠습니까? 변경사항이 저장되지 않습니다.")
@@ -275,5 +282,6 @@ class SaveStyleFragment : Fragment(R.layout.fragment_save_style), OnTabReselecte
         super.onDestroyView()
         onBackPressedCallback.remove()
         nameTextWatcher?.let { editTextName.removeTextChangedListener(it) }
+        toast?.cancel()
     }
 }
