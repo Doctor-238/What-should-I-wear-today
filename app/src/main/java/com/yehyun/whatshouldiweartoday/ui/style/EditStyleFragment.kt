@@ -320,10 +320,7 @@ class EditStyleFragment : Fragment(R.layout.fragment_edit_style), OnTabReselecte
                 saveChangesAndExit()
             }
             .setNegativeButton("아니오") { _, _ ->
-                if (viewModel.selectedItems.value.isNullOrEmpty()) {
-                    viewModel.deleteStyle()
-                    return@setNegativeButton
-                }
+                viewModel.handleCancelAndDeleteIfOrphaned()
                 findNavController().popBackStack()
             }
             .setCancelable(true)

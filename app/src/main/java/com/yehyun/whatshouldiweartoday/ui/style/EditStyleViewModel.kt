@@ -69,13 +69,13 @@ class EditStyleViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     private fun validateSelectedItems(currentClothes: List<ClothingItem>?) {
-        val clothes = currentClothes ?: return
+        val allClothesList = currentClothes ?: return
         _selectedItems.value?.let { selected ->
-            val existingIds = clothes.map { it.id }.toSet()
-            val selectionChanged = selected.removeAll { it.id !in existingIds }
-            if (selectionChanged) {
-                postSortedSelectedItems(selected)
-                checkForChanges()
+            val currentSelectedIds = selected.map { it.id }.toSet()
+            val refreshedSelectedItems = allClothesList.filter { it.id in currentSelectedIds }.toMutableList()
+
+            if (selected.toSet() != refreshedSelectedItems.toSet()) {
+                setSortedSelectedItems(refreshedSelectedItems)
             }
         }
     }
@@ -114,14 +114,14 @@ class EditStyleViewModel(application: Application) : AndroidViewModel(applicatio
                     isInitialLoadComplete = true
                 }
 
-                postSortedSelectedItems(styleWithItems.items.toMutableList())
-                currentStyleName.postValue(styleWithItems.style.styleName)
-                currentSeason.postValue(styleWithItems.style.season)
-                toolbarTitle.postValue("'${styleWithItems.style.styleName}' 수정")
+                setSortedSelectedItems(styleWithItems.items.toMutableList())
+                currentStyleName.value = styleWithItems.style.styleName
+                currentSeason.value = styleWithItems.style.season
+                toolbarTitle.value = "'${styleWithItems.style.styleName}' 수정"
 
                 checkForChanges()
             } else {
-                _isDeleteComplete.postValue(true)
+                _isDeleteComplete.value = true
             }
         }
     }
@@ -130,11 +130,20 @@ class EditStyleViewModel(application: Application) : AndroidViewModel(applicatio
         if (!isInitialLoadComplete) return
         viewModelScope.launch {
             val allCurrentClothes = clothingRepository.getAllItemsList()
-            validateSelectedItems(allCurrentClothes)
+            _selectedItems.value?.let { currentSelectedItems ->
+                val currentSelectedIds = currentSelectedItems.map { it.id }.toSet()
+                val refreshedSelectedItems = allCurrentClothes
+                    .filter { it.id in currentSelectedIds }
+                    .toMutableList()
+
+                if (currentSelectedItems.map { it.id }.toSet() != refreshedSelectedItems.map { it.id }.toSet()) {
+                    setSortedSelectedItems(refreshedSelectedItems)
+                }
+            }
         }
     }
 
-    private fun postSortedSelectedItems(items: MutableList<ClothingItem>) {
+    private fun setSortedSelectedItems(items: MutableList<ClothingItem>) {
         val categoryOrder = mapOf(
             "상의" to 1, "하의" to 2, "아우터" to 3, "신발" to 4,
             "가방" to 5, "모자" to 6, "기타" to 7
@@ -142,8 +151,10 @@ class EditStyleViewModel(application: Application) : AndroidViewModel(applicatio
         val sortedList = items.sortedWith(
             compareBy { categoryOrder[it.category] ?: 8 }
         ).toMutableList()
-        _selectedItems.postValue(sortedList)
+        _selectedItems.value = sortedList
+        checkForChanges()
     }
+
 
     fun setClothingFilter(category: String) {
         if (_clothingCategory.value != category) {
@@ -153,25 +164,25 @@ class EditStyleViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun toggleItemSelection(item: ClothingItem) {
         val currentList = _selectedItems.value ?: mutableListOf()
-        val isSelected = currentList.any { it.id == item.id }
-
-        if (isSelected) {
+        if (currentList.any { it.id == item.id }) {
             currentList.removeAll { it.id == item.id }
         } else {
             if (currentList.size < 9) {
                 currentList.add(item)
             }
         }
-        postSortedSelectedItems(currentList)
-        checkForChanges()
+        setSortedSelectedItems(currentList)
     }
 
+
     private fun checkForChanges() {
-        if (originalStyle == null || initialItemIds == null) return
+        if (originalStyle == null || initialItemIds == null) {
+            return
+        }
 
         val nameChanged = originalStyle?.styleName != currentStyleName.value
         val seasonChanged = originalStyle?.season != currentSeason.value
-        val itemsChanged = initialItemIds != _selectedItems.value?.map { it.id }?.toSet()
+        val itemsChanged = initialItemIds != selectedItems.value?.map { it.id }?.toSet()
 
         val hasChanges = nameChanged || seasonChanged || itemsChanged
         val isSavable = hasChanges && !currentStyleName.value.isNullOrEmpty() && !currentSeason.value.isNullOrEmpty()
@@ -207,7 +218,6 @@ class EditStyleViewModel(application: Application) : AndroidViewModel(applicatio
         }
 
         if (items.isNullOrEmpty()) {
-            deleteStyle()
             return
         }
 
@@ -219,6 +229,22 @@ class EditStyleViewModel(application: Application) : AndroidViewModel(applicatio
                 _isUpdateComplete.postValue(true)
             } finally {
                 _isProcessing.value = false
+            }
+        }
+    }
+
+    fun handleCancelAndDeleteIfOrphaned() {
+        viewModelScope.launch {
+            val initialIds = initialItemIds ?: return@launch
+            if (initialIds.isEmpty()) return@launch
+
+            val allCurrentClothes = clothingRepository.getAllItemsList()
+            val allCurrentIds = allCurrentClothes.map { it.id }.toSet()
+
+            val stillExist = initialIds.any { it in allCurrentIds }
+
+            if (!stillExist) {
+                originalStyle?.let { styleRepository.deleteStyleAndRefs(it) }
             }
         }
     }
