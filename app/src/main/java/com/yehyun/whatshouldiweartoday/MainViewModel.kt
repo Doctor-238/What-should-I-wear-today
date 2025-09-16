@@ -3,6 +3,7 @@ package com.yehyun.whatshouldiweartoday
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import com.yehyun.whatshouldiweartoday.util.Event
 
 class MainViewModel : ViewModel() {
 
@@ -10,11 +11,18 @@ class MainViewModel : ViewModel() {
     private val _resetAllEvent = MutableLiveData<Boolean>()
     val resetAllEvent: LiveData<Boolean> = _resetAllEvent
 
+    private val _settingsChangedEvent = MutableLiveData<Event<Unit>>()
+    val settingsChangedEvent: LiveData<Event<Unit>> = _settingsChangedEvent
+
     fun triggerResetAll() {
         _resetAllEvent.value = true
     }
 
     fun onResetAllEventHandled() {
         _resetAllEvent.value = false
+    }
+
+    fun notifySettingsChanged() {
+        _settingsChangedEvent.value = Event(Unit)
     }
 }

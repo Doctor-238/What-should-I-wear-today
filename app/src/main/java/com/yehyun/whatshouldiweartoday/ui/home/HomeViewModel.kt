@@ -74,6 +74,9 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     private val _switchToTab = MutableLiveData<Int?>()
     val switchToTab: LiveData<Int?> = _switchToTab
 
+    private val _todayRecommendedClothingIds = MutableLiveData<Set<Int>>(emptySet())
+    val todayRecommendedClothingIds: LiveData<Set<Int>> = _todayRecommendedClothingIds
+
     var permissionRequestedThisSession = false
 
     companion object {
@@ -170,11 +173,12 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         } else {
             _todayWeatherSummary.postValue(null)
             _todayRecommendation.postValue(null)
+            _todayRecommendedClothingIds.postValue(emptySet())
         }
         if (tomorrowForecasts.isNotEmpty()) {
             val summary = createDailySummary(tomorrowForecasts)
             _tomorrowWeatherSummary.postValue(summary)
-            _tomorrowRecommendation.postValue(generateRecommendation(summary, allClothes))
+            _tomorrowRecommendation.postValue(generateRecommendation(summary, allClothes, isToday = false))
         } else {
             _tomorrowWeatherSummary.postValue(null)
             _tomorrowRecommendation.postValue(null)
@@ -195,7 +199,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         return DailyWeatherSummary("", maxTemp, minTemp, maxFeelsLike, minFeelsLike, weatherCondition, pop)
     }
 
-    fun generateRecommendation(summary: DailyWeatherSummary, allClothes: List<ClothingItem>): RecommendationResult {
+    fun generateRecommendation(summary: DailyWeatherSummary, allClothes: List<ClothingItem>, isToday: Boolean = true): RecommendationResult {
         val maxTempCriteria = (summary.maxTemp + summary.maxFeelsLike) / 2
         val minTempCriteria = (summary.minTemp + summary.minFeelsLike) / 2
         val temperatureTolerance = settingsManager.getTemperatureTolerance()
@@ -245,6 +249,13 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             summary.precipitationProbability >= 70 -> "비가 올 예정이니 우산을 꼭 챙겨주세요!"
             summary.precipitationProbability >= 40 -> "비올 확률이 있어요. 우산을 챙겨주세요!"
             else -> ""
+        }
+
+        if (isToday) {
+            val allRecommendedIds = (recommendedTops + recommendedBottoms + recommendedOuters + bestCombination)
+                .map { it.id }
+                .toSet()
+            _todayRecommendedClothingIds.postValue(allRecommendedIds)
         }
 
         return RecommendationResult(

@@ -150,6 +150,7 @@ class EditClothingViewModel(application: Application) : AndroidViewModel(applica
             viewModelScope.launch {
                 try {
                     repository.delete(itemToDelete)
+                    styleDao.deleteOrphanedStyles()
                     _isDeleteComplete.postValue(true)
                 } finally {
                     _isProcessing.postValue(false)
