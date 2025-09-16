@@ -117,7 +117,14 @@ class StyleFragment : Fragment(), OnTabReselectedListener {
             }
         }
 
-        viewModel.isDeleteMode.observe(viewLifecycleOwner) { notifyAdapterDeleteModeChanged() }
+        viewModel.isDeleteMode.observe(viewLifecycleOwner) {
+            // 모든 프래그먼트의 드래그 상태를 초기화
+            for (i in 0 until (binding.viewPagerStyle.adapter?.itemCount ?: 0)) {
+                val fragment = childFragmentManager.findFragmentByTag("f$i") as? StyleListFragment
+                fragment?.resetDragState()
+            }
+            notifyAdapterDeleteModeChanged()
+        }
         viewModel.selectedItems.observe(viewLifecycleOwner) { notifyAdapterSelectionChanged() }
 
         viewModel.longDragStateByTab.observe(viewLifecycleOwner) { stateMap ->
@@ -214,16 +221,14 @@ class StyleFragment : Fragment(), OnTabReselectedListener {
             }
             override fun onTabUnselected(tab: TabLayout.Tab?) {
                 tab?.position?.let { position ->
-                    viewModel.setLongDragStateForTab(position, false)
-                    val fragment = (binding.viewPagerStyle.adapter as? StyleViewPagerAdapter)?.getFragment(position) as? StyleListFragment
+                    val fragment = childFragmentManager.findFragmentByTag("f$position") as? StyleListFragment
                     fragment?.resetDragState()
                 }
             }
             override fun onTabReselected(tab: TabLayout.Tab?) {
                 tab?.position?.let { position ->
                     (childFragmentManager.findFragmentByTag("f$position") as? StyleListFragment)?.scrollToTop()
-                    viewModel.setLongDragStateForTab(position, false)
-                    val fragment = (binding.viewPagerStyle.adapter as? StyleViewPagerAdapter)?.getFragment(position) as? StyleListFragment
+                    val fragment = childFragmentManager.findFragmentByTag("f$position") as? StyleListFragment
                     fragment?.resetDragState()
                 }
             }
@@ -327,16 +332,20 @@ class StyleFragment : Fragment(), OnTabReselectedListener {
         }
 
         if (_binding == null) return
+        val currentPosition = binding.viewPagerStyle.currentItem
+        val fragment = childFragmentManager.findFragmentByTag("f$currentPosition") as? StyleListFragment
+
         if (binding.viewPagerStyle.currentItem == 0) {
-            val fragment = childFragmentManager.findFragmentByTag("f0") as? StyleListFragment
             fragment?.scrollToTop()
         } else {
             binding.viewPagerStyle.currentItem = 0
             binding.viewPagerStyle.post {
-                val fragment = childFragmentManager.findFragmentByTag("f0") as? StyleListFragment
-                fragment?.scrollToTop()
+                val firstFragment = childFragmentManager.findFragmentByTag("f0") as? StyleListFragment
+                firstFragment?.scrollToTop()
             }
         }
+        // 현재 프래그먼트의 드래그 상태 초기화
+        fragment?.resetDragState()
     }
 
     override fun onDestroyView() {

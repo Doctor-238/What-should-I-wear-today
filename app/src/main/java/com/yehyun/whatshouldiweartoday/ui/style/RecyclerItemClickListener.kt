@@ -56,6 +56,22 @@ class RecyclerItemClickListener(
         })
     }
 
+    fun resetDragState() {
+        handler.removeCallbacks(longPressRunnable)
+        longDragRunnable?.let { longDragHandler.removeCallbacks(it) }
+
+        if (touchedView != null) {
+            touchedView?.isPressed = false
+            touchedView = null
+        }
+
+        isDragging = false
+        if (isLongDragActive) {
+            isLongDragActive = false
+            onLongDragStateChanged(false) // UI 업데이트를 위해 콜백 호출
+        }
+    }
+
 
     private val longPressRunnable = Runnable {
         touchedView?.let { view ->

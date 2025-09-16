@@ -28,7 +28,7 @@ class StyleListFragment : Fragment() {
     private var tabIndex: Int = 0
 
     fun resetDragState() {
-        itemClickListener?.isDragging = false
+        itemClickListener?.resetDragState()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
