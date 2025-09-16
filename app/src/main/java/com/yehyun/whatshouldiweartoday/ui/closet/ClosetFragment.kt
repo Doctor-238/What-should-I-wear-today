@@ -352,14 +352,17 @@ class ClosetFragment : Fragment(), OnTabReselectedListener {
     }
 
     private fun startBatchAddWorker(imagePaths: Array<String>) {
+        val batchId = "batch_${System.currentTimeMillis()}"
         val workRequest = OneTimeWorkRequestBuilder<BatchAddWorker>()
             .setInputData(workDataOf(
+                BatchAddWorker.KEY_BATCH_ID to batchId,
                 BatchAddWorker.KEY_IMAGE_PATHS to imagePaths,
                 BatchAddWorker.KEY_API to getString(R.string.gemini_api_key)
             ))
             .build()
-        viewModel.workManager.enqueueUniqueWork("batch_add", ExistingWorkPolicy.REPLACE, workRequest)
+        viewModel.workManager.enqueueUniqueWork("batch_add", ExistingWorkPolicy.KEEP, workRequest)
     }
+
 
     override fun onResume() {
         super.onResume()

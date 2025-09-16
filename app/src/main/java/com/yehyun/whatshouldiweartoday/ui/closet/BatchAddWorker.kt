@@ -1,4 +1,3 @@
-
 package com.yehyun.whatshouldiweartoday.ui.closet
 
 import android.app.NotificationManager
@@ -46,8 +45,11 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
     private val clothingDao = AppDatabase.getDatabase(context).clothingDao()
     private val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
     private val settingsManager = SettingsManager(context)
+    private val prefs = context.getSharedPreferences("batch_add_progress", Context.MODE_PRIVATE)
+
 
     companion object {
+        const val KEY_BATCH_ID = "batch_id"
         const val KEY_IMAGE_PATHS = "image_paths"
         const val KEY_API = "api_key"
         const val PROGRESS_CURRENT = "current"
@@ -68,10 +70,15 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
     }
 
     override suspend fun doWork(): Result {
+        val batchId = inputData.getString(KEY_BATCH_ID) ?: return Result.failure()
         val imagePaths = inputData.getStringArray(KEY_IMAGE_PATHS) ?: return Result.failure()
         val apiKey = inputData.getString(KEY_API) ?: return Result.failure()
-        var successCount = 0
+
+        val completedPaths = prefs.getStringSet(batchId, emptySet())?.toMutableSet() ?: mutableSetOf()
+        var successCount = completedPaths.size
         var failureCount = 0
+        var currentProgress = completedPaths.size
+
 
         try {
             setForeground(getForegroundInfo())
@@ -82,12 +89,23 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
             for (i in imagePaths.indices) {
                 if (isStopped) break
 
+                val path = imagePaths[i]
+                if (completedPaths.contains(path)) {
+                    continue
+                }
+
+
                 try {
-                    val path = imagePaths[i]
                     val bitmap = getCorrectlyOrientedBitmap(path)
                     if (bitmap != null) {
                         val saved = analyzeAndSave(bitmap, generativeModel)
-                        if (saved) successCount++ else failureCount++
+                        if (saved) {
+                            successCount++
+                            completedPaths.add(path)
+                            prefs.edit().putStringSet(batchId, completedPaths).apply()
+                        } else {
+                            failureCount++
+                        }
                     } else {
                         failureCount++
                     }
@@ -96,12 +114,14 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
                     failureCount++
                 }
 
+                currentProgress++
+
                 if (isStopped) break
 
-                val progressData = workDataOf(PROGRESS_CURRENT to i + 1, PROGRESS_TOTAL to totalItems)
+                val progressData = workDataOf(PROGRESS_CURRENT to currentProgress, PROGRESS_TOTAL to totalItems)
                 setProgress(progressData)
 
-                val notification = createProgressNotification(i + 1, totalItems).build()
+                val notification = createProgressNotification(currentProgress, totalItems).build()
                 notificationManager.notify(FOREGROUND_NOTIFICATION_ID, notification)
             }
         } catch (e: Exception) {
@@ -109,7 +129,7 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
             showFinalNotification("작업 실패", "옷 추가 중 오류가 발생했습니다.")
             return Result.failure()
         } finally {
-            cleanup(imagePaths)
+            cleanup(imagePaths, batchId)
         }
 
         val outputData = workDataOf(
@@ -118,7 +138,8 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
         )
 
         val message = if (isStopped) {
-            "작업이 취소되었습니다."
+            "이미 추가된 옷은 자동으로 삭제되지 않습니다"
+
         } else {
             "$successCount 개의 옷을 성공적으로 추가했습니다.\n$failureCount 개의 옷이 추가되지 않았습니다."
         }
@@ -128,17 +149,22 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
         return Result.success(outputData)
     }
 
-    private fun cleanup(imagePaths: Array<String>) {
+    private fun cleanup(imagePaths: Array<String>, batchId: String) {
         notificationManager.cancel(FOREGROUND_NOTIFICATION_ID)
-        imagePaths.forEach { path ->
-            try {
-                val file = File(path)
-                if (file.exists()) file.delete()
-            } catch (e: Exception) {
-                Log.e("BatchAddWorker", "Failed to delete cache file: $path", e)
+
+        if (!isStopped) {
+            prefs.edit().remove(batchId).apply()
+            imagePaths.forEach { path ->
+                try {
+                    val file = File(path)
+                    if (file.exists()) file.delete()
+                } catch (e: Exception) {
+                    Log.e("BatchAddWorker", "Failed to delete cache file: $path", e)
+                }
             }
         }
     }
+
 
     private fun createProgressNotification(current: Int, total: Int): NotificationCompat.Builder {
         val title = if (total > 0) "새 옷 추가 중 ($current/$total)" else "새 옷 추가 중"
