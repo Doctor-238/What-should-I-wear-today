@@ -16,6 +16,7 @@ import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
 import androidx.core.widget.addTextChangedListener
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
@@ -27,13 +28,17 @@ import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.textfield.TextInputEditText
+import com.yehyun.whatshouldiweartoday.MainViewModel
 import com.yehyun.whatshouldiweartoday.R
 import com.yehyun.whatshouldiweartoday.ui.OnTabReselectedListener
+import com.yehyun.whatshouldiweartoday.ui.home.HomeViewModel
 import kotlin.math.abs
 
 class EditStyleFragment : Fragment(R.layout.fragment_edit_style), OnTabReselectedListener {
 
     private val viewModel: EditStyleViewModel by viewModels()
+    private val homeViewModel: HomeViewModel by activityViewModels()
+    private val mainViewModel: MainViewModel by activityViewModels()
     private val args: EditStyleFragmentArgs by navArgs()
     private lateinit var tabLayout: TabLayout
 
@@ -48,10 +53,13 @@ class EditStyleFragment : Fragment(R.layout.fragment_edit_style), OnTabReselecte
     private var nameTextWatcher: TextWatcher? = null
     private val defaultItemAnimator = DefaultItemAnimator()
 
+    private var recommendedIdsSet: Set<Int> = emptySet()
+    private var packableIdsSet: Set<Int> = emptySet()
+    private var toast: Toast? = null
 
     override fun onResume() {
         super.onResume()
-        viewModel.refreshCurrentStyle()
+        viewModel.onFragmentResume()
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -78,6 +86,18 @@ class EditStyleFragment : Fragment(R.layout.fragment_edit_style), OnTabReselecte
     private fun observeViewModel() {
         viewModel.toolbarTitle.observe(viewLifecycleOwner) { title ->
             toolbar.title = title
+        }
+
+        homeViewModel.todayRecommendedClothingIds.observe(viewLifecycleOwner) { ids ->
+            recommendedIdsSet = ids
+            adapterForAll.notifyDataSetChanged()
+            adapterForSelected.notifyDataSetChanged()
+        }
+
+        homeViewModel.todayRecommendation.observe(viewLifecycleOwner) { result ->
+            packableIdsSet = result?.packableOuters?.map { it.id }?.toSet() ?: emptySet()
+            adapterForAll.notifyDataSetChanged()
+            adapterForSelected.notifyDataSetChanged()
         }
 
         viewModel.currentStyleName.observe(viewLifecycleOwner) { name ->
@@ -135,15 +155,22 @@ class EditStyleFragment : Fragment(R.layout.fragment_edit_style), OnTabReselecte
 
         viewModel.isUpdateComplete.observe(viewLifecycleOwner) { isComplete ->
             if (isComplete) {
-                Toast.makeText(context, "저장되었습니다.", Toast.LENGTH_SHORT).show()
+                showToast("저장되었습니다.")
                 findNavController().popBackStack()
             }
         }
 
         viewModel.isDeleteComplete.observe(viewLifecycleOwner) { isComplete ->
             if (isComplete) {
-                Toast.makeText(context, "'${viewModel.getOriginalStyleName()}' 스타일이 삭제되었습니다.", Toast.LENGTH_SHORT).show()
+                showToast("'${viewModel.getOriginalStyleName()}' 스타일이 삭제되었습니다.")
                 findNavController().popBackStack()
+            }
+        }
+
+        mainViewModel.settingsChangedEvent.observe(viewLifecycleOwner) { event ->
+            event.getContentIfNotHandled()?.let {
+                adapterForAll.notifyDataSetChanged()
+                adapterForSelected.notifyDataSetChanged()
             }
         }
     }
@@ -181,7 +208,11 @@ class EditStyleFragment : Fragment(R.layout.fragment_edit_style), OnTabReselecte
         val rvSelectedItems = view.findViewById<RecyclerView>(R.id.rv_selected_items)
         rvSelectedItems.layoutManager = GridLayoutManager(context, 3)
         rvSelectedItems.itemAnimator = DefaultItemAnimator()
-        adapterForSelected = SaveStyleAdapter { false }
+        adapterForSelected = SaveStyleAdapter(
+            isItemSelected = { false },
+            isItemRecommended = { itemId -> recommendedIdsSet.contains(itemId) },
+            isItemPackable = { itemId -> packableIdsSet.contains(itemId) }
+        )
         rvSelectedItems.adapter = adapterForSelected
 
         rvSelectedItems.addOnItemTouchListener(RecyclerItemClickListener(
@@ -203,7 +234,11 @@ class EditStyleFragment : Fragment(R.layout.fragment_edit_style), OnTabReselecte
 
         val rvAllItems = view.findViewById<RecyclerView>(R.id.rv_all_items_for_edit)
         rvAllItems.itemAnimator = DefaultItemAnimator()
-        adapterForAll = SaveStyleAdapter { false }
+        adapterForAll = SaveStyleAdapter(
+            isItemSelected = { false },
+            isItemRecommended = { itemId -> recommendedIdsSet.contains(itemId) },
+            isItemPackable = { itemId -> packableIdsSet.contains(itemId) }
+        )
         rvAllItems.adapter = adapterForAll
 
         rvAllItems.addOnItemTouchListener(RecyclerItemClickListener(
@@ -279,6 +314,12 @@ class EditStyleFragment : Fragment(R.layout.fragment_edit_style), OnTabReselecte
         }
     }
 
+    private fun showToast(message: String, duration: Int = Toast.LENGTH_SHORT) {
+        toast?.cancel()
+        toast = Toast.makeText(context, message, duration)
+        toast?.show()
+    }
+
     private fun showSaveChangesDialog() {
         AlertDialog.Builder(requireContext())
             .setMessage("변경사항을 저장하시겠습니까?")
@@ -286,8 +327,7 @@ class EditStyleFragment : Fragment(R.layout.fragment_edit_style), OnTabReselecte
                 saveChangesAndExit()
             }
             .setNegativeButton("아니오") { _, _ ->
-                if (viewModel.selectedItems.value.isNullOrEmpty()) {
-                    viewModel.deleteStyle()}
+                viewModel.handleCancelAndDeleteIfOrphaned()
                 findNavController().popBackStack()
             }
             .setCancelable(true)
@@ -308,16 +348,16 @@ class EditStyleFragment : Fragment(R.layout.fragment_edit_style), OnTabReselecte
     private fun saveChangesAndExit() {
         val styleName = editTextName.text.toString().trim()
         if (styleName.isEmpty()) {
-            Toast.makeText(context, "스타일 이름을 입력해주세요.", Toast.LENGTH_SHORT).show()
+            showToast("스타일 이름을 입력해주세요.")
             return
         }
         if (viewModel.selectedItems.value.isNullOrEmpty()) {
-            Toast.makeText(context, "스타일에 추가된 옷이 없습니다.", Toast.LENGTH_LONG).show()
+            showToast("스타일에 추가된 옷이 없습니다.", Toast.LENGTH_LONG)
             return
         }
         val selectedSeasonId = chipGroupSeason.checkedChipId
         if (selectedSeasonId == View.NO_ID) {
-            Toast.makeText(context, "계절을 선택해주세요.", Toast.LENGTH_SHORT).show()
+            showToast("계절을 선택해주세요.")
             return
         }
         viewModel.updateStyle()
@@ -345,6 +385,7 @@ class EditStyleFragment : Fragment(R.layout.fragment_edit_style), OnTabReselecte
         super.onDestroyView()
         nameTextWatcher?.let { editTextName.removeTextChangedListener(it) }
         onBackPressedCallback.remove()
+        toast?.cancel()
     }
 
     override fun onTabReselected() {

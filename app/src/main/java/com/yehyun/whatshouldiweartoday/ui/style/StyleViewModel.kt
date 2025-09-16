@@ -155,11 +155,16 @@ class StyleViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun resetAllDragStates() {
+        _longDragStateByTab.value = emptyMap()
+    }
+
     fun enterDeleteMode(initialStyleId: Long) {
         if (_isDeleteMode.value == false) {
             viewModelScope.launch { _resetSearchEvent.emit(Unit) }
             _isDeleteMode.value = true
             _selectedItems.value = setOf(initialStyleId)
+            resetAllDragStates()
         }
     }
 
@@ -168,6 +173,7 @@ class StyleViewModel(application: Application) : AndroidViewModel(application) {
             viewModelScope.launch { _resetSearchEvent.emit(Unit) }
             _isDeleteMode.value = false
             _selectedItems.value = emptySet()
+            resetAllDragStates()
         }
     }
 

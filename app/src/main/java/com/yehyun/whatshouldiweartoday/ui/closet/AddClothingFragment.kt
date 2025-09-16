@@ -71,6 +71,7 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabResel
     private lateinit var onBackPressedCallback: OnBackPressedCallback
 
     private var lastClickTime = 0L
+    private var toast: Toast? = null
 
     private val pickImageLauncher = registerForActivityResult(
         ActivityResultContracts.GetContent()
@@ -80,7 +81,7 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabResel
             if (bitmap != null) {
                 viewModel.onImageSelected(bitmap, getString(R.string.gemini_api_key))
             } else {
-                Toast.makeText(requireContext(), "이미지를 불러오는 데 실패했습니다.", Toast.LENGTH_SHORT).show()
+                showToast("이미지를 불러오는 데 실패했습니다.")
             }
         }
     }
@@ -126,6 +127,7 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabResel
     override fun onDestroyView() {
         super.onDestroyView()
         onBackPressedCallback.remove()
+        toast?.cancel()
     }
 
     private fun setupViews(view: View) {
@@ -224,7 +226,7 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabResel
 
         viewModel.errorMessage.observe(viewLifecycleOwner) { message ->
             if (!message.isNullOrEmpty()) {
-                Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                showToast(message, Toast.LENGTH_LONG)
                 viewModel.clearErrorMessage()
             }
         }
@@ -270,7 +272,7 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabResel
     private fun saveClothingItem() {
         val name = editTextName.text.toString().trim()
         if (name.isEmpty()) {
-            Toast.makeText(requireContext(), "옷 이름을 입력해주세요.", Toast.LENGTH_SHORT).show()
+            showToast("옷 이름을 입력해주세요.")
             return
         }
         val imm = context?.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
@@ -294,6 +296,12 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabResel
         } else {
             findNavController().popBackStack()
         }
+    }
+
+    private fun showToast(message: String, duration: Int = Toast.LENGTH_SHORT) {
+        toast?.cancel()
+        toast = Toast.makeText(requireContext(), message, duration)
+        toast?.show()
     }
 
     private fun showCancelDialog() {
