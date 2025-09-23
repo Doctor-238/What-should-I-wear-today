@@ -1,5 +1,6 @@
 package com.yehyun.whatshouldiweartoday.ui.style
 
+import android.content.res.Configuration
 import android.graphics.Color
 import android.graphics.Typeface
 import android.os.Bundle
@@ -10,6 +11,8 @@ import android.text.style.StyleSpan
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewConfiguration
+import android.view.ViewGroup
+import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
@@ -241,6 +244,15 @@ class EditStyleFragment : Fragment(R.layout.fragment_edit_style), OnTabReselecte
         )
         rvAllItems.adapter = adapterForAll
 
+        val isTablet = (resources.configuration.screenLayout and Configuration.SCREENLAYOUT_SIZE_MASK) >= Configuration.SCREENLAYOUT_SIZE_LARGE
+        if (isTablet) {
+            val newHeightInDp = 550
+            val newHeightInPixels = (newHeightInDp * resources.displayMetrics.density).toInt()
+            val layoutParams = rvAllItems.layoutParams
+            layoutParams.height = newHeightInPixels
+            rvAllItems.layoutParams = layoutParams
+        }
+
         rvAllItems.addOnItemTouchListener(RecyclerItemClickListener(
             context = requireContext(),
             recyclerView = rvAllItems,
@@ -369,6 +381,22 @@ class EditStyleFragment : Fragment(R.layout.fragment_edit_style), OnTabReselecte
         if (tabLayout.tabCount == 0) {
             categories.forEach { tabLayout.addTab(tabLayout.newTab().setText(it)) }
         }
+
+        val isTablet = (resources.configuration.screenLayout and Configuration.SCREENLAYOUT_SIZE_MASK) >= Configuration.SCREENLAYOUT_SIZE_LARGE
+        if (isTablet) {
+            val tabStrip = tabLayout.getChildAt(0) as ViewGroup
+            tabStrip.post {
+                val desiredWidthInDp = 90
+                val desiredWidthInPixels = (desiredWidthInDp * resources.displayMetrics.density).toInt()
+                for (i in 0 until tabStrip.childCount) {
+                    val tab = tabStrip.getChildAt(i)
+                    val params = tab.layoutParams as LinearLayout.LayoutParams
+                    params.width = desiredWidthInPixels
+                    tab.layoutParams = params
+                }
+            }
+        }
+
         tabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
             override fun onTabSelected(tab: TabLayout.Tab?) {
                 rvAllItems.itemAnimator = null

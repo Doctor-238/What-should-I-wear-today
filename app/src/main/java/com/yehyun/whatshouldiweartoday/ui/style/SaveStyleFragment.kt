@@ -1,11 +1,14 @@
 package com.yehyun.whatshouldiweartoday.ui.style
 
+import android.content.res.Configuration
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.View
+import android.view.ViewGroup
 import android.widget.Button
 import android.widget.FrameLayout
+import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
@@ -83,6 +86,22 @@ class SaveStyleFragment : Fragment(R.layout.fragment_save_style), OnTabReselecte
         if (tabLayout.tabCount == 0) {
             categories.forEach { tabLayout.addTab(tabLayout.newTab().setText(it)) }
         }
+
+        val isTablet = (resources.configuration.screenLayout and Configuration.SCREENLAYOUT_SIZE_MASK) >= Configuration.SCREENLAYOUT_SIZE_LARGE
+        if (isTablet) {
+            val tabStrip = tabLayout.getChildAt(0) as ViewGroup
+            tabStrip.post {
+                val desiredWidthInDp = 90
+                val desiredWidthInPixels = (desiredWidthInDp * resources.displayMetrics.density).toInt()
+                for (i in 0 until tabStrip.childCount) {
+                    val tab = tabStrip.getChildAt(i)
+                    val params = tab.layoutParams as LinearLayout.LayoutParams
+                    params.width = desiredWidthInPixels
+                    tab.layoutParams = params
+                }
+            }
+        }
+
         tabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
             override fun onTabSelected(tab: TabLayout.Tab?) {
                 recyclerView.itemAnimator = null
@@ -94,6 +113,7 @@ class SaveStyleFragment : Fragment(R.layout.fragment_save_style), OnTabReselecte
             }
         })
     }
+
 
     private fun setupRecyclerView(view: View) {
         adapter = SaveStyleAdapter(
@@ -109,6 +129,15 @@ class SaveStyleFragment : Fragment(R.layout.fragment_save_style), OnTabReselecte
         )
         recyclerView.adapter = adapter
         recyclerView.itemAnimator = defaultItemAnimator
+
+        val isTablet = (resources.configuration.screenLayout and Configuration.SCREENLAYOUT_SIZE_MASK) >= Configuration.SCREENLAYOUT_SIZE_LARGE
+        if (isTablet) {
+            val newHeightInDp = 550
+            val newHeightInPixels = (newHeightInDp * resources.displayMetrics.density).toInt()
+            val layoutParams = recyclerView.layoutParams
+            layoutParams.height = newHeightInPixels
+            recyclerView.layoutParams = layoutParams
+        }
 
         recyclerView.addOnItemTouchListener(RecyclerItemClickListener(
             context = requireContext(),
