@@ -3,6 +3,7 @@ package com.yehyun.whatshouldiweartoday.ui.closet
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.content.res.Configuration
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -13,6 +14,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
+import android.widget.LinearLayout
 import android.widget.Spinner
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
@@ -225,6 +227,22 @@ class ClosetFragment : Fragment(), OnTabReselectedListener {
         TabLayoutMediator(binding.tabLayoutCategory, binding.viewPagerCloset) { tab, position ->
             tab.text = categories[position]
         }.attach()
+
+        val isTablet = (resources.configuration.screenLayout and Configuration.SCREENLAYOUT_SIZE_MASK) >= Configuration.SCREENLAYOUT_SIZE_LARGE
+        if (isTablet) {
+            val tabStrip = binding.tabLayoutCategory.getChildAt(0) as ViewGroup
+            tabStrip.post {
+                val desiredWidthInDp = 90
+                val desiredWidthInPixels = (desiredWidthInDp * resources.displayMetrics.density).toInt()
+                for (i in 0 until tabStrip.childCount) {
+                    val tab = tabStrip.getChildAt(i)
+                    val params = tab.layoutParams as LinearLayout.LayoutParams
+                    params.width = desiredWidthInPixels
+                    tab.layoutParams = params
+                }
+            }
+        }
+
 
         binding.tabLayoutCategory.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
             override fun onTabSelected(tab: TabLayout.Tab?) {}
