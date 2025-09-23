@@ -1,5 +1,6 @@
 package com.yehyun.whatshouldiweartoday.ui.closet
 
+import android.content.res.Configuration
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -91,7 +92,10 @@ class ClothingListFragment : Fragment() {
         }
         adapter.registerAdapterDataObserver(dataObserver)
 
-        binding.recyclerViewClothingList.layoutManager = GridLayoutManager(context, 2)
+        val isTablet = (resources.configuration.screenLayout and Configuration.SCREENLAYOUT_SIZE_MASK) >= Configuration.SCREENLAYOUT_SIZE_LARGE
+        val spanCount = if (isTablet) 3 else 2
+
+        binding.recyclerViewClothingList.layoutManager = GridLayoutManager(context, spanCount)
         binding.recyclerViewClothingList.adapter = adapter
     }
 
