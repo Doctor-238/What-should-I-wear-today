@@ -4,6 +4,7 @@ import android.content.res.Configuration
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
+import android.util.TypedValue
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
@@ -14,6 +15,7 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
+import androidx.core.view.children
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
@@ -68,6 +70,15 @@ class SaveStyleFragment : Fragment(R.layout.fragment_save_style), OnTabReselecte
         scrollView = view.findViewById(R.id.scroll_view_content)
 
         tvSelectionGuide.text = "스타일에 포함할 옷을 선택하세요 (0/9)"
+
+        val isTablet = (resources.configuration.screenLayout and Configuration.SCREENLAYOUT_SIZE_MASK) >= Configuration.SCREENLAYOUT_SIZE_LARGE
+        if (isTablet) {
+            chipGroupSeason.children.forEach { chipView ->
+                if (chipView is Chip) {
+                    chipView.setTextSize(TypedValue.COMPLEX_UNIT_PX, chipView.textSize * 1.2f)
+                }
+            }
+        }
 
 
         setupRecyclerView(view)

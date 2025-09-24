@@ -158,11 +158,17 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="8dp"
+                android:layout_marginTop="24dp"
+                android:background="@color/bottom_nav_background" />
+
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="16dp"
-                android:layout_marginTop="24dp"
+                android:layout_marginTop="16dp"
                 android:text="옷장에서 아이템 추가/제거"
                 android:textSize="16sp"
                 android:textStyle="bold" />
@@ -198,7 +204,8 @@
             <View
                 android:layout_width="match_parent"
                 android:layout_height="1dp"
-                android:background="@color/bottom_nav_background" />
+                android:background="@color/bottom_nav_background"
+                />
 
             <Button
                 android:id="@+id/button_delete_style"
@@ -209,8 +216,8 @@
                 android:layout_marginTop="4dp"
                 android:paddingHorizontal="48dp"
                 android:text="삭제하기"
-                android:textStyle="bold"
                 android:textColor="?attr/colorError"
+                android:textStyle="bold"
                 app:cornerRadius="24dp"
                 app:strokeColor="?attr/colorError" />
         </LinearLayout>
