@@ -1,5 +1,6 @@
 package com.yehyun.whatshouldiweartoday.ui.home
 
+import android.content.res.Configuration
 import android.net.Uri
 import android.util.TypedValue
 import android.view.LayoutInflater
@@ -38,6 +39,15 @@ class RecommendationAdapter(
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecommendationViewHolder {
         val view = LayoutInflater.from(parent.context).inflate(R.layout.item_recommendation_clothing_square, parent, false)
+        val context = parent.context
+        val isTablet = (context.resources.configuration.screenLayout and Configuration.SCREENLAYOUT_SIZE_MASK) >= Configuration.SCREENLAYOUT_SIZE_LARGE
+        if (isTablet) {
+            val newSize = (140 * context.resources.displayMetrics.density).toInt()
+            val layoutParams = view.layoutParams
+            layoutParams.width = newSize
+            layoutParams.height = newSize
+            view.layoutParams = layoutParams
+        }
         return RecommendationViewHolder(view)
     }
 

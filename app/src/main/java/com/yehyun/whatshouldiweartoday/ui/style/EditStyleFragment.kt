@@ -8,6 +8,7 @@ import android.text.SpannableString
 import android.text.TextWatcher
 import android.text.style.ForegroundColorSpan
 import android.text.style.StyleSpan
+import android.util.TypedValue
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewConfiguration
@@ -17,6 +18,7 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
+import androidx.core.view.children
 import androidx.core.widget.addTextChangedListener
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
@@ -70,6 +72,16 @@ class EditStyleFragment : Fragment(R.layout.fragment_edit_style), OnTabReselecte
         toolbar = view.findViewById(R.id.toolbar_edit_style)
         chipGroupSeason = view.findViewById(R.id.chip_group_season_edit)
         setupViews(view)
+
+        val isTablet = (resources.configuration.screenLayout and Configuration.SCREENLAYOUT_SIZE_MASK) >= Configuration.SCREENLAYOUT_SIZE_LARGE
+        if (isTablet) {
+            chipGroupSeason.children.forEach { chipView ->
+                if (chipView is Chip) {
+                    chipView.setTextSize(TypedValue.COMPLEX_UNIT_PX, chipView.textSize * 1.2f)
+                }
+            }
+        }
+
         setupAdapters(view)
         observeViewModel()
         setupListeners()

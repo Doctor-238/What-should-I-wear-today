@@ -1,6 +1,7 @@
 package com.yehyun.whatshouldiweartoday.ui.closet
 
 import android.content.Context
+import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Color
@@ -15,12 +16,15 @@ import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.ProgressBar
+import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.cardview.widget.CardView
+import androidx.constraintlayout.widget.ConstraintLayout
+import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.core.widget.addTextChangedListener
@@ -119,6 +123,16 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabResel
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         setupViews(view)
+
+        val isTablet = (resources.configuration.screenLayout and Configuration.SCREENLAYOUT_SIZE_MASK) >= Configuration.SCREENLAYOUT_SIZE_LARGE
+        if (isTablet) {
+            val container = view.findViewById<ScrollView>(R.id.scrollView).getChildAt(0) as ConstraintLayout
+            val constraintSet = ConstraintSet()
+            constraintSet.clone(container)
+            constraintSet.constrainPercentWidth(R.id.frameLayout_preview, 0.75f)
+            constraintSet.applyTo(container)
+        }
+
         setupListeners()
         setupBackButtonHandler()
         observeViewModel()

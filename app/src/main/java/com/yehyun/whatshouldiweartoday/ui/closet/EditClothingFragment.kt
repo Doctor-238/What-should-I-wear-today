@@ -1,5 +1,6 @@
 package com.yehyun.whatshouldiweartoday.ui.closet
 
+import android.content.res.Configuration
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
@@ -10,16 +11,21 @@ import android.text.SpannableString
 import android.text.TextWatcher
 import android.text.style.ForegroundColorSpan
 import android.text.style.StyleSpan
+import android.util.TypedValue
 import android.view.View
 import android.widget.Button
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.RelativeLayout
+import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
+import androidx.constraintlayout.widget.ConstraintLayout
+import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.content.ContextCompat
+import androidx.core.view.children
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
@@ -71,6 +77,22 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
         super.onViewCreated(view, savedInstanceState)
         settingsManager = SettingsManager(requireContext())
         setupViews(view)
+
+        val isTablet = (resources.configuration.screenLayout and Configuration.SCREENLAYOUT_SIZE_MASK) >= Configuration.SCREENLAYOUT_SIZE_LARGE
+        if (isTablet) {
+            val container = view.findViewById<ScrollView>(R.id.scrollView).getChildAt(0) as ConstraintLayout
+            val constraintSet = ConstraintSet()
+            constraintSet.clone(container)
+            constraintSet.constrainPercentWidth(R.id.frameLayout_edit_preview, 0.75f)
+            constraintSet.applyTo(container)
+
+            chipGroupCategory.children.forEach { chipView ->
+                if (chipView is Chip) {
+                    chipView.setTextSize(TypedValue.COMPLEX_UNIT_PX, chipView.textSize * 1.2f)
+                }
+            }
+        }
+
         viewModel.loadClothingItem(args.clothingItemId)
         setupBackButtonHandler()
         setupListeners()
