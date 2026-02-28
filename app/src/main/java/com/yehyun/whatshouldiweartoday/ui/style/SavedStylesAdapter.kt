@@ -20,6 +20,19 @@ class SavedStylesAdapter(
     private val isItemSelected: (Long) -> Boolean
 ) : ListAdapter<StyleWithItems, SavedStylesAdapter.StyleViewHolder>(diffUtil) {
 
+    private var recommendedIds: Set<Int> = emptySet()
+    private var packableOuters: List<ClothingItem> = emptyList()
+
+    fun setRecommendedIds(ids: Set<Int>) {
+        this.recommendedIds = ids
+        notifyDataSetChanged()
+    }
+
+    fun setPackableOuters(outers: List<ClothingItem>) {
+        this.packableOuters = outers
+        notifyDataSetChanged()
+    }
+
     fun getStyleAt(position: Int): StyleWithItems? {
         return getItem(position)
     }
@@ -31,7 +44,7 @@ class SavedStylesAdapter(
 
     override fun onBindViewHolder(holder: StyleViewHolder, position: Int) {
         val currentStyle = getItem(position)
-        holder.bind(currentStyle, isDeleteMode, isItemSelected)
+        holder.bind(currentStyle, isDeleteMode, isItemSelected, recommendedIds, packableOuters)
     }
 
     override fun onBindViewHolder(holder: StyleViewHolder, position: Int, payloads: MutableList<Any>) {
@@ -61,7 +74,9 @@ class SavedStylesAdapter(
         fun bind(
             styleWithItems: StyleWithItems,
             isDeleteMode: () -> Boolean,
-            isItemSelected: (Long) -> Boolean
+            isItemSelected: (Long) -> Boolean,
+            recommendedIds: Set<Int>,
+            packableOuters: List<ClothingItem>
         ) {
             styleName.text = styleWithItems.style.styleName
 
@@ -69,11 +84,15 @@ class SavedStylesAdapter(
                 "상의" to 1, "하의" to 2, "아우터" to 3, "신발" to 4,
                 "가방" to 5, "모자" to 6, "기타" to 7
             )
+
             val sortedItems = styleWithItems.items.sortedWith(
-                compareBy<ClothingItem> { categoryOrder[it.category] ?: 8 }
+                compareByDescending<ClothingItem> { it.id in recommendedIds }
+                    .thenBy { categoryOrder[it.category] ?: 8 }
                     .thenBy { it.suitableTemperature }
             )
-            itemsAdapter.submitList(sortedItems)
+
+            itemsAdapter.setRecommendedIds(recommendedIds)
+            itemsAdapter.submitList(sortedItems, packableOuters)
 
             itemsRecyclerView.setOnTouchListener { v, event ->
                 itemView.onTouchEvent(event)

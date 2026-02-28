@@ -1,5 +1,6 @@
 package com.yehyun.whatshouldiweartoday.ui.closet
 
+import android.content.res.Configuration
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
@@ -10,18 +11,24 @@ import android.text.SpannableString
 import android.text.TextWatcher
 import android.text.style.ForegroundColorSpan
 import android.text.style.StyleSpan
+import android.util.TypedValue
 import android.view.View
 import android.widget.Button
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.RelativeLayout
+import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
+import androidx.constraintlayout.widget.ConstraintLayout
+import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.content.ContextCompat
+import androidx.core.view.children
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
@@ -35,11 +42,13 @@ import com.yehyun.whatshouldiweartoday.R
 import com.yehyun.whatshouldiweartoday.data.database.ClothingItem
 import com.yehyun.whatshouldiweartoday.data.preference.SettingsManager
 import com.yehyun.whatshouldiweartoday.ui.OnTabReselectedListener
+import com.yehyun.whatshouldiweartoday.ui.home.HomeViewModel
 import java.io.File
 
 class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabReselectedListener {
 
     private val viewModel: EditClothingViewModel by viewModels()
+    private val homeViewModel: HomeViewModel by activityViewModels()
     private val args: EditClothingFragmentArgs by navArgs()
 
     private lateinit var onBackPressedCallback: OnBackPressedCallback
@@ -55,6 +64,9 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
     private lateinit var settingsManager: SettingsManager
     private lateinit var buttonTempIncrease: ImageButton
     private lateinit var buttonTempDecrease: ImageButton
+    private lateinit var iconSpecialEdit: ImageView
+
+    private var toast: Toast? = null
 
     override fun onResume() {
         super.onResume()
@@ -65,6 +77,22 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
         super.onViewCreated(view, savedInstanceState)
         settingsManager = SettingsManager(requireContext())
         setupViews(view)
+
+        val isTablet = (resources.configuration.screenLayout and Configuration.SCREENLAYOUT_SIZE_MASK) >= Configuration.SCREENLAYOUT_SIZE_LARGE
+        if (isTablet) {
+            val container = view.findViewById<ScrollView>(R.id.scrollView).getChildAt(0) as ConstraintLayout
+            val constraintSet = ConstraintSet()
+            constraintSet.clone(container)
+            constraintSet.constrainPercentWidth(R.id.frameLayout_edit_preview, 0.75f)
+            constraintSet.applyTo(container)
+
+            chipGroupCategory.children.forEach { chipView ->
+                if (chipView is Chip) {
+                    chipView.setTextSize(TypedValue.COMPLEX_UNIT_PX, chipView.textSize * 1.2f)
+                }
+            }
+        }
+
         viewModel.loadClothingItem(args.clothingItemId)
         setupBackButtonHandler()
         setupListeners()
@@ -83,6 +111,7 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
         layoutBackgroundRemoval = view.findViewById(R.id.layout_background_removal)
         buttonTempIncrease = view.findViewById(R.id.button_edit_temp_increase)
         buttonTempDecrease = view.findViewById(R.id.button_edit_temp_decrease)
+        iconSpecialEdit = view.findViewById(R.id.icon_special_edit)
         toolbar.inflateMenu(R.menu.edit_clothing_menu)
     }
 
@@ -133,9 +162,17 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
 
         viewModel.isDeleteComplete.observe(viewLifecycleOwner) { isComplete ->
             if (isComplete) {
-                Toast.makeText(context, "삭제되었습니다.", Toast.LENGTH_SHORT).show()
+                showToast("삭제되었습니다.")
                 findNavController().popBackStack()
             }
+        }
+
+        homeViewModel.todayRecommendedClothingIds.observe(viewLifecycleOwner) {
+            viewModel.currentClothingItem.value?.let { bindDataToViews(it) }
+        }
+
+        homeViewModel.todayRecommendation.observe(viewLifecycleOwner) {
+            viewModel.currentClothingItem.value?.let { bindDataToViews(it) }
         }
     }
 
@@ -169,6 +206,23 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
         switchRemoveBackground.isChecked = item.useProcessedImage
 
         updateImagePreview(item)
+
+        val isRecommended = homeViewModel.todayRecommendedClothingIds.value?.contains(item.id) ?: false
+        val isPackable = homeViewModel.todayRecommendation.value?.packableOuters?.any { it.id == item.id } ?: false
+
+        if (settingsManager.showRecommendationIcon) {
+            if (isPackable) {
+                iconSpecialEdit.setImageResource(R.drawable.ic_packable_bag)
+                iconSpecialEdit.isVisible = true
+            } else if (isRecommended) {
+                iconSpecialEdit.setImageResource(R.drawable.sun)
+                iconSpecialEdit.isVisible = true
+            } else {
+                iconSpecialEdit.isVisible = false
+            }
+        } else {
+            iconSpecialEdit.isVisible = false
+        }
     }
 
     private fun updateTemperatureDisplay(item: ClothingItem) {
@@ -272,10 +326,16 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
 
     private fun trySaveChanges() {
         if (viewModel.currentClothingItem.value?.name.isNullOrBlank()) {
-            Toast.makeText(context, "옷 이름을 입력해주세요.", Toast.LENGTH_SHORT).show()
+            showToast("옷 이름을 입력해주세요.")
         } else {
             viewModel.saveChanges()
         }
+    }
+
+    private fun showToast(message: String) {
+        toast?.cancel()
+        toast = Toast.makeText(context, message, Toast.LENGTH_SHORT)
+        toast?.show()
     }
 
     private fun showDeleteConfirmDialog() {
@@ -294,5 +354,6 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
     override fun onDestroyView() {
         super.onDestroyView()
         onBackPressedCallback.remove()
+        toast?.cancel()
     }
 }

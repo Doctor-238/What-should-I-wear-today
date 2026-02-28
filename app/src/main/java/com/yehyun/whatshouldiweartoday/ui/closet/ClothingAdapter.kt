@@ -3,16 +3,20 @@ package com.yehyun.whatshouldiweartoday.ui.closet
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.net.Uri
+import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.animation.AnimationUtils
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.core.content.ContextCompat
+import androidx.core.view.isVisible
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
+import com.google.android.material.card.MaterialCardView
 import com.yehyun.whatshouldiweartoday.R
 import com.yehyun.whatshouldiweartoday.data.database.ClothingItem
 import com.yehyun.whatshouldiweartoday.data.preference.SettingsManager
@@ -25,6 +29,19 @@ class ClothingAdapter(
     private val isItemSelected: (Int) -> Boolean
 ) : ListAdapter<ClothingItem, ClothingAdapter.ClothingViewHolder>(DiffCallback) {
 
+    private var recommendedIds: Set<Int> = emptySet()
+    private var packableOuters: List<ClothingItem> = emptyList()
+
+    fun setRecommendedIds(ids: Set<Int>) {
+        this.recommendedIds = ids
+        notifyDataSetChanged()
+    }
+
+    fun setPackableOuters(outers: List<ClothingItem>) {
+        this.packableOuters = outers
+        notifyDataSetChanged()
+    }
+
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ClothingViewHolder {
         val view = LayoutInflater.from(parent.context).inflate(R.layout.item_clothing, parent, false)
         return ClothingViewHolder(view)
@@ -32,7 +49,9 @@ class ClothingAdapter(
 
     override fun onBindViewHolder(holder: ClothingViewHolder, position: Int) {
         val currentItem = getItem(position)
-        holder.bind(currentItem, onItemClicked, onItemLongClicked, isDeleteMode, isItemSelected)
+        val isRecommended = recommendedIds.contains(currentItem.id)
+        val isPackable = packableOuters.any { it.id == currentItem.id }
+        holder.bind(currentItem, onItemClicked, onItemLongClicked, isDeleteMode, isItemSelected, isRecommended, isPackable)
     }
 
     override fun onBindViewHolder(holder: ClothingViewHolder, position: Int, payloads: MutableList<Any>) {
@@ -57,17 +76,21 @@ class ClothingAdapter(
         private val tempTextView: TextView = itemView.findViewById(R.id.tv_clothing_temp)
         private val colorView: View = itemView.findViewById(R.id.view_clothing_color)
         private val deleteCheckbox: ImageView = itemView.findViewById(R.id.iv_delete_checkbox)
+        private val imageContainer: MaterialCardView = itemView.findViewById(R.id.image_container)
+        private val iconSpecial: ImageView = itemView.findViewById(R.id.icon_special)
+        private val settingsManager = SettingsManager(itemView.context)
 
         fun bind(
             item: ClothingItem,
             clickAction: (ClothingItem) -> Unit,
             longClickAction: (ClothingItem) -> Unit,
             isDeleteMode: () -> Boolean,
-            isItemSelected: (Int) -> Boolean
+            isItemSelected: (Int) -> Boolean,
+            isRecommended: Boolean,
+            isPackable: Boolean
         ) {
             nameTextView.text = item.name
 
-            val settingsManager = SettingsManager(itemView.context)
             val constitutionAdjustment = settingsManager.getConstitutionAdjustment()
 
             if (item.category in listOf("상의", "하의", "아우터")) {
@@ -108,6 +131,25 @@ class ClothingAdapter(
                     longClickAction(item)
                 }
                 true
+            }
+
+            imageContainer.strokeWidth = TypedValue.applyDimension(
+                TypedValue.COMPLEX_UNIT_DIP, 1.5f, itemView.context.resources.displayMetrics
+            ).toInt()
+            imageContainer.strokeColor = ContextCompat.getColor(itemView.context, R.color.weather_card_blue_bg)
+
+            if (settingsManager.showRecommendationIcon) {
+                if (isPackable) {
+                    iconSpecial.setImageResource(R.drawable.ic_packable_bag)
+                    iconSpecial.isVisible = true
+                } else if (isRecommended) {
+                    iconSpecial.setImageResource(R.drawable.sun)
+                    iconSpecial.isVisible = true
+                } else {
+                    iconSpecial.isVisible = false
+                }
+            } else {
+                iconSpecial.isVisible = false
             }
 
             updateDeleteModeUI(isDeleteMode())

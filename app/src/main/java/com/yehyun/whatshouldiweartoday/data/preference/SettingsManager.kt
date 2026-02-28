@@ -43,6 +43,12 @@ class SettingsManager(context: Context) {
             prefs.edit().putString(KEY_STYLE_SORT_TYPE, value).commit()
         }
 
+    var showRecommendationIcon: Boolean
+        get() = prefs.getBoolean(KEY_SHOW_RECOMMENDATION_ICON, true)
+        set(value) {
+            prefs.edit().putBoolean(KEY_SHOW_RECOMMENDATION_ICON, value).commit()
+        }
+
     fun getTemperatureTolerance(): Double {
         return when (temperatureRange) {
             TEMP_RANGE_NARROW -> 1.5
@@ -95,6 +101,7 @@ class SettingsManager(context: Context) {
         private const val KEY_AI_MODEL = "ai_model"
         private const val KEY_CLOSET_SORT_TYPE = "closet_sort_type"
         private const val KEY_STYLE_SORT_TYPE = "style_sort_type"
+        private const val KEY_SHOW_RECOMMENDATION_ICON = "show_recommendation_icon"
 
         const val TEMP_RANGE_NARROW = "좁게"
         const val TEMP_RANGE_NORMAL = "보통"
