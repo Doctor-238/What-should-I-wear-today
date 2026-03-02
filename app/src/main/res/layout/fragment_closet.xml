@@ -4,14 +4,16 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/app_background"
     tools:context=".ui.closet.ClosetFragment">
 
     <FrameLayout
         android:id="@+id/toolbar_container"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:paddingTop="16dp"
-        android:paddingBottom="16dp"
+        android:background="@color/surface"
+        android:paddingTop="12dp"
+        android:paddingBottom="12dp"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
@@ -26,7 +28,7 @@
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_marginStart="16dp"
-                android:layout_marginEnd="8dp"
+                android:layout_marginEnd="10dp"
                 android:background="@drawable/bg_search_spinner"
                 app:iconifiedByDefault="false"
                 app:layout_constraintEnd_toStartOf="@+id/spinner_container_closet"
@@ -50,7 +52,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="match_parent"
                     android:background="@android:color/transparent"
-                    android:paddingStart="16dp"
+                    android:paddingStart="14dp"
                     android:paddingEnd="32dp" />
 
                 <ImageView
@@ -74,7 +76,7 @@
                 android:id="@+id/iv_back_delete_mode"
                 android:layout_width="48dp"
                 android:layout_height="48dp"
-                android:layout_marginLeft="5dp"
+                android:layout_marginLeft="4dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:scaleType="center"
                 android:src="@drawable/ic_arrow_back"
@@ -87,7 +89,7 @@
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:background="@drawable/bg_search_spinner"
-                android:layout_marginRight="8dp"
+                android:layout_marginEnd="10dp"
                 app:iconifiedByDefault="false"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toStartOf="@+id/iv_select_all"
@@ -100,7 +102,7 @@
                 android:id="@+id/iv_select_all"
                 android:layout_width="32dp"
                 android:layout_height="32dp"
-                android:layout_marginEnd="8dp"
+                android:layout_marginEnd="10dp"
                 android:padding="2dp"
                 android:src="@drawable/ic_checkbox_unchecked_custom"
                 android:background="?attr/selectableItemBackgroundBorderless"
@@ -116,10 +118,11 @@
                 android:background="@drawable/bg_delete_button"
                 app:backgroundTint="@null"
                 android:enabled="false"
-                android:minWidth="90dp"
+                android:minWidth="88dp"
                 android:text="삭제하기"
                 android:textColor="@color/white"
                 android:textStyle="bold"
+                android:textSize="13sp"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintTop_toTopOf="parent" />
@@ -127,11 +130,11 @@
         </androidx.constraintlayout.widget.ConstraintLayout>
     </FrameLayout>
 
-
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/tabs_container"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
+        android:background="@color/surface"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/toolbar_container">
@@ -143,7 +146,7 @@
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
-            app:tabBackground="@android:color/white"
+            app:tabBackground="@color/surface"
             app:tabGravity="fill"
             app:tabMode="scrollable"
             app:tabSelectedTextColor="@color/tab_selected_text"
@@ -186,9 +189,9 @@
             android:layout_height="wrap_content"
             android:layout_marginLeft="24dp"
             android:layout_marginRight="24dp"
-            android:layout_marginBottom="16dp"
+            android:layout_marginBottom="14dp"
             android:src="@drawable/multiple"
-            app:elevation="4dp"
+            app:elevation="6dp"
             app:backgroundTint="@color/fab_color_style_tab"
             app:fabSize="normal"
             app:shapeAppearanceOverlay="@style/FabCircle"
@@ -202,8 +205,8 @@
             android:src="@drawable/plus"
             android:layout_marginLeft="24dp"
             android:layout_marginRight="24dp"
-            android:layout_marginBottom="24dp"
-            app:elevation="4dp"
+            android:layout_marginBottom="20dp"
+            app:elevation="6dp"
             app:backgroundTint="@color/fab_color_style_tab"
             app:fabSize="normal"
             app:tint="@android:color/white"

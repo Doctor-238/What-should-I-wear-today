@@ -11,14 +11,15 @@
         android:id="@+id/toolbar"
         android:layout_width="0dp"
         android:layout_height="?attr/actionBarSize"
-        android:textAlignment="center"
-        android:textStyle="bold"
+        android:background="@color/surface"
+        android:elevation="2dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         app:navigationIcon="@drawable/ic_arrow_back"
         app:title="옷 추가하기"
-        app:titleCentered="true"/>
+        app:titleCentered="true"
+        app:titleTextColor="@color/text_primary" />
 
     <ScrollView
         android:id="@+id/scrollView"
@@ -35,7 +36,7 @@
         <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:paddingVertical="16dp">
+            android:paddingVertical="20dp">
 
             <FrameLayout
                 android:id="@+id/frameLayout_preview"
@@ -45,7 +46,7 @@
                 android:clickable="true"
                 android:focusable="true"
                 android:padding="16dp"
-                android:layout_marginHorizontal="16dp"
+                android:layout_marginHorizontal="20dp"
                 app:layout_constraintDimensionRatio="1:1"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
@@ -57,11 +58,11 @@
                     android:layout_height="wrap_content"
                     android:layout_gravity="center"
                     android:drawableTop="@drawable/ic_add_photo"
-                    android:drawablePadding="8dp"
+                    android:drawablePadding="10dp"
                     android:gravity="center"
                     android:text="클릭하여 사진을 추가하세요"
                     android:textColor="@color/text_secondary"
-                    android:textSize="16sp"
+                    android:textSize="15sp"
                     android:visibility="visible"
                     tools:visibility="visible" />
 
@@ -86,12 +87,14 @@
                 android:id="@+id/card_ai_info"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
-                android:layout_marginHorizontal="16dp"
+                android:layout_marginTop="20dp"
+                android:layout_marginHorizontal="20dp"
                 android:visibility="gone"
-                app:cardBackgroundColor="@color/settings_card_background"
-                app:cardCornerRadius="16dp"
-                app:cardElevation="4dp"
+                app:cardBackgroundColor="@color/surface"
+                app:cardCornerRadius="20dp"
+                app:cardElevation="0dp"
+                app:strokeColor="@color/card_border"
+                app:strokeWidth="1.5dp"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/frameLayout_preview"
@@ -101,13 +104,13 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:paddingHorizontal="16dp"
-                    android:paddingVertical="8dp">
+                    android:paddingHorizontal="18dp"
+                    android:paddingVertical="6dp">
 
                     <RelativeLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:paddingVertical="8dp">
+                        android:paddingVertical="12dp">
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
@@ -116,27 +119,27 @@
                             android:layout_alignParentStart="true"
                             android:layout_centerVertical="true"
                             android:textColor="@color/text_primary"
-                            android:textSize="16sp" />
+                            android:textSize="15sp" />
                         <TextView
                             android:id="@+id/tv_info_category"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_alignParentEnd="true"
                             android:layout_centerVertical="true"
-                            android:textColor="@color/text_primary"
-                            android:textSize="16sp"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="15sp"
                             tools:text="아우터" />
                     </RelativeLayout>
 
                     <View
                         android:layout_width="match_parent"
                         android:layout_height="1dp"
-                        android:background="#F0F0F0" />
+                        android:background="@color/divider_color" />
 
                     <androidx.constraintlayout.widget.ConstraintLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:paddingVertical="8dp">
+                        android:paddingVertical="12dp">
 
                         <TextView
                             android:id="@+id/tv_temp_label"
@@ -144,7 +147,7 @@
                             android:layout_height="wrap_content"
                             android:text="적정 온도"
                             android:textColor="@color/text_primary"
-                            android:textSize="16sp"
+                            android:textSize="15sp"
                             android:textStyle="bold"
                             app:layout_constraintBottom_toBottomOf="parent"
                             app:layout_constraintStart_toStartOf="parent"
@@ -152,9 +155,9 @@
 
                         <ImageButton
                             android:id="@+id/button_temp_decrease"
-                            android:layout_width="26dp"
-                            android:layout_height="26dp"
-                            android:layout_marginEnd="8dp"
+                            android:layout_width="30dp"
+                            android:layout_height="30dp"
+                            android:layout_marginEnd="10dp"
                             android:background="@drawable/bg_button_minus"
                             android:contentDescription="온도 내리기"
                             android:src="@drawable/ic_minus"
@@ -166,9 +169,10 @@
                             android:id="@+id/tv_info_temperature"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_marginEnd="8dp"
+                            android:layout_marginEnd="10dp"
                             android:textColor="@color/text_primary"
-                            android:textSize="16sp"
+                            android:textSize="14sp"
+                            android:textStyle="bold"
                             app:layout_constraintBottom_toBottomOf="parent"
                             app:layout_constraintEnd_toStartOf="@id/button_temp_increase"
                             app:layout_constraintTop_toTopOf="parent"
@@ -176,8 +180,8 @@
 
                         <ImageButton
                             android:id="@+id/button_temp_increase"
-                            android:layout_width="26dp"
-                            android:layout_height="26dp"
+                            android:layout_width="30dp"
+                            android:layout_height="30dp"
                             android:background="@drawable/bg_button_plus"
                             android:contentDescription="온도 올리기"
                             android:src="@drawable/ic_plus"
@@ -185,15 +189,16 @@
                             app:layout_constraintEnd_toEndOf="parent"
                             app:layout_constraintTop_toTopOf="parent" />
                     </androidx.constraintlayout.widget.ConstraintLayout>
+
                     <View
                         android:layout_width="match_parent"
                         android:layout_height="1dp"
-                        android:background="#F0F0F0" />
+                        android:background="@color/divider_color" />
 
                     <RelativeLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:paddingVertical="8dp">
+                        android:paddingVertical="12dp">
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
@@ -202,11 +207,11 @@
                             android:layout_alignParentStart="true"
                             android:layout_centerVertical="true"
                             android:textColor="@color/text_primary"
-                            android:textSize="16sp" />
+                            android:textSize="15sp" />
                         <View
                             android:id="@+id/view_info_color_swatch"
-                            android:layout_width="24dp"
-                            android:layout_height="24dp"
+                            android:layout_width="28dp"
+                            android:layout_height="28dp"
                             android:layout_alignParentEnd="true"
                             android:layout_centerVertical="true"
                             tools:background="#AAAAAA" />
@@ -215,12 +220,12 @@
                     <View
                         android:layout_width="match_parent"
                         android:layout_height="1dp"
-                        android:background="#F0F0F0" />
+                        android:background="@color/divider_color" />
 
                     <RelativeLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        >
+                        android:paddingVertical="4dp">
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
@@ -229,7 +234,7 @@
                             android:layout_alignParentStart="true"
                             android:layout_centerVertical="true"
                             android:textColor="@color/text_primary"
-                            android:textSize="16sp" />
+                            android:textSize="15sp" />
                         <com.google.android.material.switchmaterial.SwitchMaterial
                             android:id="@+id/switch_remove_background"
                             android:layout_width="wrap_content"
@@ -245,13 +250,13 @@
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
-                android:layout_marginHorizontal="16dp"
+                android:layout_marginTop="20dp"
+                android:layout_marginHorizontal="20dp"
                 android:hint="옷 이름을 입력해주세요 (최대 20자)"
-                app:boxCornerRadiusBottomEnd="12dp"
-                app:boxCornerRadiusBottomStart="12dp"
-                app:boxCornerRadiusTopEnd="12dp"
-                app:boxCornerRadiusTopStart="12dp"
+                app:boxCornerRadiusBottomEnd="14dp"
+                app:boxCornerRadiusBottomStart="14dp"
+                app:boxCornerRadiusTopEnd="14dp"
+                app:boxCornerRadiusTopStart="14dp"
                 app:counterEnabled="true"
                 app:counterMaxLength="20"
                 app:boxStrokeColor="@color/text_input_box_stroke_color"
@@ -270,18 +275,16 @@
 
             <Button
                 android:id="@+id/button_save"
-                style="@style/Widget.Material3.Button.UnelevatedButton"
-                android:layout_width="wrap_content"
-                android:layout_height="60dp"
+                android:layout_width="0dp"
+                android:layout_height="56dp"
                 android:enabled="false"
-                android:paddingHorizontal="48dp"
-                android:layout_marginHorizontal="16dp"
+                android:layout_marginHorizontal="20dp"
                 android:text="저장하기"
                 android:textSize="16sp"
                 android:textStyle="bold"
-                android:layout_marginTop="32dp"
-                app:backgroundTint="@color/fab_color_style_tab"
-                app:cornerRadius="24dp"
+                android:textColor="@color/white"
+                android:background="@drawable/bg_primary_button"
+                android:layout_marginTop="28dp"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/textInputLayout_name" />
@@ -293,7 +296,7 @@
         android:id="@+id/saving_overlay"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="#80000000"
+        android:background="#88000000"
         android:clickable="true"
         android:focusable="true"
         android:visibility="gone"

@@ -11,13 +11,13 @@
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:paddingBottom="16dp">
+        android:paddingBottom="24dp">
 
         <TextView
             android:id="@+id/toolbar_title"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
+            android:layout_marginTop="28dp"
             android:text="설정"
             android:textColor="@color/text_primary"
             android:textSize="20sp"
@@ -28,13 +28,13 @@
 
         <ImageView
             android:id="@+id/button_close"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
             android:layout_marginEnd="16dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
+            android:background="@color/primary_light"
             android:clickable="true"
             android:focusable="true"
-            android:padding="4dp"
+            android:padding="8dp"
             android:src="@drawable/close"
             app:layout_constraintBottom_toBottomOf="@id/toolbar_title"
             app:layout_constraintEnd_toEndOf="parent"
@@ -45,10 +45,13 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="24dp"
-            android:layout_marginTop="32dp"
+            android:layout_marginTop="28dp"
             android:text="온도"
             android:textColor="@color/settings_section_title"
-            android:textSize="16sp"
+            android:textSize="13sp"
+            android:letterSpacing="0.08"
+            android:textAllCaps="true"
+            android:textStyle="bold"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/toolbar_title" />
 
@@ -57,10 +60,12 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginHorizontal="16dp"
-            android:layout_marginTop="8dp"
-            app:cardBackgroundColor="@color/settings_card_background"
-            app:cardCornerRadius="16dp"
-            app:cardElevation="4dp"
+            android:layout_marginTop="10dp"
+            app:cardBackgroundColor="@color/surface"
+            app:cardCornerRadius="20dp"
+            app:cardElevation="0dp"
+            app:strokeColor="@color/card_border"
+            app:strokeWidth="1.5dp"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/tv_header_temperature">
@@ -68,7 +73,7 @@
             <androidx.constraintlayout.widget.ConstraintLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:padding="16dp">
+                android:padding="18dp">
 
                 <TextView
                     android:id="@+id/tv_temp_range_label"
@@ -76,7 +81,7 @@
                     android:layout_height="wrap_content"
                     android:text="적정온도 범위"
                     android:textColor="@color/text_primary"
-                    android:textSize="16sp"
+                    android:textSize="15sp"
                     android:textStyle="bold"
                     app:layout_constraintBottom_toBottomOf="@id/spinner_temp_range_container"
                     app:layout_constraintStart_toStartOf="parent"
@@ -95,7 +100,7 @@
                     <Spinner
                         android:id="@+id/spinner_temp_range"
                         android:layout_width="120dp"
-                        android:layout_height="40dp"
+                        android:layout_height="42dp"
                         android:background="@android:color/transparent"
                         android:gravity="center"
                         android:spinnerMode="dropdown" />
@@ -104,7 +109,7 @@
                         android:layout_width="16dp"
                         android:layout_height="16dp"
                         android:layout_gravity="end|center_vertical"
-                        android:layout_marginEnd="16dp"
+                        android:layout_marginEnd="14dp"
                         android:src="@drawable/ic_dropdown_arrow" />
                 </FrameLayout>
 
@@ -112,21 +117,20 @@
                     android:id="@+id/divider_1"
                     android:layout_width="0dp"
                     android:layout_height="1dp"
-                    android:layout_marginTop="16dp"
-                    android:background="?android:attr/listDivider"
+                    android:layout_marginTop="18dp"
+                    android:background="@color/divider_color"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toBottomOf="@id/spinner_temp_range_container" />
-
 
                 <TextView
                     android:id="@+id/tv_constitution_label"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="16dp"
+                    android:layout_marginTop="18dp"
                     android:text="체질"
                     android:textColor="@color/text_primary"
-                    android:textSize="16sp"
+                    android:textSize="15sp"
                     android:textStyle="bold"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toBottomOf="@id/divider_1" />
@@ -146,7 +150,7 @@
                     android:id="@+id/constitution_slider_container"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
+                    android:layout_marginTop="10dp"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toBottomOf="@id/tv_constitution_label">
@@ -156,6 +160,7 @@
                         android:layout_width="0dp"
                         android:layout_height="8dp"
                         android:background="@drawable/bg_slider_track_gradient"
+                        android:elevation="0dp"
                         app:layout_constraintBottom_toBottomOf="parent"
                         app:layout_constraintEnd_toEndOf="parent"
                         app:layout_constraintStart_toStartOf="parent"
@@ -169,6 +174,7 @@
                         android:value="3.0"
                         android:valueFrom="1.0"
                         android:valueTo="5.0"
+                        android:elevation="2dp"
                         app:labelBehavior="gone"
                         app:layout_constraintBottom_toBottomOf="parent"
                         app:layout_constraintEnd_toEndOf="parent"
@@ -188,36 +194,38 @@
                         android:elevation="6dp"
                         app:layout_constraintBottom_toBottomOf="parent"
                         app:layout_constraintTop_toTopOf="parent"
-                        app:layout_constraintStart_toStartOf="parent"/>
+                        app:layout_constraintStart_toStartOf="parent" />
                 </androidx.constraintlayout.widget.ConstraintLayout>
-
 
                 <TextView
                     android:id="@+id/tv_constitution_min_label"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
                     android:text="더위 많이 탐"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="12sp"
+                    android:textColor="@color/text_tertiary"
+                    android:textSize="11sp"
                     app:layout_constraintStart_toStartOf="@id/constitution_slider_container"
                     app:layout_constraintTop_toBottomOf="@id/constitution_slider_container" />
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
                     android:text="추위 많이 탐"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="12sp"
+                    android:textColor="@color/text_tertiary"
+                    android:textSize="11sp"
                     app:layout_constraintEnd_toEndOf="@id/constitution_slider_container"
                     app:layout_constraintTop_toBottomOf="@id/constitution_slider_container" />
+
                 <TextView
                     android:id="@+id/tv_recommendation_note"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="16dp"
+                    android:layout_marginTop="14dp"
                     android:text="※ 적정온도 범위/체질 변경시 추천범위도 변경됩니다."
                     android:textColor="@color/text_tertiary"
-                    android:textSize="12sp"
+                    android:textSize="11sp"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toBottomOf="@id/tv_constitution_min_label" />
@@ -230,10 +238,13 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="24dp"
-            android:layout_marginTop="32dp"
+            android:layout_marginTop="28dp"
             android:text="AI 설정"
             android:textColor="@color/settings_section_title"
-            android:textSize="16sp"
+            android:textSize="13sp"
+            android:letterSpacing="0.08"
+            android:textAllCaps="true"
+            android:textStyle="bold"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/card_temperature" />
 
@@ -242,10 +253,12 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginHorizontal="16dp"
-            android:layout_marginTop="8dp"
-            app:cardBackgroundColor="@color/settings_card_background"
-            app:cardCornerRadius="16dp"
-            app:cardElevation="4dp"
+            android:layout_marginTop="10dp"
+            app:cardBackgroundColor="@color/surface"
+            app:cardCornerRadius="20dp"
+            app:cardElevation="0dp"
+            app:strokeColor="@color/card_border"
+            app:strokeWidth="1.5dp"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/tv_header_ai">
@@ -253,7 +266,7 @@
             <androidx.constraintlayout.widget.ConstraintLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:padding="16dp">
+                android:padding="18dp">
 
                 <TextView
                     android:id="@+id/tv_ai_model_label"
@@ -261,7 +274,7 @@
                     android:layout_height="wrap_content"
                     android:text="AI 모델"
                     android:textColor="@color/text_primary"
-                    android:textSize="16sp"
+                    android:textSize="15sp"
                     android:textStyle="bold"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="parent" />
@@ -277,7 +290,6 @@
                     app:layout_constraintTop_toBottomOf="@id/tv_ai_model_label"
                     tools:text="느림, 정확성 증가" />
 
-
                 <FrameLayout
                     android:id="@+id/spinner_ai_model_container"
                     android:layout_width="wrap_content"
@@ -292,7 +304,7 @@
                     <Spinner
                         android:id="@+id/spinner_ai_model"
                         android:layout_width="120dp"
-                        android:layout_height="40dp"
+                        android:layout_height="42dp"
                         android:background="@android:color/transparent"
                         android:gravity="center"
                         android:spinnerMode="dropdown" />
@@ -301,7 +313,7 @@
                         android:layout_width="16dp"
                         android:layout_height="16dp"
                         android:layout_gravity="end|center_vertical"
-                        android:layout_marginEnd="16dp"
+                        android:layout_marginEnd="14dp"
                         android:src="@drawable/ic_dropdown_arrow" />
                 </FrameLayout>
             </androidx.constraintlayout.widget.ConstraintLayout>
@@ -312,10 +324,13 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="24dp"
-            android:layout_marginTop="32dp"
+            android:layout_marginTop="28dp"
             android:text="배경"
             android:textColor="@color/settings_section_title"
-            android:textSize="16sp"
+            android:textSize="13sp"
+            android:letterSpacing="0.08"
+            android:textAllCaps="true"
+            android:textStyle="bold"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/card_ai" />
 
@@ -324,10 +339,12 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginHorizontal="16dp"
-            android:layout_marginTop="8dp"
-            app:cardBackgroundColor="@color/settings_card_background"
-            app:cardCornerRadius="16dp"
-            app:cardElevation="4dp"
+            android:layout_marginTop="10dp"
+            app:cardBackgroundColor="@color/surface"
+            app:cardCornerRadius="20dp"
+            app:cardElevation="0dp"
+            app:strokeColor="@color/card_border"
+            app:strokeWidth="1.5dp"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/tv_header_background">
@@ -335,7 +352,7 @@
             <androidx.constraintlayout.widget.ConstraintLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:padding="16dp">
+                android:padding="18dp">
 
                 <TextView
                     android:id="@+id/tv_sensitivity_label"
@@ -343,7 +360,7 @@
                     android:layout_height="wrap_content"
                     android:text="배경제거 민감도"
                     android:textColor="@color/text_primary"
-                    android:textSize="16sp"
+                    android:textSize="15sp"
                     android:textStyle="bold"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="parent" />
@@ -359,12 +376,11 @@
                     app:layout_constraintTop_toTopOf="@id/tv_sensitivity_label"
                     tools:text="보통" />
 
-
                 <androidx.constraintlayout.widget.ConstraintLayout
                     android:id="@+id/sensitivity_slider_container"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
+                    android:layout_marginTop="10dp"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toBottomOf="@id/tv_sensitivity_label">
@@ -384,7 +400,7 @@
                         app:layout_constraintTop_toTopOf="parent"
                         app:thumbColor="@android:color/transparent"
                         app:thumbElevation="0dp"
-                        app:trackColorActive="@color/settings_spinner_blue"
+                        app:trackColorActive="@color/primary"
                         app:trackColorInactive="@color/slider_track_inactive_color"
                         app:trackHeight="8dp" />
 
@@ -403,9 +419,10 @@
                     android:id="@+id/tv_sensitivity_min_label"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
                     android:text="둔감"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="12sp"
+                    android:textColor="@color/text_tertiary"
+                    android:textSize="11sp"
                     app:layout_constraintStart_toStartOf="@id/sensitivity_slider_container"
                     app:layout_constraintTop_toBottomOf="@id/sensitivity_slider_container" />
 
@@ -413,9 +430,10 @@
                     android:id="@+id/tv_sensitivity_max_label"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
                     android:text="민감"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="12sp"
+                    android:textColor="@color/text_tertiary"
+                    android:textSize="11sp"
                     app:layout_constraintEnd_toEndOf="@id/sensitivity_slider_container"
                     app:layout_constraintTop_toBottomOf="@id/sensitivity_slider_container" />
 
@@ -423,10 +441,10 @@
                     android:id="@+id/tv_sensitivity_note"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="16dp"
+                    android:layout_marginTop="14dp"
                     android:text="※ 민감도 변경은 새롭게 추가하는 옷부터 적용됩니다."
                     android:textColor="@color/text_tertiary"
-                    android:textSize="12sp"
+                    android:textSize="11sp"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toBottomOf="@id/tv_sensitivity_max_label" />
@@ -439,10 +457,13 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="24dp"
-            android:layout_marginTop="32dp"
+            android:layout_marginTop="28dp"
             android:text="기타"
             android:textColor="@color/settings_section_title"
-            android:textSize="16sp"
+            android:textSize="13sp"
+            android:letterSpacing="0.08"
+            android:textAllCaps="true"
+            android:textStyle="bold"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/card_background" />
 
@@ -451,10 +472,12 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginHorizontal="16dp"
-            android:layout_marginTop="8dp"
-            app:cardBackgroundColor="@color/settings_card_background"
-            app:cardCornerRadius="16dp"
-            app:cardElevation="4dp"
+            android:layout_marginTop="10dp"
+            app:cardBackgroundColor="@color/surface"
+            app:cardCornerRadius="20dp"
+            app:cardElevation="0dp"
+            app:strokeColor="@color/card_border"
+            app:strokeWidth="1.5dp"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/tv_header_misc">
@@ -462,7 +485,7 @@
             <androidx.constraintlayout.widget.ConstraintLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:padding="16dp">
+                android:padding="18dp">
 
                 <TextView
                     android:id="@+id/tv_show_reco_icon_label"
@@ -470,7 +493,7 @@
                     android:layout_height="wrap_content"
                     android:text="추천 아이콘 표시"
                     android:textColor="@color/text_primary"
-                    android:textSize="16sp"
+                    android:textSize="15sp"
                     android:textStyle="bold"
                     app:layout_constraintBottom_toBottomOf="@+id/switch_show_reco_icon"
                     app:layout_constraintEnd_toStartOf="@+id/switch_show_reco_icon"
@@ -488,10 +511,10 @@
                     android:id="@+id/tv_reco_icon_note"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="16dp"
+                    android:layout_marginTop="14dp"
                     android:text="※ 스타일, 옷 화면에서 날씨 추천 표시 여부를 바꿀 수 있습니다."
                     android:textColor="@color/text_tertiary"
-                    android:textSize="12sp"
+                    android:textSize="11sp"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toBottomOf="@id/switch_show_reco_icon" />
@@ -499,16 +522,18 @@
             </androidx.constraintlayout.widget.ConstraintLayout>
         </com.google.android.material.card.MaterialCardView>
 
-
         <TextView
             android:id="@+id/tv_header_credits"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="24dp"
-            android:layout_marginTop="32dp"
+            android:layout_marginTop="28dp"
             android:text="제작"
             android:textColor="@color/settings_section_title"
-            android:textSize="16sp"
+            android:textSize="13sp"
+            android:letterSpacing="0.08"
+            android:textAllCaps="true"
+            android:textStyle="bold"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/card_misc" />
 
@@ -517,10 +542,12 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginHorizontal="16dp"
-            android:layout_marginTop="8dp"
-            app:cardBackgroundColor="@color/settings_card_background"
-            app:cardCornerRadius="16dp"
-            app:cardElevation="4dp"
+            android:layout_marginTop="10dp"
+            app:cardBackgroundColor="@color/surface"
+            app:cardCornerRadius="20dp"
+            app:cardElevation="0dp"
+            app:strokeColor="@color/card_border"
+            app:strokeWidth="1.5dp"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/tv_header_credits">
@@ -528,7 +555,7 @@
             <androidx.constraintlayout.widget.ConstraintLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:padding="16dp">
+                android:padding="18dp">
 
                 <TextView
                     android:id="@+id/tv_credits_label"
@@ -536,7 +563,7 @@
                     android:layout_height="wrap_content"
                     android:text="제작자"
                     android:textColor="@color/text_primary"
-                    android:textSize="16sp"
+                    android:textSize="15sp"
                     android:textStyle="bold"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="parent" />
@@ -548,6 +575,7 @@
                     android:gravity="end"
                     android:text="2171297 유예현\n2171429 이지윈"
                     android:textColor="@color/text_secondary"
+                    android:textSize="14sp"
                     app:layout_constraintBaseline_toBaselineOf="@id/tv_credits_label"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toEndOf="@id/tv_credits_label" />
@@ -557,7 +585,7 @@
                     android:layout_width="0dp"
                     android:layout_height="1dp"
                     android:layout_marginTop="16dp"
-                    android:background="?android:attr/listDivider"
+                    android:background="@color/divider_color"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toBottomOf="@id/tv_credits_value" />
@@ -569,7 +597,7 @@
                     android:layout_marginTop="16dp"
                     android:text="깃허브 주소"
                     android:textColor="@color/text_primary"
-                    android:textSize="16sp"
+                    android:textSize="15sp"
                     android:textStyle="bold"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toBottomOf="@id/divider_2" />
@@ -584,8 +612,9 @@
                     android:focusable="true"
                     android:gravity="end"
                     android:text="https://github.com/Doctor-238/What-should-I-wear-today"
-                    android:textColor="@color/settings_spinner_blue"
-                    android:textColorLink="@color/settings_spinner_blue"
+                    android:textColor="@color/primary"
+                    android:textColorLink="@color/primary"
+                    android:textSize="12sp"
                     app:layout_constraintBaseline_toBaselineOf="@id/tv_github_label"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toEndOf="@id/tv_github_label" />
@@ -597,13 +626,15 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginHorizontal="16dp"
-            android:layout_marginTop="48dp"
+            android:layout_marginTop="40dp"
             android:layout_marginBottom="16dp"
             android:clickable="true"
             android:focusable="true"
-            app:cardBackgroundColor="@color/settings_card_background"
-            app:cardCornerRadius="16dp"
-            app:cardElevation="2dp"
+            app:cardBackgroundColor="@color/surface"
+            app:cardCornerRadius="20dp"
+            app:cardElevation="0dp"
+            app:strokeColor="#FCA5A5"
+            app:strokeWidth="1.5dp"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/card_credits"
@@ -614,12 +645,11 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:gravity="center"
-                android:padding="16dp"
+                android:padding="18dp"
                 android:text="전체 초기화하기"
                 android:textColor="@color/settings_reset_button_text"
-                android:textSize="16sp"
+                android:textSize="15sp"
                 android:textStyle="bold" />
-
 
         </com.google.android.material.card.MaterialCardView>
 

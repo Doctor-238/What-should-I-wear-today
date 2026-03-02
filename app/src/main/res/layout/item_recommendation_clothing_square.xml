@@ -4,11 +4,11 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="100dp"
     android:layout_height="100dp"
-    android:layout_marginEnd="8dp"
-    app:cardBackgroundColor="@android:color/white"
-    app:cardCornerRadius="12dp"
-    app:cardElevation="1dp"
-    app:strokeColor="@color/weather_card_blue_bg"
+    android:layout_marginEnd="10dp"
+    app:cardBackgroundColor="@color/surface"
+    app:cardCornerRadius="14dp"
+    app:cardElevation="0dp"
+    app:strokeColor="@color/card_border"
     app:strokeWidth="1.5dp">
 
     <FrameLayout
@@ -19,15 +19,16 @@
             android:id="@+id/item_image_recommend_square"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
+            android:background="@color/primary_light"
             android:scaleType="centerCrop"
             tools:src="@tools:sample/backgrounds/scenic" />
 
         <ImageView
             android:id="@+id/icon_special"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
+            android:layout_width="22dp"
+            android:layout_height="22dp"
             android:layout_gravity="bottom|end"
-            android:layout_margin="8dp"
+            android:layout_margin="6dp"
             android:src="@drawable/ic_packable_bag"
             android:visibility="gone"
             app:tint="@null"

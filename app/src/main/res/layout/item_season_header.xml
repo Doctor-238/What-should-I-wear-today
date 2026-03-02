@@ -1,15 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <TextView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/tv_season_header"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:paddingStart="16dp"
+    android:paddingStart="20dp"
     android:paddingTop="24dp"
-    android:paddingEnd="16dp"
+    android:paddingEnd="20dp"
     android:paddingBottom="8dp"
-    android:textSize="20sp"
+    android:textSize="18sp"
     android:textStyle="bold"
-    android:textColor="?android:attr/textColorPrimary"
-    android:background="?android:attr/colorBackground"
-    tools:text="봄"
-    xmlns:tools="http://schemas.android.com/tools" />
+    android:letterSpacing="0.01"
+    android:textColor="@color/text_primary"
+    android:background="@color/app_background"
+    tools:text="봄" />

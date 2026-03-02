@@ -3,11 +3,9 @@
     android:shape="rectangle">
     <stroke
         android:width="2dp"
-        android:color="#bad0e8"
-        android:dashWidth="8dp"
-        android:dashGap="4dp" />
-
-    <corners android:radius="40dp" />
-
-    <solid android:color="#fafafa" />
+        android:color="#A8D4F5"
+        android:dashWidth="10dp"
+        android:dashGap="6dp" />
+    <corners android:radius="28dp" />
+    <solid android:color="#F8FBFF" />
 </shape>

@@ -1,14 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_marginHorizontal="16dp"
-    android:layout_marginVertical="8dp"
-    app:cardBackgroundColor="#fff0e6"
-    app:cardCornerRadius="16dp"
-    app:cardElevation="2dp">
+    android:layout_marginVertical="6dp"
+    app:cardBackgroundColor="@color/surface"
+    app:cardCornerRadius="20dp"
+    app:cardElevation="0dp"
+    app:strokeColor="@color/card_border"
+    app:strokeWidth="1.5dp">
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/clickable_layout"
@@ -22,9 +24,11 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:textColor="@color/text_primary"
-            android:textSize="18sp"
+            android:textSize="16sp"
             android:textStyle="bold"
-            app:layout_constraintEnd_toEndOf="parent"
+            android:maxLines="1"
+            android:ellipsize="end"
+            app:layout_constraintEnd_toStartOf="@id/iv_delete_checkbox"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
             tools:text="여름 코디 1" />
@@ -44,10 +48,9 @@
 
         <ImageView
             android:id="@+id/iv_delete_checkbox"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
-            android:layout_gravity="right|top"
-            android:padding="4dp"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:padding="3dp"
             android:src="@drawable/ic_checkbox_unchecked_custom"
             android:visibility="gone"
             app:layout_constraintEnd_toEndOf="parent"
@@ -55,4 +58,4 @@
             tools:visibility="visible" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
-</androidx.cardview.widget.CardView>
+</com.google.android.material.card.MaterialCardView>

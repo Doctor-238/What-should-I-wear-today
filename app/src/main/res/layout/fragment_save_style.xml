@@ -4,18 +4,22 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/app_background"
     tools:context=".ui.style.SaveStyleFragment">
 
     <com.google.android.material.appbar.MaterialToolbar
         android:id="@+id/toolbar_save_style"
         android:layout_width="0dp"
         android:layout_height="?attr/actionBarSize"
+        android:background="@color/surface"
+        android:elevation="2dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         app:navigationIcon="@drawable/ic_arrow_back"
         app:title="나만의 스타일 만들기"
-        app:titleCentered="true" />
+        app:titleCentered="true"
+        app:titleTextColor="@color/text_primary" />
 
     <ScrollView
         android:id="@+id/scroll_view_content"
@@ -32,19 +36,19 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:paddingBottom="4dp">
+            android:paddingBottom="8dp">
 
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/textInputLayout_style_name"
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginHorizontal="16dp"
-                android:layout_marginTop="16dp"
-                app:boxCornerRadiusBottomEnd="12dp"
-                app:boxCornerRadiusBottomStart="12dp"
-                app:boxCornerRadiusTopEnd="12dp"
-                app:boxCornerRadiusTopStart="12dp"
+                android:layout_marginHorizontal="20dp"
+                android:layout_marginTop="20dp"
+                app:boxCornerRadiusBottomEnd="14dp"
+                app:boxCornerRadiusBottomStart="14dp"
+                app:boxCornerRadiusTopEnd="14dp"
+                app:boxCornerRadiusTopStart="14dp"
                 app:boxStrokeColor="@color/text_input_box_stroke_color"
                 app:counterEnabled="true"
                 app:counterMaxLength="20"
@@ -63,17 +67,18 @@
                 android:id="@+id/tv_season_label"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="16dp"
+                android:layout_marginStart="20dp"
                 android:layout_marginTop="16dp"
                 android:text="계절 선택"
-                android:textSize="16sp"
-                android:textStyle="bold" />
+                android:textSize="15sp"
+                android:textStyle="bold"
+                android:textColor="@color/text_primary" />
 
             <com.google.android.material.chip.ChipGroup
                 android:id="@+id/chip_group_season_save"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginHorizontal="16dp"
+                android:layout_marginHorizontal="20dp"
                 android:layout_marginTop="8dp"
                 app:chipSpacingHorizontal="8dp"
                 app:selectionRequired="true"
@@ -88,7 +93,7 @@
                     android:textColor="@color/chip_textcolor_selector"
                     app:chipBackgroundColor="@color/chip_backgroundcolor_selector"
                     app:chipStrokeColor="@color/fab_color_style_tab"
-                    app:chipStrokeWidth="2dp" />
+                    app:chipStrokeWidth="1.5dp" />
 
                 <com.google.android.material.chip.Chip
                     android:id="@+id/chip_summer"
@@ -99,7 +104,7 @@
                     android:textColor="@color/chip_textcolor_selector"
                     app:chipBackgroundColor="@color/chip_backgroundcolor_selector"
                     app:chipStrokeColor="@color/fab_color_style_tab"
-                    app:chipStrokeWidth="2dp" />
+                    app:chipStrokeWidth="1.5dp" />
 
                 <com.google.android.material.chip.Chip
                     android:id="@+id/chip_fall"
@@ -110,7 +115,7 @@
                     android:textColor="@color/chip_textcolor_selector"
                     app:chipBackgroundColor="@color/chip_backgroundcolor_selector"
                     app:chipStrokeColor="@color/fab_color_style_tab"
-                    app:chipStrokeWidth="2dp" />
+                    app:chipStrokeWidth="1.5dp" />
 
                 <com.google.android.material.chip.Chip
                     android:id="@+id/chip_winter"
@@ -121,7 +126,7 @@
                     android:textColor="@color/chip_textcolor_selector"
                     app:chipBackgroundColor="@color/chip_backgroundcolor_selector"
                     app:chipStrokeColor="@color/fab_color_style_tab"
-                    app:chipStrokeWidth="2dp" />
+                    app:chipStrokeWidth="1.5dp" />
 
             </com.google.android.material.chip.ChipGroup>
 
@@ -129,18 +134,20 @@
                 android:id="@+id/tv_selection_guide"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="16dp"
+                android:layout_marginStart="20dp"
                 android:layout_marginTop="16dp"
                 android:text="스타일에 포함할 옷을 선택하세요 (최대 10개)"
-                android:textSize="16sp"
-                android:textStyle="bold" />
+                android:textSize="15sp"
+                android:textStyle="bold"
+                android:textColor="@color/text_primary" />
 
             <com.google.android.material.tabs.TabLayout
                 android:id="@+id/tab_layout_save_style_category"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                app:tabBackground="@android:color/white"
+                android:layout_marginTop="10dp"
+                android:background="@color/surface"
+                app:tabBackground="@color/surface"
                 app:tabGravity="fill"
                 app:tabIndicator="@drawable/tab_indicator_custom"
                 app:tabIndicatorAnimationMode="linear"
@@ -162,9 +169,11 @@
                 android:layout_height="300dp"
                 android:nestedScrollingEnabled="true"
                 android:layout_marginHorizontal="12dp"
+                android:paddingTop="8dp"
                 app:layoutManager="androidx.recyclerview.widget.GridLayoutManager"
                 app:spanCount="4"
                 tools:listitem="@layout/item_clothing_selectable" />
+
             <View
                 android:layout_width="match_parent"
                 android:layout_height="1dp"
@@ -172,18 +181,17 @@
 
             <Button
                 android:id="@+id/button_save_style_final"
-                style="@style/Widget.Material3.Button.UnelevatedButton"
-                android:layout_width="wrap_content"
-                android:layout_height="60dp"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
                 android:layout_gravity="center_horizontal"
-                android:layout_marginTop="4dp"
+                android:layout_marginTop="8dp"
+                android:layout_marginHorizontal="20dp"
                 android:enabled="false"
-                android:paddingHorizontal="48dp"
                 android:text="저장하기"
                 android:textSize="16sp"
                 android:textStyle="bold"
-                app:backgroundTint="@color/fab_color_style_tab"
-                app:cornerRadius="24dp" />
+                android:textColor="@color/white"
+                android:background="@drawable/bg_primary_button" />
 
         </LinearLayout>
     </ScrollView>
@@ -192,7 +200,7 @@
         android:id="@+id/loading_overlay"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="#80000000"
+        android:background="#88000000"
         android:clickable="true"
         android:focusable="true"
         android:visibility="gone"

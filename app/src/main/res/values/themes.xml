@@ -1,8 +1,12 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <style name="Base.Theme.WhatshouldIweartoday" parent="Theme.Material3.Light.NoActionBar">
-        <item name="colorPrimary">@color/settings_spinner_blue</item>
+        <item name="colorPrimary">@color/primary</item>
+        <item name="colorPrimaryVariant">@color/primary_dark</item>
+        <item name="colorSecondary">@color/primary</item>
         <item name="android:statusBarColor">@color/status_bar_blue</item>
         <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowBackground">@color/app_background</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
     </style>
 
     <style name="Theme.WhatshouldIweartoday" parent="Base.Theme.WhatshouldIweartoday" />
@@ -17,6 +21,7 @@
         <item name="windowSplashScreenAnimatedIcon">@drawable/splash_icon_wrapper</item>
         <item name="postSplashScreenTheme">@style/Theme.WhatshouldIweartoday</item>
     </style>
+
     <style name="Theme.Transparent" parent="Theme.AppCompat.Dialog">
         <item name="android:windowIsTranslucent">true</item>
         <item name="android:windowBackground">@android:color/transparent</item>
@@ -26,4 +31,18 @@
         <item name="android:backgroundDimEnabled">true</item>
     </style>
 
+    <style name="CardElevated" parent="">
+        <item name="cardCornerRadius">20dp</item>
+        <item name="cardElevation">0dp</item>
+        <item name="strokeWidth">1.5dp</item>
+        <item name="strokeColor">@color/card_border</item>
+        <item name="cardBackgroundColor">@color/surface</item>
+    </style>
+
+    <style name="PillButton" parent="Widget.Material3.Button.UnelevatedButton">
+        <item name="cornerRadius">28dp</item>
+        <item name="android:paddingHorizontal">32dp</item>
+        <item name="android:textSize">15sp</item>
+        <item name="android:letterSpacing">0.02</item>
+    </style>
 </resources>
