@@ -7,24 +7,26 @@
     android:layout_marginHorizontal="16dp"
     android:layout_marginVertical="6dp"
     app:cardBackgroundColor="@color/surface"
-    app:cardCornerRadius="20dp"
+    app:cardCornerRadius="22dp"
     app:cardElevation="0dp"
     app:strokeColor="@color/card_border"
-    app:strokeWidth="1.5dp">
+    app:strokeWidth="1dp">
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/clickable_layout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="?android:attr/selectableItemBackground"
-        android:padding="16dp">
+        android:paddingHorizontal="16dp"
+        android:paddingTop="14dp"
+        android:paddingBottom="14dp">
 
         <TextView
             android:id="@+id/tv_style_name"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:textColor="@color/text_primary"
-            android:textSize="16sp"
+            android:textSize="15sp"
             android:textStyle="bold"
             android:maxLines="1"
             android:ellipsize="end"
@@ -37,7 +39,7 @@
             android:id="@+id/rv_style_items"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
+            android:layout_marginTop="10dp"
             android:orientation="horizontal"
             app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
             app:layout_constraintEnd_toEndOf="parent"
@@ -48,9 +50,9 @@
 
         <ImageView
             android:id="@+id/iv_delete_checkbox"
-            android:layout_width="30dp"
-            android:layout_height="30dp"
-            android:padding="3dp"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:padding="2dp"
             android:src="@drawable/ic_checkbox_unchecked_custom"
             android:visibility="gone"
             app:layout_constraintEnd_toEndOf="parent"

@@ -4,8 +4,12 @@
         <layer-list>
             <item>
                 <shape android:shape="rectangle">
-                    <solid android:color="@color/delete_button_red_active" />
-                    <corners android:radius="6dp" />
+                    <gradient
+                        android:angle="135"
+                        android:startColor="#FF5F52"
+                        android:endColor="#E53935"
+                        android:type="linear" />
+                    <corners android:radius="7dp" />
                 </shape>
             </item>
             <item
@@ -18,8 +22,8 @@
     <item android:state_checked="false">
         <shape android:shape="rectangle">
             <solid android:color="@android:color/transparent" />
-            <corners android:radius="6dp" />
-            <stroke android:width="2dp" android:color="#C4CEDB" />
+            <corners android:radius="7dp" />
+            <stroke android:width="1.5dp" android:color="#BCC8D4" />
         </shape>
     </item>
 </selector>

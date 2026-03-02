@@ -11,7 +11,7 @@
         android:layout_width="0dp"
         android:layout_height="72dp"
         android:background="@drawable/bg_bottom_nav"
-        app:elevation="12dp"
+        app:elevation="16dp"
         app:itemIconSize="26dp"
         app:labelVisibilityMode="labeled"
         app:itemIconTint="@color/bottom_nav_text_color_selector"

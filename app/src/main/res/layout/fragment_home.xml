@@ -11,19 +11,21 @@
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/toolbar_home"
         android:layout_width="match_parent"
-        android:layout_height="68dp"
-        android:background="@color/surface"
-        android:elevation="2dp">
+        android:layout_height="wrap_content"
+        android:background="@drawable/bg_toolbar_gradient"
+        android:paddingTop="12dp"
+        android:paddingBottom="0dp"
+        android:elevation="0dp">
 
         <ImageView
             android:id="@+id/iv_logo"
-            android:layout_width="220dp"
-            android:layout_height="52dp"
+            android:layout_width="200dp"
+            android:layout_height="48dp"
             android:src="@drawable/applogo"
             android:scaleType="fitCenter"
             android:background="@android:color/transparent"
             app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/iv_settings"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
@@ -32,22 +34,23 @@
             android:layout_width="40dp"
             android:layout_height="40dp"
             android:layout_marginEnd="16dp"
-            android:background="@color/primary_light"
-            android:padding="8dp"
+            android:background="@drawable/bg_pill_tag"
+            android:padding="9dp"
             android:clickable="true"
             android:focusable="true"
             android:src="@drawable/settings"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
+            app:layout_constraintTop_toTopOf="parent"
+            app:tint="@color/primary" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
     <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@color/surface"
-        android:paddingTop="4dp">
+        android:background="@drawable/bg_toolbar_gradient"
+        android:paddingTop="8dp">
 
         <LinearLayout
             android:id="@+id/tabs_container"
@@ -60,23 +63,23 @@
                 android:id="@+id/tv_tab_today"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:paddingHorizontal="24dp"
-                android:paddingBottom="10dp"
+                android:paddingHorizontal="28dp"
+                android:paddingBottom="12dp"
                 android:text="오늘"
                 android:textColor="@color/tab_selected_text"
-                android:textSize="18sp"
+                android:textSize="17sp"
                 android:textStyle="bold" />
 
             <TextView
                 android:id="@+id/tv_tab_tomorrow"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="48dp"
-                android:paddingHorizontal="24dp"
-                android:paddingBottom="10dp"
+                android:layout_marginStart="32dp"
+                android:paddingHorizontal="28dp"
+                android:paddingBottom="12dp"
                 android:text="내일"
                 android:textColor="@color/tab_unselected_text"
-                android:textSize="18sp"
+                android:textSize="17sp"
                 android:textStyle="bold" />
         </LinearLayout>
 
@@ -92,7 +95,7 @@
     <View
         android:layout_width="match_parent"
         android:layout_height="1dp"
-        android:background="@color/bottom_nav_background" />
+        android:background="@color/divider_color" />
 
     <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
         android:id="@+id/swipe_refresh_layout"

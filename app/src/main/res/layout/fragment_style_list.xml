@@ -10,8 +10,8 @@
         android:id="@+id/recyclerView_style_list"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:paddingTop="8dp"
-        android:paddingBottom="8dp"
+        android:paddingTop="10dp"
+        android:paddingBottom="16dp"
         android:clipToPadding="false"
         app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
         tools:listitem="@layout/item_saved_style" />

@@ -7,45 +7,58 @@
     <color name="primary">#2D8FE8</color>
     <color name="primary_dark">#1A6BC4</color>
     <color name="primary_light">#EBF5FF</color>
+    <color name="primary_border">#A8D4F5</color>
 
-    <color name="status_bar_blue">#5BAEE8</color>
-    <color name="app_background">#F5F9FF</color>
+    <color name="status_bar_blue">#4FA4EC</color>
+    <color name="app_background">#F4F8FF</color>
     <color name="surface">#FFFFFF</color>
+    <color name="surface_variant">#F8FBFF</color>
     <color name="weather_card_background">#FFFFFF</color>
-    <color name="weather_card_stroke">#D0E8FA</color>
-    <color name="text_primary">#0F1923</color>
-    <color name="text_secondary">#6B7B8D</color>
-    <color name="text_tertiary">#9DAFC0</color>
+    <color name="weather_card_stroke">#C8E4F8</color>
+
+    <color name="text_primary">#0D1926</color>
+    <color name="text_secondary">#647485</color>
+    <color name="text_tertiary">#9BAEBB</color>
+    <color name="text_hint">#B0C0D0</color>
+
     <color name="tab_selected_text">#2D8FE8</color>
-    <color name="tab_unselected_text">#A8B8C8</color>
+    <color name="tab_unselected_text">#A4B6C8</color>
     <color name="weather_card_blue_bg">#A8D4F5</color>
 
-    <color name="bottom_nav_background">#EDF1F5</color>
+    <color name="bottom_nav_background">#E8EEF6</color>
     <color name="bottom_nav_surface">#FFFFFF</color>
+    <color name="nav_border">#DDE8F2</color>
 
-    <color name="settings_section_title">#9DAFC0</color>
+    <color name="settings_section_title">#9BAEBB</color>
     <color name="settings_card_background">#FFFFFF</color>
     <color name="settings_spinner_blue">#2D8FE8</color>
-    <color name="settings_reset_button_text">#EF4444</color>
-    <color name="slider_track_inactive_color">#D8EAF7</color>
+    <color name="settings_reset_button_text">#E53935</color>
+
+    <color name="slider_track_inactive_color">#D4E8F6</color>
     <color name="slider_thumb_color">#FFFFFF</color>
-    <color name="clothing_item_border">#A8D4F5</color>
+
+    <color name="clothing_item_border">#C0D8F0</color>
+    <color name="input_border">#C8D8E8</color>
+    <color name="search_bg">#F6FAFF</color>
 
     <color name="style_card_background">#EBF7FF</color>
     <color name="style_background">#FFF3E8</color>
-    <color name="search_view_stroke_color">#D0E8FA</color>
     <color name="fab_color_style_tab">#2D8FE8</color>
+
     <color name="temp_high_red">#FF6B6B</color>
     <color name="temp_low_blue">#5499FF</color>
 
-    <color name="delete_button_red_active">#EF4444</color>
-    <color name="delete_button_red_inactive">#FCA5A5</color>
+    <color name="delete_button_red_active">#E53935</color>
+    <color name="delete_button_red_inactive">#FFBCBA</color>
 
     <color name="button_plus_green">#34C759</color>
     <color name="button_minus_red">#FF453A</color>
+
     <color name="chip_selected_bg">#2D8FE8</color>
-    <color name="bottom_nav_item_selected_bg">#E4F2FD</color>
-    <color name="card_border">#D0E8FA</color>
-    <color name="divider_color">#EBF1F7</color>
+    <color name="chip_unselected_bg">#F0F7FF</color>
+
+    <color name="bottom_nav_item_selected_bg">#E2F0FD</color>
+    <color name="card_border">#D4E8F5</color>
+    <color name="divider_color">#EBF2F8</color>
     <color name="ic_launcher_background">#F0F8FF</color>
 </resources>
