@@ -16,7 +16,7 @@
         android:clipToPadding="false"
         app:layoutManager="androidx.recyclerview.widget.GridLayoutManager"
         app:spanCount="2"
-        tools:listitem="@layout/item_clothing" />
+        tools:listitem="@layout/item_clothing"/>
 
     <LinearLayout
         android:id="@+id/empty_view_container"
@@ -32,7 +32,7 @@
             android:layout_width="260dp"
             android:layout_height="wrap_content"
             android:adjustViewBounds="true"
-            android:src="@drawable/empty_closet_bubble" />
+            android:src="@drawable/empty_closet_bubble"/>
 
     </LinearLayout>
 

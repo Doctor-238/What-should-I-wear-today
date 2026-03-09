@@ -14,7 +14,7 @@
         android:paddingBottom="16dp"
         android:clipToPadding="false"
         app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
-        tools:listitem="@layout/item_saved_style" />
+        tools:listitem="@layout/item_saved_style"/>
 
     <LinearLayout
         android:id="@+id/empty_style_container"
@@ -30,7 +30,7 @@
             android:layout_width="300dp"
             android:layout_height="wrap_content"
             android:adjustViewBounds="true"
-            android:src="@drawable/empty_style_bubble" />
+            android:src="@drawable/empty_style_bubble"/>
 
     </LinearLayout>
 

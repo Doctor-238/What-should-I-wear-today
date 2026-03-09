@@ -21,14 +21,14 @@
         app:titleCentered="true"
         app:titleTextColor="@color/text_primary"
         app:titleTextAppearance="@style/TextAppearance.App.ToolbarTitle"
-        app:menu="@menu/edit_clothing_menu" />
+        app:menu="@menu/edit_clothing_menu"/>
 
     <View
         android:id="@+id/toolbar_divider"
         android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:background="@color/divider_color"
-        app:layout_constraintTop_toBottomOf="@id/toolbar_edit" />
+        android:layout_height="2dp"
+        android:background="@drawable/bg_section_divider"
+        app:layout_constraintTop_toBottomOf="@id/toolbar_edit"/>
 
     <ScrollView
         android:id="@+id/scrollView"
@@ -53,6 +53,7 @@
                 android:layout_marginHorizontal="20dp"
                 android:background="@drawable/bg_cloth_spinner"
                 android:padding="12dp"
+                android:elevation="6dp"
                 app:layout_constraintDimensionRatio="1:1"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
@@ -63,7 +64,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
                     android:scaleType="fitCenter"
-                    tools:src="@tools:sample/backgrounds/scenic" />
+                    tools:src="@tools:sample/backgrounds/scenic"/>
 
                 <ImageView
                     android:id="@+id/icon_special_edit"
@@ -73,7 +74,7 @@
                     android:layout_margin="10dp"
                     android:visibility="gone"
                     tools:src="@tools:sample/sun"
-                    tools:visibility="visible" />
+                    tools:visibility="visible"/>
 
             </FrameLayout>
 
@@ -85,9 +86,8 @@
                 android:layout_marginTop="16dp"
                 app:cardBackgroundColor="@color/surface"
                 app:cardCornerRadius="24dp"
-                app:cardElevation="0dp"
-                app:strokeColor="@color/card_border"
-                app:strokeWidth="1dp"
+                app:cardElevation="6dp"
+                app:strokeWidth="0dp"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/frameLayout_edit_preview">
@@ -114,7 +114,21 @@
                             android:textStyle="bold"
                             app:layout_constraintBottom_toBottomOf="parent"
                             app:layout_constraintStart_toStartOf="parent"
-                            app:layout_constraintTop_toTopOf="parent" />
+                            app:layout_constraintTop_toTopOf="parent"/>
+
+                        <TextView
+                            android:id="@+id/tv_edit_temp_hint"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:text="상의, 하의, 아우터에만 표시됩니다."
+                            android:textColor="@color/text_tertiary"
+                            android:textSize="11sp"
+                            android:gravity="end"
+                            android:layout_marginEnd="10dp"
+                            app:layout_constraintBottom_toBottomOf="parent"
+                            app:layout_constraintEnd_toStartOf="@id/button_edit_temp_decrease"
+                            app:layout_constraintStart_toEndOf="@id/tv_edit_temp_label"
+                            app:layout_constraintTop_toTopOf="parent"/>
 
                         <ImageButton
                             android:id="@+id/button_edit_temp_decrease"
@@ -124,9 +138,10 @@
                             android:background="@drawable/bg_button_minus"
                             android:contentDescription="온도 내리기"
                             android:src="@drawable/ic_minus"
+                            android:elevation="3dp"
                             app:layout_constraintBottom_toBottomOf="parent"
                             app:layout_constraintEnd_toStartOf="@id/textView_edit_temperature"
-                            app:layout_constraintTop_toTopOf="parent" />
+                            app:layout_constraintTop_toTopOf="parent"/>
 
                         <TextView
                             android:id="@+id/textView_edit_temperature"
@@ -139,7 +154,7 @@
                             app:layout_constraintBottom_toBottomOf="parent"
                             app:layout_constraintEnd_toStartOf="@id/button_edit_temp_increase"
                             app:layout_constraintTop_toTopOf="parent"
-                            tools:text="-7.5°C ~ -2.5°C" />
+                            tools:text="-7.5°C ~ -2.5°C"/>
 
                         <ImageButton
                             android:id="@+id/button_edit_temp_increase"
@@ -148,15 +163,16 @@
                             android:background="@drawable/bg_button_plus"
                             android:contentDescription="온도 올리기"
                             android:src="@drawable/ic_plus"
+                            android:elevation="3dp"
                             app:layout_constraintBottom_toBottomOf="parent"
                             app:layout_constraintEnd_toEndOf="parent"
-                            app:layout_constraintTop_toTopOf="parent" />
+                            app:layout_constraintTop_toTopOf="parent"/>
                     </androidx.constraintlayout.widget.ConstraintLayout>
 
                     <View
                         android:layout_width="match_parent"
                         android:layout_height="1dp"
-                        android:background="@color/divider_color" />
+                        android:background="@color/divider_color"/>
 
                     <RelativeLayout
                         android:layout_width="match_parent"
@@ -171,7 +187,7 @@
                             android:text="색상"
                             android:textColor="@color/text_primary"
                             android:textSize="14sp"
-                            android:textStyle="bold" />
+                            android:textStyle="bold"/>
 
                         <View
                             android:id="@+id/view_color_swatch_edit"
@@ -179,13 +195,14 @@
                             android:layout_height="28dp"
                             android:layout_alignParentEnd="true"
                             android:layout_centerVertical="true"
-                            tools:background="#000000" />
+                            android:elevation="2dp"
+                            tools:background="#000000"/>
                     </RelativeLayout>
 
                     <View
                         android:layout_width="match_parent"
                         android:layout_height="1dp"
-                        android:background="@color/divider_color" />
+                        android:background="@color/divider_color"/>
 
                     <RelativeLayout
                         android:id="@+id/layout_background_removal"
@@ -201,14 +218,14 @@
                             android:text="배경 제거"
                             android:textColor="@color/text_primary"
                             android:textSize="14sp"
-                            android:textStyle="bold" />
+                            android:textStyle="bold"/>
 
                         <com.google.android.material.switchmaterial.SwitchMaterial
                             android:id="@+id/switch_edit_remove_background"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_alignParentEnd="true"
-                            android:layout_centerVertical="true" />
+                            android:layout_centerVertical="true"/>
                     </RelativeLayout>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
@@ -238,7 +255,7 @@
                     android:layout_height="wrap_content"
                     android:hint="옷 이름"
                     android:inputType="text"
-                    android:maxLength="20" />
+                    android:maxLength="20"/>
             </com.google.android.material.textfield.TextInputLayout>
 
             <TextView
@@ -252,7 +269,7 @@
                 android:textSize="14sp"
                 android:textStyle="bold"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/textInputLayout_edit_name" />
+                app:layout_constraintTop_toBottomOf="@id/textInputLayout_edit_name"/>
 
             <com.google.android.material.chip.ChipGroup
                 android:id="@+id/chipGroup_edit_category"
@@ -277,7 +294,7 @@
                     android:textColor="@color/chip_textcolor_selector"
                     app:chipBackgroundColor="@color/chip_backgroundcolor_selector"
                     app:chipStrokeColor="@color/fab_color_style_tab"
-                    app:chipStrokeWidth="1.5dp" />
+                    app:chipStrokeWidth="1.5dp"/>
 
                 <com.google.android.material.chip.Chip
                     android:id="@+id/chip_edit_bottom"
@@ -288,7 +305,7 @@
                     android:textColor="@color/chip_textcolor_selector"
                     app:chipBackgroundColor="@color/chip_backgroundcolor_selector"
                     app:chipStrokeColor="@color/fab_color_style_tab"
-                    app:chipStrokeWidth="1.5dp" />
+                    app:chipStrokeWidth="1.5dp"/>
 
                 <com.google.android.material.chip.Chip
                     android:id="@+id/chip_edit_outer"
@@ -299,7 +316,7 @@
                     android:textColor="@color/chip_textcolor_selector"
                     app:chipBackgroundColor="@color/chip_backgroundcolor_selector"
                     app:chipStrokeColor="@color/fab_color_style_tab"
-                    app:chipStrokeWidth="1.5dp" />
+                    app:chipStrokeWidth="1.5dp"/>
 
                 <com.google.android.material.chip.Chip
                     android:id="@+id/chip_edit_shoe"
@@ -310,7 +327,7 @@
                     android:textColor="@color/chip_textcolor_selector"
                     app:chipBackgroundColor="@color/chip_backgroundcolor_selector"
                     app:chipStrokeColor="@color/fab_color_style_tab"
-                    app:chipStrokeWidth="1.5dp" />
+                    app:chipStrokeWidth="1.5dp"/>
 
                 <com.google.android.material.chip.Chip
                     android:id="@+id/chip_edit_bag"
@@ -321,7 +338,7 @@
                     android:textColor="@color/chip_textcolor_selector"
                     app:chipBackgroundColor="@color/chip_backgroundcolor_selector"
                     app:chipStrokeColor="@color/fab_color_style_tab"
-                    app:chipStrokeWidth="1.5dp" />
+                    app:chipStrokeWidth="1.5dp"/>
 
                 <com.google.android.material.chip.Chip
                     android:id="@+id/chip_edit_hat"
@@ -332,7 +349,7 @@
                     android:textColor="@color/chip_textcolor_selector"
                     app:chipBackgroundColor="@color/chip_backgroundcolor_selector"
                     app:chipStrokeColor="@color/fab_color_style_tab"
-                    app:chipStrokeWidth="1.5dp" />
+                    app:chipStrokeWidth="1.5dp"/>
 
                 <com.google.android.material.chip.Chip
                     android:id="@+id/chip_edit_other"
@@ -343,7 +360,7 @@
                     android:textColor="@color/chip_textcolor_selector"
                     app:chipBackgroundColor="@color/chip_backgroundcolor_selector"
                     app:chipStrokeColor="@color/fab_color_style_tab"
-                    app:chipStrokeWidth="1.5dp" />
+                    app:chipStrokeWidth="1.5dp"/>
 
             </com.google.android.material.chip.ChipGroup>
 
@@ -362,7 +379,7 @@
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/chipGroup_edit_category"
-                app:strokeColor="?attr/colorError" />
+                app:strokeColor="?attr/colorError"/>
 
         </androidx.constraintlayout.widget.ConstraintLayout>
 

@@ -20,14 +20,14 @@
         app:title="옷 추가하기"
         app:titleCentered="true"
         app:titleTextColor="@color/text_primary"
-        app:titleTextAppearance="@style/TextAppearance.App.ToolbarTitle" />
+        app:titleTextAppearance="@style/TextAppearance.App.ToolbarTitle"/>
 
     <View
         android:id="@+id/toolbar_divider"
         android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:background="@color/divider_color"
-        app:layout_constraintTop_toBottomOf="@id/toolbar" />
+        android:layout_height="2dp"
+        android:background="@drawable/bg_section_divider"
+        app:layout_constraintTop_toBottomOf="@id/toolbar"/>
 
     <ScrollView
         android:id="@+id/scrollView"
@@ -56,6 +56,7 @@
                 android:focusable="true"
                 android:padding="16dp"
                 android:layout_marginHorizontal="20dp"
+                android:elevation="4dp"
                 app:layout_constraintDimensionRatio="1:1"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
@@ -80,7 +81,7 @@
                         android:textColor="@color/text_hint"
                         android:textSize="14sp"
                         android:visibility="visible"
-                        tools:visibility="visible" />
+                        tools:visibility="visible"/>
                 </LinearLayout>
 
                 <ImageView
@@ -89,7 +90,7 @@
                     android:layout_height="match_parent"
                     android:scaleType="fitCenter"
                     android:visibility="invisible"
-                    tools:visibility="visible" />
+                    tools:visibility="visible"/>
 
                 <ProgressBar
                     android:id="@+id/progressBar"
@@ -97,7 +98,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_gravity="center"
-                    android:visibility="gone" />
+                    android:visibility="gone"/>
             </FrameLayout>
 
             <com.google.android.material.card.MaterialCardView
@@ -109,9 +110,8 @@
                 android:visibility="gone"
                 app:cardBackgroundColor="@color/surface"
                 app:cardCornerRadius="24dp"
-                app:cardElevation="0dp"
-                app:strokeColor="@color/card_border"
-                app:strokeWidth="1dp"
+                app:cardElevation="6dp"
+                app:strokeWidth="0dp"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/frameLayout_preview"
@@ -136,7 +136,7 @@
                             android:layout_alignParentStart="true"
                             android:layout_centerVertical="true"
                             android:textColor="@color/text_primary"
-                            android:textSize="14sp" />
+                            android:textSize="14sp"/>
                         <TextView
                             android:id="@+id/tv_info_category"
                             android:layout_width="wrap_content"
@@ -146,13 +146,13 @@
                             android:textColor="@color/primary"
                             android:textSize="14sp"
                             android:textStyle="bold"
-                            tools:text="아우터" />
+                            tools:text="아우터"/>
                     </RelativeLayout>
 
                     <View
                         android:layout_width="match_parent"
                         android:layout_height="1dp"
-                        android:background="@color/divider_color" />
+                        android:background="@color/divider_color"/>
 
                     <androidx.constraintlayout.widget.ConstraintLayout
                         android:layout_width="match_parent"
@@ -169,7 +169,21 @@
                             android:textStyle="bold"
                             app:layout_constraintBottom_toBottomOf="parent"
                             app:layout_constraintStart_toStartOf="parent"
-                            app:layout_constraintTop_toTopOf="parent" />
+                            app:layout_constraintTop_toTopOf="parent"/>
+
+                        <TextView
+                            android:id="@+id/tv_temp_only_label"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:text="상의, 하의, 아우터에만 표시됩니다."
+                            android:textColor="@color/text_tertiary"
+                            android:textSize="11sp"
+                            android:gravity="end"
+                            android:layout_marginEnd="8dp"
+                            app:layout_constraintBottom_toBottomOf="parent"
+                            app:layout_constraintEnd_toStartOf="@id/button_temp_decrease"
+                            app:layout_constraintStart_toEndOf="@id/tv_temp_label"
+                            app:layout_constraintTop_toTopOf="parent"/>
 
                         <ImageButton
                             android:id="@+id/button_temp_decrease"
@@ -179,9 +193,10 @@
                             android:background="@drawable/bg_button_minus"
                             android:contentDescription="온도 내리기"
                             android:src="@drawable/ic_minus"
+                            android:elevation="3dp"
                             app:layout_constraintBottom_toBottomOf="parent"
                             app:layout_constraintEnd_toStartOf="@id/tv_info_temperature"
-                            app:layout_constraintTop_toTopOf="parent" />
+                            app:layout_constraintTop_toTopOf="parent"/>
 
                         <TextView
                             android:id="@+id/tv_info_temperature"
@@ -194,7 +209,7 @@
                             app:layout_constraintBottom_toBottomOf="parent"
                             app:layout_constraintEnd_toStartOf="@id/button_temp_increase"
                             app:layout_constraintTop_toTopOf="parent"
-                            tools:text="16.5° ~ 23.5°" />
+                            tools:text="16.5° ~ 23.5°"/>
 
                         <ImageButton
                             android:id="@+id/button_temp_increase"
@@ -203,15 +218,16 @@
                             android:background="@drawable/bg_button_plus"
                             android:contentDescription="온도 올리기"
                             android:src="@drawable/ic_plus"
+                            android:elevation="3dp"
                             app:layout_constraintBottom_toBottomOf="parent"
                             app:layout_constraintEnd_toEndOf="parent"
-                            app:layout_constraintTop_toTopOf="parent" />
+                            app:layout_constraintTop_toTopOf="parent"/>
                     </androidx.constraintlayout.widget.ConstraintLayout>
 
                     <View
                         android:layout_width="match_parent"
                         android:layout_height="1dp"
-                        android:background="@color/divider_color" />
+                        android:background="@color/divider_color"/>
 
                     <RelativeLayout
                         android:layout_width="match_parent"
@@ -225,20 +241,21 @@
                             android:layout_alignParentStart="true"
                             android:layout_centerVertical="true"
                             android:textColor="@color/text_primary"
-                            android:textSize="14sp" />
+                            android:textSize="14sp"/>
                         <View
                             android:id="@+id/view_info_color_swatch"
                             android:layout_width="28dp"
                             android:layout_height="28dp"
                             android:layout_alignParentEnd="true"
                             android:layout_centerVertical="true"
-                            tools:background="#AAAAAA" />
+                            android:elevation="2dp"
+                            tools:background="#AAAAAA"/>
                     </RelativeLayout>
 
                     <View
                         android:layout_width="match_parent"
                         android:layout_height="1dp"
-                        android:background="@color/divider_color" />
+                        android:background="@color/divider_color"/>
 
                     <RelativeLayout
                         android:layout_width="match_parent"
@@ -252,13 +269,13 @@
                             android:layout_alignParentStart="true"
                             android:layout_centerVertical="true"
                             android:textColor="@color/text_primary"
-                            android:textSize="14sp" />
+                            android:textSize="14sp"/>
                         <com.google.android.material.switchmaterial.SwitchMaterial
                             android:id="@+id/switch_remove_background"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_alignParentEnd="true"
-                            android:layout_centerVertical="true" />
+                            android:layout_centerVertical="true"/>
                     </RelativeLayout>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
@@ -288,7 +305,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:inputType="text"
-                    android:maxLength="20" />
+                    android:maxLength="20"/>
             </com.google.android.material.textfield.TextInputLayout>
 
             <Button
@@ -302,10 +319,11 @@
                 android:textStyle="bold"
                 android:textColor="@color/white"
                 android:background="@drawable/bg_primary_button"
+                android:elevation="6dp"
                 android:layout_marginTop="28dp"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/textInputLayout_name" />
+                app:layout_constraintTop_toBottomOf="@id/textInputLayout_name"/>
 
         </androidx.constraintlayout.widget.ConstraintLayout>
     </ScrollView>
@@ -324,7 +342,7 @@
             style="?android:attr/progressBarStyleLarge"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_gravity="center" />
+            android:layout_gravity="center"/>
     </FrameLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

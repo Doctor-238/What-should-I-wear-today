@@ -7,9 +7,8 @@
     android:layout_margin="7dp"
     app:cardBackgroundColor="@color/surface"
     app:cardCornerRadius="22dp"
-    app:cardElevation="0dp"
-    app:strokeColor="@color/card_border"
-    app:strokeWidth="1dp">
+    app:cardElevation="5dp"
+    app:strokeWidth="0dp">
 
     <FrameLayout
         android:layout_width="match_parent"
@@ -41,7 +40,7 @@
                     android:layout_height="match_parent"
                     android:background="@color/primary_light"
                     android:scaleType="centerCrop"
-                    tools:src="@tools:sample/backgrounds/scenic" />
+                    tools:src="@tools:sample/backgrounds/scenic"/>
 
             </com.google.android.material.card.MaterialCardView>
 
@@ -54,7 +53,7 @@
                 android:visibility="gone"
                 app:layout_constraintBottom_toBottomOf="@id/image_container"
                 app:layout_constraintEnd_toEndOf="@id/image_container"
-                tools:visibility="visible" />
+                tools:visibility="visible"/>
 
             <TextView
                 android:id="@+id/tv_clothing_name"
@@ -71,7 +70,7 @@
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/image_container"
-                tools:text="멋진 검은 티셔츠" />
+                tools:text="멋진 검은 티셔츠"/>
 
             <TextView
                 android:id="@+id/tv_clothing_temp"
@@ -84,7 +83,7 @@
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/tv_clothing_name"
-                tools:text="15.0° ~ 25.0°" />
+                tools:text="15.0° ~ 25.0°"/>
 
             <View
                 android:id="@+id/view_clothing_color"
@@ -96,7 +95,7 @@
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/tv_clothing_temp"
-                tools:background="#4A6E8A" />
+                tools:background="#4A6E8A"/>
 
         </androidx.constraintlayout.widget.ConstraintLayout>
 
@@ -109,7 +108,7 @@
             android:padding="2dp"
             android:src="@drawable/ic_checkbox_unchecked_custom"
             android:visibility="gone"
-            tools:visibility="visible" />
+            tools:visibility="visible"/>
 
     </FrameLayout>
 </com.google.android.material.card.MaterialCardView>

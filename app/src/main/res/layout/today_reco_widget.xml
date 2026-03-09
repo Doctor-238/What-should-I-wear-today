@@ -27,7 +27,7 @@
                 android:text="오늘"
                 android:textColor="@color/text_primary"
                 android:textSize="16sp"
-                android:textStyle="bold" />
+                android:textStyle="bold"/>
 
             <TextView
                 android:id="@+id/tv_widget_tomorrow"
@@ -36,7 +36,7 @@
                 android:paddingHorizontal="14dp"
                 android:text="내일"
                 android:textColor="@color/text_secondary"
-                android:textSize="16sp" />
+                android:textSize="16sp"/>
         </LinearLayout>
 
         <TextView
@@ -47,7 +47,7 @@
             android:paddingBottom="10dp"
             android:textSize="11sp"
             android:textColor="@color/text_secondary"
-            tools:text="날씨 정보를 불러오는 중..." />
+            tools:text="날씨 정보를 불러오는 중..."/>
 
         <TextView
             android:id="@+id/tv_widget_title"
@@ -57,7 +57,7 @@
             android:text="최적의 코디"
             android:textSize="14sp"
             android:textStyle="bold"
-            android:textColor="@color/text_primary" />
+            android:textColor="@color/text_primary"/>
 
         <FrameLayout
             android:layout_width="match_parent"
@@ -79,7 +79,7 @@
                     android:scaleType="centerCrop"
                     android:visibility="gone"
                     tools:src="@tools:sample/backgrounds/scenic"
-                    tools:visibility="visible" />
+                    tools:visibility="visible"/>
 
                 <ImageView
                     android:id="@+id/iv_widget_item2"
@@ -89,7 +89,7 @@
                     android:scaleType="centerCrop"
                     android:visibility="gone"
                     tools:src="@tools:sample/backgrounds/scenic"
-                    tools:visibility="visible" />
+                    tools:visibility="visible"/>
 
                 <ImageView
                     android:id="@+id/iv_widget_item3"
@@ -99,7 +99,7 @@
                     android:scaleType="centerCrop"
                     android:visibility="gone"
                     tools:src="@tools:sample/backgrounds/scenic"
-                    tools:visibility="visible" />
+                    tools:visibility="visible"/>
             </LinearLayout>
 
             <TextView
@@ -111,7 +111,7 @@
                 android:textColor="@color/text_secondary"
                 android:textSize="12sp"
                 android:visibility="gone"
-                tools:visibility="visible" />
+                tools:visibility="visible"/>
 
         </FrameLayout>
 
@@ -126,6 +126,6 @@
         android:padding="7dp"
         android:layout_margin="10dp"
         android:alpha="0.6"
-        android:contentDescription="새로고침" />
+        android:contentDescription="새로고침"/>
 
 </FrameLayout>

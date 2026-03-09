@@ -7,9 +7,8 @@
     android:layout_marginEnd="10dp"
     app:cardBackgroundColor="@color/surface"
     app:cardCornerRadius="16dp"
-    app:cardElevation="0dp"
-    app:strokeColor="@color/card_border"
-    app:strokeWidth="1dp">
+    app:cardElevation="4dp"
+    app:strokeWidth="0dp">
 
     <FrameLayout
         android:layout_width="match_parent"
@@ -21,7 +20,7 @@
             android:layout_height="match_parent"
             android:background="@color/primary_light"
             android:scaleType="centerCrop"
-            tools:src="@tools:sample/backgrounds/scenic" />
+            tools:src="@tools:sample/backgrounds/scenic"/>
 
         <ImageView
             android:id="@+id/icon_special"
@@ -32,7 +31,7 @@
             android:src="@drawable/ic_packable_bag"
             android:visibility="gone"
             app:tint="@null"
-            tools:visibility="visible" />
+            tools:visibility="visible"/>
 
     </FrameLayout>
 </com.google.android.material.card.MaterialCardView>

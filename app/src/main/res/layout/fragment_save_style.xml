@@ -20,14 +20,14 @@
         app:title="나만의 스타일 만들기"
         app:titleCentered="true"
         app:titleTextColor="@color/text_primary"
-        app:titleTextAppearance="@style/TextAppearance.App.ToolbarTitle" />
+        app:titleTextAppearance="@style/TextAppearance.App.ToolbarTitle"/>
 
     <View
         android:id="@+id/toolbar_divider"
         android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:background="@color/divider_color"
-        app:layout_constraintTop_toBottomOf="@id/toolbar_save_style" />
+        android:layout_height="2dp"
+        android:background="@drawable/bg_section_divider"
+        app:layout_constraintTop_toBottomOf="@id/toolbar_save_style"/>
 
     <ScrollView
         android:id="@+id/scroll_view_content"
@@ -68,7 +68,7 @@
                     android:layout_height="wrap_content"
                     android:hint="스타일 이름을 입력하세요 (최대 20자)"
                     android:inputType="text"
-                    android:maxLength="20" />
+                    android:maxLength="20"/>
             </com.google.android.material.textfield.TextInputLayout>
 
             <TextView
@@ -80,7 +80,7 @@
                 android:text="계절 선택"
                 android:textSize="14sp"
                 android:textStyle="bold"
-                android:textColor="@color/text_primary" />
+                android:textColor="@color/text_primary"/>
 
             <com.google.android.material.chip.ChipGroup
                 android:id="@+id/chip_group_season_save"
@@ -102,7 +102,7 @@
                     android:textColor="@color/chip_textcolor_selector"
                     app:chipBackgroundColor="@color/chip_backgroundcolor_selector"
                     app:chipStrokeColor="@color/fab_color_style_tab"
-                    app:chipStrokeWidth="1.5dp" />
+                    app:chipStrokeWidth="1.5dp"/>
 
                 <com.google.android.material.chip.Chip
                     android:id="@+id/chip_summer"
@@ -113,7 +113,7 @@
                     android:textColor="@color/chip_textcolor_selector"
                     app:chipBackgroundColor="@color/chip_backgroundcolor_selector"
                     app:chipStrokeColor="@color/fab_color_style_tab"
-                    app:chipStrokeWidth="1.5dp" />
+                    app:chipStrokeWidth="1.5dp"/>
 
                 <com.google.android.material.chip.Chip
                     android:id="@+id/chip_fall"
@@ -124,7 +124,7 @@
                     android:textColor="@color/chip_textcolor_selector"
                     app:chipBackgroundColor="@color/chip_backgroundcolor_selector"
                     app:chipStrokeColor="@color/fab_color_style_tab"
-                    app:chipStrokeWidth="1.5dp" />
+                    app:chipStrokeWidth="1.5dp"/>
 
                 <com.google.android.material.chip.Chip
                     android:id="@+id/chip_winter"
@@ -135,7 +135,7 @@
                     android:textColor="@color/chip_textcolor_selector"
                     app:chipBackgroundColor="@color/chip_backgroundcolor_selector"
                     app:chipStrokeColor="@color/fab_color_style_tab"
-                    app:chipStrokeWidth="1.5dp" />
+                    app:chipStrokeWidth="1.5dp"/>
 
             </com.google.android.material.chip.ChipGroup>
 
@@ -148,7 +148,7 @@
                 android:text="스타일에 포함할 옷을 선택하세요 (최대 10개)"
                 android:textSize="14sp"
                 android:textStyle="bold"
-                android:textColor="@color/text_primary" />
+                android:textColor="@color/text_primary"/>
 
             <com.google.android.material.tabs.TabLayout
                 android:id="@+id/tab_layout_save_style_category"
@@ -156,6 +156,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="10dp"
                 android:background="@drawable/bg_toolbar_gradient"
+                android:paddingHorizontal="8dp"
                 app:tabBackground="@android:color/transparent"
                 app:tabGravity="fill"
                 app:tabIndicator="@drawable/tab_indicator_custom"
@@ -165,12 +166,13 @@
                 app:tabIndicatorGravity="bottom"
                 app:tabMode="scrollable"
                 app:tabSelectedTextColor="@color/tab_selected_text"
-                app:tabTextColor="@color/tab_unselected_text" />
+                app:tabTextColor="@color/tab_unselected_text"
+                app:tabTextAppearance="@style/TextAppearance.App.TabText"/>
 
             <View
                 android:layout_width="match_parent"
-                android:layout_height="1dp"
-                android:background="@color/divider_color" />
+                android:layout_height="2dp"
+                android:background="@drawable/bg_section_divider"/>
 
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/rv_clothing_selection"
@@ -181,12 +183,12 @@
                 android:paddingTop="8dp"
                 app:layoutManager="androidx.recyclerview.widget.GridLayoutManager"
                 app:spanCount="4"
-                tools:listitem="@layout/item_clothing_selectable" />
+                tools:listitem="@layout/item_clothing_selectable"/>
 
             <View
                 android:layout_width="match_parent"
-                android:layout_height="1dp"
-                android:background="@color/divider_color" />
+                android:layout_height="2dp"
+                android:background="@drawable/bg_section_divider"/>
 
             <Button
                 android:id="@+id/button_save_style_final"
@@ -200,7 +202,8 @@
                 android:textSize="16sp"
                 android:textStyle="bold"
                 android:textColor="@color/white"
-                android:background="@drawable/bg_primary_button" />
+                android:background="@drawable/bg_primary_button"
+                android:elevation="6dp"/>
 
         </LinearLayout>
     </ScrollView>
@@ -222,7 +225,7 @@
         <ProgressBar
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_gravity="center" />
+            android:layout_gravity="center"/>
     </FrameLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -11,7 +11,7 @@
         android:layout_width="0dp"
         android:layout_height="0dp"
         app:cardCornerRadius="14dp"
-        app:cardElevation="0dp"
+        app:cardElevation="4dp"
         app:layout_constraintDimensionRatio="1:1"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -29,7 +29,7 @@
                 android:layout_height="match_parent"
                 android:background="@color/primary_light"
                 android:scaleType="centerCrop"
-                tools:src="@tools:sample/backgrounds/scenic" />
+                tools:src="@tools:sample/backgrounds/scenic"/>
 
             <ImageView
                 android:id="@+id/icon_special"
@@ -39,7 +39,7 @@
                 android:layout_margin="4dp"
                 android:visibility="gone"
                 tools:src="@drawable/sun"
-                tools:visibility="visible" />
+                tools:visibility="visible"/>
         </FrameLayout>
 
     </com.google.android.material.card.MaterialCardView>
