@@ -7,13 +7,16 @@ import android.graphics.BitmapFactory
 import android.graphics.Matrix
 import android.net.Uri
 import android.os.Bundle
+import android.text.InputType
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.animation.DecelerateInterpolator
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
+import android.widget.EditText
 import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
@@ -25,6 +28,7 @@ import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import com.google.android.material.slider.Slider
+import com.yehyun.whatshouldiweartoday.BodyAnalysisState
 import com.yehyun.whatshouldiweartoday.R
 import com.yehyun.whatshouldiweartoday.MainViewModel
 import com.yehyun.whatshouldiweartoday.data.preference.SettingsManager
@@ -50,7 +54,7 @@ class SettingsFragment : Fragment(), OnTabReselectedListener {
         uri?.let {
             val bitmap = getCorrectlyOrientedBitmap(it)
             if (bitmap != null) {
-                viewModel.analyzeBodyPhoto(bitmap, getString(R.string.gemini_api_key))
+                mainViewModel.analyzeBodyPhoto(bitmap, getString(R.string.gemini_api_key))
             } else {
                 showToast("이미지를 불러오는 데 실패했습니다.")
             }
@@ -64,7 +68,7 @@ class SettingsFragment : Fragment(), OnTabReselectedListener {
             cameraPhotoUri?.let { uri ->
                 val bitmap = getCorrectlyOrientedBitmap(uri)
                 if (bitmap != null) {
-                    viewModel.analyzeBodyPhoto(bitmap, getString(R.string.gemini_api_key))
+                    mainViewModel.analyzeBodyPhoto(bitmap, getString(R.string.gemini_api_key))
                 } else {
                     showToast("이미지를 불러오는 데 실패했습니다.")
                 }
@@ -134,20 +138,23 @@ class SettingsFragment : Fragment(), OnTabReselectedListener {
             }
         }
 
-        viewModel.isBodyAnalyzing.observe(viewLifecycleOwner) { isAnalyzing ->
+        mainViewModel.isBodyAnalyzing.observe(viewLifecycleOwner) { isAnalyzing ->
             binding.progressBarBody.isVisible = isAnalyzing
-            binding.buttonBodyRegister.isVisible = !isAnalyzing
+            if (settingsManager.bodyFitEnabled) {
+                binding.buttonBodyRegister.isVisible = !isAnalyzing
+            }
         }
 
-        viewModel.bodyAnalysisResult.observe(viewLifecycleOwner) { result ->
-            when (result) {
-                is SettingsViewModel.BodyAnalysisState.Success -> {
-                    binding.tvBodyStatus.text = "등록 완료 (%.1fcm / %.1fkg)".format(result.height, result.weight)
-                    binding.buttonBodyRegister.text = "재등록"
-                    showToast("체형이 등록되었습니다.")
-                }
-                is SettingsViewModel.BodyAnalysisState.Error -> {
-                    showToast(result.message, Toast.LENGTH_LONG)
+        mainViewModel.bodyAnalysisResult.observe(viewLifecycleOwner) { event ->
+            event.getContentIfNotHandled()?.let { result ->
+                when (result) {
+                    is BodyAnalysisState.Success -> {
+                        updateBodyStatus()
+                        showToast("체형이 등록되었습니다.")
+                    }
+                    is BodyAnalysisState.Error -> {
+                        showToast(result.message, Toast.LENGTH_LONG)
+                    }
                 }
             }
         }
@@ -180,6 +187,48 @@ class SettingsFragment : Fragment(), OnTabReselectedListener {
                     1 -> pickImageLauncher.launch("image/*")
                 }
             }
+            .show()
+    }
+
+    private fun showManualBodyInputDialog() {
+        val layout = LinearLayout(requireContext()).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(64, 32, 64, 0)
+        }
+        val editHeight = EditText(requireContext()).apply {
+            hint = "키 (cm)"
+            inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
+            if (settingsManager.estimatedHeight > 0f) {
+                setText("%.1f".format(settingsManager.estimatedHeight))
+            }
+        }
+        val editWeight = EditText(requireContext()).apply {
+            hint = "몸무게 (kg)"
+            inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
+            if (settingsManager.estimatedWeight > 0f) {
+                setText("%.1f".format(settingsManager.estimatedWeight))
+            }
+        }
+        layout.addView(editHeight)
+        layout.addView(editWeight)
+
+        AlertDialog.Builder(requireContext())
+            .setTitle("체형 수동 입력")
+            .setView(layout)
+            .setPositiveButton("저장") { _, _ ->
+                val height = editHeight.text.toString().toFloatOrNull()
+                val weight = editWeight.text.toString().toFloatOrNull()
+                if (height != null && weight != null && height > 0 && weight > 0) {
+                    settingsManager.estimatedHeight = height
+                    settingsManager.estimatedWeight = weight
+                    updateBodyStatus()
+                    mainViewModel.notifySettingsChanged()
+                    showToast("체형이 등록되었습니다.")
+                } else {
+                    showToast("올바른 값을 입력해주세요.")
+                }
+            }
+            .setNegativeButton("취소", null)
             .show()
     }
 
@@ -228,7 +277,11 @@ class SettingsFragment : Fragment(), OnTabReselectedListener {
 
         binding.switchShowRecoIcon.isChecked = settingsManager.showRecommendationIcon
 
+        binding.switchBodyFit.isChecked = settingsManager.bodyFitEnabled
+        binding.switchBodyBorder.isChecked = settingsManager.bodyFitBorderEnabled
+
         updateBodyStatus()
+        updateBodySectionVisibility()
     }
 
     private fun updateBodyStatus() {
@@ -236,11 +289,26 @@ class SettingsFragment : Fragment(), OnTabReselectedListener {
             binding.tvBodyStatus.text = "등록 완료 (%.1fcm / %.1fkg)".format(
                 settingsManager.estimatedHeight, settingsManager.estimatedWeight
             )
-            binding.buttonBodyRegister.text = "재등록"
+            binding.buttonBodyRegister.text = "사진 재등록"
+            binding.buttonBodyManual.text = "수동 수정"
         } else {
             binding.tvBodyStatus.text = "미등록"
-            binding.buttonBodyRegister.text = "등록"
+            binding.buttonBodyRegister.text = "사진 등록"
+            binding.buttonBodyManual.text = "수동 입력"
         }
+    }
+
+    private fun updateBodySectionVisibility() {
+        val enabled = settingsManager.bodyFitEnabled
+        binding.dividerBody1.isVisible = enabled
+        binding.tvBodyBorderLabel.isVisible = enabled
+        binding.switchBodyBorder.isVisible = enabled
+        binding.dividerBody2.isVisible = enabled
+        binding.tvBodyLabel.isVisible = enabled
+        binding.tvBodyStatus.isVisible = enabled
+        binding.buttonBodyRegister.isVisible = enabled
+        binding.buttonBodyManual.isVisible = enabled
+        binding.tvBodyNote.isVisible = enabled
     }
 
     private fun setupListeners() {
@@ -287,6 +355,19 @@ class SettingsFragment : Fragment(), OnTabReselectedListener {
         binding.cardReset.setOnClickListener { showResetConfirmDialog() }
 
         binding.buttonBodyRegister.setOnClickListener { showBodyPhotoSourceDialog() }
+
+        binding.switchBodyFit.setOnCheckedChangeListener { _, isChecked ->
+            settingsManager.bodyFitEnabled = isChecked
+            updateBodySectionVisibility()
+            mainViewModel.notifySettingsChanged()
+        }
+
+        binding.switchBodyBorder.setOnCheckedChangeListener { _, isChecked ->
+            settingsManager.bodyFitBorderEnabled = isChecked
+            mainViewModel.notifySettingsChanged()
+        }
+
+        binding.buttonBodyManual.setOnClickListener { showManualBodyInputDialog() }
 
         binding.switchShowRecoIcon.setOnCheckedChangeListener { _, isChecked ->
             settingsManager.showRecommendationIcon = isChecked

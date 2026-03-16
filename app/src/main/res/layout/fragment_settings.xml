@@ -373,16 +373,87 @@
                 android:layout_height="wrap_content"
                 android:padding="18dp">
 
+                <!-- 체형 추천 ON/OFF -->
+                <TextView
+                    android:id="@+id/tv_body_fit_label"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:text="체형 추천"
+                    android:textColor="@color/text_primary"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    app:layout_constraintBottom_toBottomOf="@id/switch_body_fit"
+                    app:layout_constraintEnd_toStartOf="@id/switch_body_fit"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="@id/switch_body_fit"/>
+
+                <com.google.android.material.switchmaterial.SwitchMaterial
+                    android:id="@+id/switch_body_fit"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintTop_toTopOf="parent"/>
+
+                <!-- 체형 테두리 표시 ON/OFF -->
+                <View
+                    android:id="@+id/divider_body_1"
+                    android:layout_width="0dp"
+                    android:layout_height="1dp"
+                    android:layout_marginTop="14dp"
+                    android:background="@color/divider_color"
+                    android:visibility="gone"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/switch_body_fit"/>
+
+                <TextView
+                    android:id="@+id/tv_body_border_label"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:text="체형 테두리 표시"
+                    android:textColor="@color/text_primary"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:visibility="gone"
+                    app:layout_constraintBottom_toBottomOf="@id/switch_body_border"
+                    app:layout_constraintEnd_toStartOf="@id/switch_body_border"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="@id/switch_body_border"/>
+
+                <com.google.android.material.switchmaterial.SwitchMaterial
+                    android:id="@+id/switch_body_border"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:visibility="gone"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/divider_body_1"/>
+
+                <!-- 체형 등록 섹션 (사진 + 수동 입력 통합) -->
+                <View
+                    android:id="@+id/divider_body_2"
+                    android:layout_width="0dp"
+                    android:layout_height="1dp"
+                    android:layout_marginTop="14dp"
+                    android:background="@color/divider_color"
+                    android:visibility="gone"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/switch_body_border"/>
+
                 <TextView
                     android:id="@+id/tv_body_label"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="체형 측정"
+                    android:layout_marginTop="14dp"
+                    android:text="체형 등록"
                     android:textColor="@color/text_primary"
                     android:textSize="14sp"
                     android:textStyle="bold"
+                    android:visibility="gone"
                     app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toTopOf="parent"/>
+                    app:layout_constraintTop_toBottomOf="@id/divider_body_2"/>
 
                 <TextView
                     android:id="@+id/tv_body_status"
@@ -392,17 +463,33 @@
                     android:text="미등록"
                     android:textColor="@color/text_secondary"
                     android:textSize="12sp"
+                    android:visibility="gone"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toBottomOf="@id/tv_body_label"/>
+
+                <Button
+                    android:id="@+id/button_body_manual"
+                    style="@style/Widget.Material3.Button.TonalButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="36dp"
+                    android:text="수동 입력"
+                    android:textSize="12sp"
+                    android:visibility="gone"
+                    app:cornerRadius="18dp"
+                    app:layout_constraintEnd_toStartOf="@id/button_body_register"
+                    app:layout_constraintTop_toTopOf="@id/button_body_register"
+                    app:layout_constraintBottom_toBottomOf="@id/button_body_register"
+                    android:layout_marginEnd="8dp"/>
 
                 <Button
                     android:id="@+id/button_body_register"
                     style="@style/Widget.Material3.Button.TonalButton"
                     android:layout_width="wrap_content"
-                    android:layout_height="40dp"
-                    android:text="등록"
-                    android:textSize="13sp"
-                    app:cornerRadius="20dp"
+                    android:layout_height="36dp"
+                    android:text="사진 등록"
+                    android:textSize="12sp"
+                    android:visibility="gone"
+                    app:cornerRadius="18dp"
                     app:layout_constraintBottom_toBottomOf="@id/tv_body_status"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintTop_toTopOf="@id/tv_body_label"/>
@@ -416,6 +503,19 @@
                     app:layout_constraintBottom_toBottomOf="@id/button_body_register"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintTop_toTopOf="@id/button_body_register"/>
+
+                <TextView
+                    android:id="@+id/tv_body_note"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:text="※ 체형 추천이 켜져있으면 옷 적합도가 표시됩니다."
+                    android:textColor="@color/text_tertiary"
+                    android:textSize="11sp"
+                    android:visibility="gone"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/tv_body_status"/>
 
             </androidx.constraintlayout.widget.ConstraintLayout>
         </com.google.android.material.card.MaterialCardView>

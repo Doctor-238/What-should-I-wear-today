@@ -267,15 +267,19 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
         val category = result.category ?: "기타"
         categoryText.postValue(category)
 
-        if (settingsManager.isBodyRegistered) {
-            val level = calculateFitLevel(
-                settingsManager.estimatedHeight, settingsManager.estimatedWeight,
-                result.fit_min_height, result.fit_max_height,
-                result.fit_min_weight, result.fit_max_weight
-            )
-            fitLevelText.postValue(level)
+        if (settingsManager.bodyFitEnabled) {
+            if (settingsManager.isBodyRegistered) {
+                val level = calculateFitLevel(
+                    settingsManager.estimatedHeight, settingsManager.estimatedWeight,
+                    result.fit_min_height, result.fit_max_height,
+                    result.fit_min_weight, result.fit_max_weight
+                )
+                fitLevelText.postValue(level)
+            } else {
+                fitLevelText.postValue("설정에서 체형을 등록해주세요")
+            }
         } else {
-            fitLevelText.postValue("설정에서 체형을 등록해주세요")
+            fitLevelText.postValue("")
         }
 
         val isTempCategory = category in listOf("상의", "하의", "아우터")
@@ -360,22 +364,51 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
     }
 
     companion object {
+        const val FIT_VERY_GOOD = "매우 적합"
+        const val FIT_GOOD = "적합"
+        const val FIT_NORMAL = "보통"
+        const val FIT_BAD = "맞지않음"
+        const val FIT_VERY_BAD = "매우 맞지않음"
+        const val FIT_NO_INFO = "정보 없음"
+
         fun calculateFitLevel(
             userHeight: Float, userWeight: Float,
             minH: Double?, maxH: Double?,
             minW: Double?, maxW: Double?
         ): String {
-            if (minH == null || maxH == null || minW == null || maxW == null) return "정보 없음"
+            if (minH == null || maxH == null || minW == null || maxW == null) return FIT_NO_INFO
 
-            val heightInRange = userHeight in minH..maxH
-            val weightInRange = userWeight in minW..maxW
-            val heightInTolerance = userHeight in (minH - 5)..(maxH + 5)
-            val weightInTolerance = userWeight in (minW - 5)..(maxW + 5)
+            val hRange = maxH - minH
+            val wRange = maxW - minW
+            val hShrink = hRange * 0.15
+            val wShrink = wRange * 0.15
+
+            val heightPerfect = userHeight.toDouble() in (minH + hShrink)..(maxH - hShrink)
+            val weightPerfect = userWeight.toDouble() in (minW + wShrink)..(maxW - wShrink)
+            val heightInRange = userHeight.toDouble() in minH..maxH
+            val weightInRange = userWeight.toDouble() in minW..maxW
+            val heightClose = userHeight.toDouble() in (minH - 5)..(maxH + 5)
+            val weightClose = userWeight.toDouble() in (minW - 5)..(maxW + 5)
+            val heightFar = userHeight.toDouble() in (minH - 10)..(maxH + 10)
+            val weightFar = userWeight.toDouble() in (minW - 10)..(maxW + 10)
 
             return when {
-                heightInRange && weightInRange -> "적합"
-                heightInTolerance && weightInTolerance -> "보통"
-                else -> "맞지않음"
+                heightPerfect && weightPerfect -> FIT_VERY_GOOD
+                heightInRange && weightInRange -> FIT_GOOD
+                heightClose && weightClose -> FIT_NORMAL
+                heightFar && weightFar -> FIT_BAD
+                else -> FIT_VERY_BAD
+            }
+        }
+
+        fun fitLevelToOrder(level: String): Int {
+            return when (level) {
+                FIT_VERY_GOOD -> 0
+                FIT_GOOD -> 1
+                FIT_NORMAL -> 2
+                FIT_BAD -> 3
+                FIT_VERY_BAD -> 4
+                else -> 5
             }
         }
     }

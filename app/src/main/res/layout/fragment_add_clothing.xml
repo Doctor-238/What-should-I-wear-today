@@ -253,11 +253,13 @@
                     </RelativeLayout>
 
                     <View
+                        android:id="@+id/divider_fit_level"
                         android:layout_width="match_parent"
                         android:layout_height="1dp"
                         android:background="@color/divider_color"/>
 
                     <RelativeLayout
+                        android:id="@+id/layout_fit_level"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:paddingVertical="14dp">

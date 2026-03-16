@@ -16,6 +16,7 @@ import com.google.android.material.card.MaterialCardView
 import com.yehyun.whatshouldiweartoday.R
 import com.yehyun.whatshouldiweartoday.data.database.ClothingItem
 import com.yehyun.whatshouldiweartoday.data.preference.SettingsManager
+import com.yehyun.whatshouldiweartoday.ui.closet.AddClothingViewModel
 import java.io.File
 
 class SaveStyleAdapter(
@@ -49,7 +50,10 @@ class SaveStyleAdapter(
         private val iconSpecial: ImageView = itemView.findViewById(R.id.icon_special)
         private val settingsManager = SettingsManager(itemView.context)
 
+        private var currentItem: ClothingItem? = null
+
         fun bind(item: ClothingItem, isSelected: Boolean, isRecommended: Boolean, isPackable: Boolean) {
+            currentItem = item
             val imageToShow = if (item.useProcessedImage && item.processedImageUri != null) {
                 item.processedImageUri
             } else {
@@ -70,11 +74,15 @@ class SaveStyleAdapter(
                 cardView.strokeWidth = strokeWidthPx
                 cardView.strokeColor = ContextCompat.getColor(context, R.color.settings_spinner_blue)
             } else {
+                val fitColor = currentItem?.let { getFitBorderColor(context, it) }
+                    ?: ContextCompat.getColor(context, R.color.weather_card_blue_bg)
+                val defaultColor = ContextCompat.getColor(context, R.color.weather_card_blue_bg)
+                val thickness = if (fitColor != defaultColor) 2.5f else 1.5f
                 val strokeWidthPx = TypedValue.applyDimension(
-                    TypedValue.COMPLEX_UNIT_DIP, 1.5f, context.resources.displayMetrics
+                    TypedValue.COMPLEX_UNIT_DIP, thickness, context.resources.displayMetrics
                 ).toInt()
                 cardView.strokeWidth = strokeWidthPx
-                cardView.strokeColor = ContextCompat.getColor(context, R.color.weather_card_blue_bg)
+                cardView.strokeColor = fitColor
             }
 
             if (settingsManager.showRecommendationIcon) {
@@ -89,6 +97,25 @@ class SaveStyleAdapter(
                 }
             } else {
                 iconSpecial.isVisible = false
+            }
+        }
+
+        private fun getFitBorderColor(context: android.content.Context, item: ClothingItem): Int {
+            val defaultColor = ContextCompat.getColor(context, R.color.weather_card_blue_bg)
+            if (!settingsManager.bodyFitEnabled || !settingsManager.bodyFitBorderEnabled || !settingsManager.isBodyRegistered) {
+                return defaultColor
+            }
+            val level = AddClothingViewModel.calculateFitLevel(
+                settingsManager.estimatedHeight, settingsManager.estimatedWeight,
+                item.fitMinHeight, item.fitMaxHeight,
+                item.fitMinWeight, item.fitMaxWeight
+            )
+            return when (level) {
+                AddClothingViewModel.FIT_VERY_GOOD, AddClothingViewModel.FIT_GOOD ->
+                    ContextCompat.getColor(context, R.color.fit_green)
+                AddClothingViewModel.FIT_BAD, AddClothingViewModel.FIT_VERY_BAD ->
+                    ContextCompat.getColor(context, R.color.fit_red)
+                else -> defaultColor
             }
         }
     }
