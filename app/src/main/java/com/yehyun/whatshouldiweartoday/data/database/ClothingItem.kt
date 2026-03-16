@@ -15,5 +15,9 @@ data class ClothingItem(
     var suitableTemperature: Double,
     val baseTemperature: Double,
     val timestamp: Long = System.currentTimeMillis(),
-    val colorHex: String
+    val colorHex: String,
+    val fitMinHeight: Double? = null,
+    val fitMaxHeight: Double? = null,
+    val fitMinWeight: Double? = null,
+    val fitMaxWeight: Double? = null
 )
