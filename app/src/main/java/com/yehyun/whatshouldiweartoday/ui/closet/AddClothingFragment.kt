@@ -46,7 +46,11 @@ data class ClothingAnalysis(
     val is_wearable: Boolean,
     val category: String? = null,
     var suitable_temperature: Double? = null,
-    val color_hex: String? = null
+    val color_hex: String? = null,
+    val fit_min_height: Double? = null,
+    val fit_max_height: Double? = null,
+    val fit_min_weight: Double? = null,
+    val fit_max_weight: Double? = null
 )
 
 class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabReselectedListener {
@@ -70,6 +74,7 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabResel
 
     private lateinit var buttonTempIncrease: ImageButton
     private lateinit var buttonTempDecrease: ImageButton
+    private lateinit var tvInfoFitLevel: TextView
 
 
     private lateinit var onBackPressedCallback: OnBackPressedCallback
@@ -162,6 +167,7 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabResel
 
         buttonTempIncrease = view.findViewById(R.id.button_temp_increase)
         buttonTempDecrease = view.findViewById(R.id.button_temp_decrease)
+        tvInfoFitLevel = view.findViewById(R.id.tv_info_fit_level)
     }
 
     private fun observeViewModel() {
@@ -230,6 +236,17 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabResel
             } else {
                 viewInfoColorSwatch.isVisible = false
             }
+        }
+
+        viewModel.fitLevelText.observe(viewLifecycleOwner) { text ->
+            tvInfoFitLevel.text = text
+            val colorRes = when (text) {
+                "적합" -> R.color.primary
+                "보통" -> R.color.text_secondary
+                "맞지않음" -> com.google.android.material.R.color.design_default_color_error
+                else -> R.color.text_tertiary
+            }
+            tvInfoFitLevel.setTextColor(ContextCompat.getColor(requireContext(), colorRes))
         }
 
         viewModel.isSaveCompleted.observe(viewLifecycleOwner) { isCompleted ->

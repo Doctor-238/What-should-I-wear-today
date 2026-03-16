@@ -77,6 +77,8 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
     private val _segmentationSucceeded = MutableLiveData<Boolean>()
     val segmentationSucceeded: LiveData<Boolean> = _segmentationSucceeded
 
+    val fitLevelText = MutableLiveData<String>()
+
     private val settingsManager = SettingsManager(application)
     private var generativeModel: GenerativeModel? = null
 
@@ -194,7 +196,11 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
                     category = analysis.category!!,
                     suitableTemperature = finalTemp,
                     baseTemperature = baseTemp,
-                    colorHex = analysis.color_hex!!
+                    colorHex = analysis.color_hex!!,
+                    fitMinHeight = analysis.fit_min_height,
+                    fitMaxHeight = analysis.fit_max_height,
+                    fitMinWeight = analysis.fit_min_weight,
+                    fitMaxWeight = analysis.fit_max_weight
                 )
                 withContext(Dispatchers.IO) {
                     AppDatabase.getDatabase(getApplication()).clothingDao().insert(newClothingItem)
@@ -219,11 +225,16 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
                     text("""
                         You are a Precise Climate & Fashion Analyst for Korean weather.
                         Your task is to analyze the clothing item in the image and provide a detailed analysis in a strict JSON format, without any additional text or explanations.
-                        Your JSON response MUST contain ONLY the following keys: "is_wearable", "category", "suitable_temperature", and "color_hex".
+                        Your JSON response MUST contain ONLY the following keys: "is_wearable", "category", "suitable_temperature", "color_hex", "fit_min_height", "fit_max_height", "fit_min_weight", "fit_max_weight".
                         - "is_wearable": (boolean) If the image contains a single primary clothing item (or a single person's outfit), this is True. If the image contains multiple people or multiple separate clothing items laid out, this MUST be False.
                         - "category": (string) If wearable, one of '상의', '하의', '아우터', '신발', '가방', '모자', '기타'.
                         - "color_hex": (string) If wearable, the dominant color of the item as a hex string.
                         - "suitable_temperature": (double) If wearable, this is the most important. Estimate the MAXIMUM comfortable temperature for this item. The value can be negative for winter clothing. You MUST provide a specific, non-round number with one decimal place (e.g., 23.5, 8.0, -2.5). A generic integer like 15.0 is a bad response. Base your judgment on the visual evidence of material, thickness, and design.
+                        - "fit_min_height": (double) Minimum height in cm for wearing this item (e.g., 155.0).
+                        - "fit_max_height": (double) Maximum height in cm for wearing this item (e.g., 180.0).
+                        - "fit_min_weight": (double) Minimum weight in kg for wearing this item (e.g., 45.0).
+                        - "fit_max_weight": (double) Maximum weight in kg for wearing this item (e.g., 75.0).
+                        Estimate the body size range this clothing would fit. For free-size/stretchy items, use wider ranges. Base on visual cues: size labels, proportions, material stretch.
                     """.trimIndent())
                 }
                 val response = generativeModel!!.generateContent(inputContent)
@@ -249,11 +260,23 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
             temperatureText.postValue("상의, 하의, 아우터에만 표시됩니다.")
             isTemperatureVisible.postValue(false)
             setViewColor(null)
+            fitLevelText.postValue("")
             return
         }
 
         val category = result.category ?: "기타"
         categoryText.postValue(category)
+
+        if (settingsManager.isBodyRegistered) {
+            val level = calculateFitLevel(
+                settingsManager.estimatedHeight, settingsManager.estimatedWeight,
+                result.fit_min_height, result.fit_max_height,
+                result.fit_min_weight, result.fit_max_weight
+            )
+            fitLevelText.postValue(level)
+        } else {
+            fitLevelText.postValue("설정에서 체형을 등록해주세요")
+        }
 
         val isTempCategory = category in listOf("상의", "하의", "아우터")
         isTemperatureVisible.postValue(isTempCategory)
@@ -333,6 +356,28 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
         categoryText.value = ""
         temperatureText.value = ""
         _viewColor.value = null
+        fitLevelText.value = ""
+    }
+
+    companion object {
+        fun calculateFitLevel(
+            userHeight: Float, userWeight: Float,
+            minH: Double?, maxH: Double?,
+            minW: Double?, maxW: Double?
+        ): String {
+            if (minH == null || maxH == null || minW == null || maxW == null) return "정보 없음"
+
+            val heightInRange = userHeight in minH..maxH
+            val weightInRange = userWeight in minW..maxW
+            val heightInTolerance = userHeight in (minH - 5)..(maxH + 5)
+            val weightInTolerance = userWeight in (minW - 5)..(maxW + 5)
+
+            return when {
+                heightInRange && weightInRange -> "적합"
+                heightInTolerance && weightInTolerance -> "보통"
+                else -> "맞지않음"
+            }
+        }
     }
 
     fun refreshDisplayWithNewSettings() {

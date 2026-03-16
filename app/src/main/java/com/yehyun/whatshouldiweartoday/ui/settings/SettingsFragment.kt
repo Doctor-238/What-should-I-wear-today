@@ -2,6 +2,9 @@ package com.yehyun.whatshouldiweartoday.ui.settings
 
 import android.animation.ObjectAnimator
 import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.Matrix
 import android.net.Uri
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -12,7 +15,11 @@ import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.ImageView
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
+import androidx.core.content.FileProvider
+import androidx.core.view.isVisible
+import androidx.exifinterface.media.ExifInterface
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
@@ -23,6 +30,8 @@ import com.yehyun.whatshouldiweartoday.MainViewModel
 import com.yehyun.whatshouldiweartoday.data.preference.SettingsManager
 import com.yehyun.whatshouldiweartoday.databinding.FragmentSettingsBinding
 import com.yehyun.whatshouldiweartoday.ui.OnTabReselectedListener
+import java.io.File
+import java.io.InputStream
 
 class SettingsFragment : Fragment(), OnTabReselectedListener {
 
@@ -33,6 +42,61 @@ class SettingsFragment : Fragment(), OnTabReselectedListener {
     private val viewModel: SettingsViewModel by viewModels()
     private val mainViewModel: MainViewModel by activityViewModels()
     private var toast: Toast? = null
+    private var cameraPhotoUri: Uri? = null
+
+    private val pickImageLauncher = registerForActivityResult(
+        ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let {
+            val bitmap = getCorrectlyOrientedBitmap(it)
+            if (bitmap != null) {
+                viewModel.analyzeBodyPhoto(bitmap, getString(R.string.gemini_api_key))
+            } else {
+                showToast("이미지를 불러오는 데 실패했습니다.")
+            }
+        }
+    }
+
+    private val takePictureLauncher = registerForActivityResult(
+        ActivityResultContracts.TakePicture()
+    ) { success ->
+        if (success) {
+            cameraPhotoUri?.let { uri ->
+                val bitmap = getCorrectlyOrientedBitmap(uri)
+                if (bitmap != null) {
+                    viewModel.analyzeBodyPhoto(bitmap, getString(R.string.gemini_api_key))
+                } else {
+                    showToast("이미지를 불러오는 데 실패했습니다.")
+                }
+            }
+        }
+    }
+
+    private fun getCorrectlyOrientedBitmap(uri: Uri): Bitmap? {
+        var inputStream: InputStream? = null
+        return try {
+            inputStream = requireContext().contentResolver.openInputStream(uri)
+            if (inputStream == null) return null
+            val originalBitmap = BitmapFactory.decodeStream(inputStream)
+            inputStream.close()
+            inputStream = requireContext().contentResolver.openInputStream(uri)
+            if (inputStream == null) return originalBitmap
+            val exifInterface = ExifInterface(inputStream)
+            val orientation = exifInterface.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)
+            val matrix = Matrix()
+            when (orientation) {
+                ExifInterface.ORIENTATION_ROTATE_90 -> matrix.postRotate(90f)
+                ExifInterface.ORIENTATION_ROTATE_180 -> matrix.postRotate(180f)
+                ExifInterface.ORIENTATION_ROTATE_270 -> matrix.postRotate(270f)
+            }
+            Bitmap.createBitmap(originalBitmap, 0, 0, originalBitmap.width, originalBitmap.height, matrix, true)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        } finally {
+            inputStream?.close()
+        }
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -69,6 +133,24 @@ class SettingsFragment : Fragment(), OnTabReselectedListener {
                 Runtime.getRuntime().exit(0)
             }
         }
+
+        viewModel.isBodyAnalyzing.observe(viewLifecycleOwner) { isAnalyzing ->
+            binding.progressBarBody.isVisible = isAnalyzing
+            binding.buttonBodyRegister.isVisible = !isAnalyzing
+        }
+
+        viewModel.bodyAnalysisResult.observe(viewLifecycleOwner) { result ->
+            when (result) {
+                is SettingsViewModel.BodyAnalysisState.Success -> {
+                    binding.tvBodyStatus.text = "등록 완료 (%.1fcm / %.1fkg)".format(result.height, result.weight)
+                    binding.buttonBodyRegister.text = "재등록"
+                    showToast("체형이 등록되었습니다.")
+                }
+                is SettingsViewModel.BodyAnalysisState.Error -> {
+                    showToast(result.message, Toast.LENGTH_LONG)
+                }
+            }
+        }
     }
 
     override fun onTabReselected() {
@@ -79,6 +161,26 @@ class SettingsFragment : Fragment(), OnTabReselectedListener {
         toast?.cancel()
         toast = Toast.makeText(requireContext(), message, duration)
         toast?.show()
+    }
+
+    private fun showBodyPhotoSourceDialog() {
+        AlertDialog.Builder(requireContext())
+            .setTitle("체형 사진 선택")
+            .setItems(arrayOf("카메라", "갤러리")) { _, which ->
+                when (which) {
+                    0 -> {
+                        val photoFile = File(requireContext().cacheDir, "body_photo_${System.currentTimeMillis()}.jpg")
+                        cameraPhotoUri = FileProvider.getUriForFile(
+                            requireContext(),
+                            "${requireContext().packageName}.fileprovider",
+                            photoFile
+                        )
+                        takePictureLauncher.launch(cameraPhotoUri!!)
+                    }
+                    1 -> pickImageLauncher.launch("image/*")
+                }
+            }
+            .show()
     }
 
     private fun showResetConfirmDialog() {
@@ -125,6 +227,20 @@ class SettingsFragment : Fragment(), OnTabReselectedListener {
         updateSensitivityLabel(settingsManager.sensitivityLevel)
 
         binding.switchShowRecoIcon.isChecked = settingsManager.showRecommendationIcon
+
+        updateBodyStatus()
+    }
+
+    private fun updateBodyStatus() {
+        if (settingsManager.isBodyRegistered) {
+            binding.tvBodyStatus.text = "등록 완료 (%.1fcm / %.1fkg)".format(
+                settingsManager.estimatedHeight, settingsManager.estimatedWeight
+            )
+            binding.buttonBodyRegister.text = "재등록"
+        } else {
+            binding.tvBodyStatus.text = "미등록"
+            binding.buttonBodyRegister.text = "등록"
+        }
     }
 
     private fun setupListeners() {
@@ -169,6 +285,8 @@ class SettingsFragment : Fragment(), OnTabReselectedListener {
         }
 
         binding.cardReset.setOnClickListener { showResetConfirmDialog() }
+
+        binding.buttonBodyRegister.setOnClickListener { showBodyPhotoSourceDialog() }
 
         binding.switchShowRecoIcon.setOnCheckedChangeListener { _, isChecked ->
             settingsManager.showRecommendationIcon = isChecked
