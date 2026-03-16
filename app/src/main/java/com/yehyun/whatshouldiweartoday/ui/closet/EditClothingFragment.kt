@@ -66,6 +66,8 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
     private lateinit var buttonTempDecrease: ImageButton
     private lateinit var iconSpecialEdit: ImageView
     private lateinit var tvEditFitLevel: TextView
+    private lateinit var layoutEditFitLevel: View
+    private lateinit var dividerEditFitLevel: View
 
     private var toast: Toast? = null
 
@@ -114,6 +116,8 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
         buttonTempDecrease = view.findViewById(R.id.button_edit_temp_decrease)
         iconSpecialEdit = view.findViewById(R.id.icon_special_edit)
         tvEditFitLevel = view.findViewById(R.id.tv_edit_fit_level)
+        layoutEditFitLevel = view.findViewById(R.id.layout_edit_fit_level)
+        dividerEditFitLevel = view.findViewById(R.id.divider_edit_fit_level)
         toolbar.inflateMenu(R.menu.edit_clothing_menu)
     }
 
@@ -250,6 +254,13 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
     }
 
     private fun updateFitLevelDisplay(item: ClothingItem) {
+        if (!settingsManager.bodyFitEnabled) {
+            layoutEditFitLevel.isVisible = false
+            dividerEditFitLevel.isVisible = false
+            return
+        }
+        layoutEditFitLevel.isVisible = true
+        dividerEditFitLevel.isVisible = true
         if (settingsManager.isBodyRegistered) {
             val level = AddClothingViewModel.calculateFitLevel(
                 settingsManager.estimatedHeight, settingsManager.estimatedWeight,
@@ -257,13 +268,7 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
                 item.fitMinWeight, item.fitMaxWeight
             )
             tvEditFitLevel.text = level
-            val colorRes = when (level) {
-                "적합" -> R.color.primary
-                "보통" -> R.color.text_secondary
-                "맞지않음" -> com.google.android.material.R.color.design_default_color_error
-                else -> R.color.text_tertiary
-            }
-            tvEditFitLevel.setTextColor(ContextCompat.getColor(requireContext(), colorRes))
+            tvEditFitLevel.setTextColor(ContextCompat.getColor(requireContext(), AddClothingFragment.fitLevelColorRes(level)))
         } else {
             tvEditFitLevel.text = "설정에서 체형을 등록해주세요"
             tvEditFitLevel.setTextColor(ContextCompat.getColor(requireContext(), R.color.text_tertiary))

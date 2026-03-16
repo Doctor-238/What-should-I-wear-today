@@ -70,6 +70,18 @@ class SettingsManager(context: Context) {
     val isBodyRegistered: Boolean
         get() = estimatedHeight > 0f && estimatedWeight > 0f
 
+    var bodyFitEnabled: Boolean
+        get() = prefs.getBoolean(KEY_BODY_FIT_ENABLED, false)
+        set(value) {
+            prefs.edit().putBoolean(KEY_BODY_FIT_ENABLED, value).commit()
+        }
+
+    var bodyFitBorderEnabled: Boolean
+        get() = prefs.getBoolean(KEY_BODY_FIT_BORDER_ENABLED, true)
+        set(value) {
+            prefs.edit().putBoolean(KEY_BODY_FIT_BORDER_ENABLED, value).commit()
+        }
+
     fun getTemperatureTolerance(): Double {
         return when (temperatureRange) {
             TEMP_RANGE_NARROW -> 1.5
@@ -126,6 +138,8 @@ class SettingsManager(context: Context) {
         private const val KEY_BODY_IMAGE_URI = "body_image_uri"
         private const val KEY_ESTIMATED_HEIGHT = "estimated_height"
         private const val KEY_ESTIMATED_WEIGHT = "estimated_weight"
+        private const val KEY_BODY_FIT_ENABLED = "body_fit_enabled"
+        private const val KEY_BODY_FIT_BORDER_ENABLED = "body_fit_border_enabled"
 
         const val TEMP_RANGE_NARROW = "좁게"
         const val TEMP_RANGE_NORMAL = "보통"

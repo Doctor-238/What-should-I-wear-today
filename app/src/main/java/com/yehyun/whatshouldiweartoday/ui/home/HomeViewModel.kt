@@ -20,6 +20,7 @@ import com.yehyun.whatshouldiweartoday.data.database.ClothingItem
 import com.yehyun.whatshouldiweartoday.data.preference.SettingsManager
 import com.yehyun.whatshouldiweartoday.data.repository.ClothingRepository
 import com.yehyun.whatshouldiweartoday.data.repository.WeatherRepository
+import com.yehyun.whatshouldiweartoday.ui.closet.AddClothingViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
@@ -240,9 +241,33 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
 
-        val bestTop = recommendedTops.minByOrNull { abs(it.suitableTemperature + settingsManager.getTemperatureTolerance() - 1 - maxTempCriteria) }
-        val bestBottom = recommendedBottoms.minByOrNull { abs(it.suitableTemperature + settingsManager.getTemperatureTolerance() - 1 - maxTempCriteria) }
-        val bestOuter = recommendedOuters.minByOrNull { abs(it.suitableTemperature + settingsManager.getTemperatureTolerance() - 1 - maxTempCriteria) }
+        val fitEnabled = settingsManager.bodyFitEnabled && settingsManager.isBodyRegistered
+        val userHeight = settingsManager.estimatedHeight
+        val userWeight = settingsManager.estimatedWeight
+
+        fun fitOrder(item: ClothingItem): Int {
+            if (!fitEnabled) return 0
+            val level = AddClothingViewModel.calculateFitLevel(
+                userHeight, userWeight,
+                item.fitMinHeight, item.fitMaxHeight,
+                item.fitMinWeight, item.fitMaxWeight
+            )
+            return AddClothingViewModel.fitLevelToOrder(level)
+        }
+
+        fun bestPick(items: List<ClothingItem>): ClothingItem? {
+            if (!fitEnabled) {
+                return items.minByOrNull { abs(it.suitableTemperature + settingsManager.getTemperatureTolerance() - 1 - maxTempCriteria) }
+            }
+            return items.sortedWith(
+                compareBy<ClothingItem> { fitOrder(it) }
+                    .thenBy { abs(it.suitableTemperature + settingsManager.getTemperatureTolerance() - 1 - maxTempCriteria) }
+            ).firstOrNull()
+        }
+
+        val bestTop = bestPick(recommendedTops)
+        val bestBottom = bestPick(recommendedBottoms)
+        val bestOuter = bestPick(recommendedOuters)
         val bestCombination = listOfNotNull(bestTop, bestBottom, bestOuter)
 
         val umbrellaRecommendation = when {
@@ -258,10 +283,13 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             _todayRecommendedClothingIds.postValue(allRecommendedIds)
         }
 
+        val fitThenTempComparator = compareBy<ClothingItem> { fitOrder(it) }
+            .thenByDescending { it.suitableTemperature }
+
         return RecommendationResult(
-            recommendedTops.sortedByDescending { it.suitableTemperature },
-            recommendedBottoms.sortedByDescending { it.suitableTemperature },
-            recommendedOuters.sortedByDescending { it.suitableTemperature },
+            recommendedTops.sortedWith(fitThenTempComparator),
+            recommendedBottoms.sortedWith(fitThenTempComparator),
+            recommendedOuters.sortedWith(fitThenTempComparator),
             bestCombination,
             packableOuters,
             umbrellaRecommendation,

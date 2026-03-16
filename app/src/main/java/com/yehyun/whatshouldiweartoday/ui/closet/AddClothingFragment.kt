@@ -75,6 +75,8 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabResel
     private lateinit var buttonTempIncrease: ImageButton
     private lateinit var buttonTempDecrease: ImageButton
     private lateinit var tvInfoFitLevel: TextView
+    private lateinit var layoutFitLevel: View
+    private lateinit var dividerFitLevel: View
 
 
     private lateinit var onBackPressedCallback: OnBackPressedCallback
@@ -168,6 +170,8 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabResel
         buttonTempIncrease = view.findViewById(R.id.button_temp_increase)
         buttonTempDecrease = view.findViewById(R.id.button_temp_decrease)
         tvInfoFitLevel = view.findViewById(R.id.tv_info_fit_level)
+        layoutFitLevel = view.findViewById(R.id.layout_fit_level)
+        dividerFitLevel = view.findViewById(R.id.divider_fit_level)
     }
 
     private fun observeViewModel() {
@@ -239,14 +243,15 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabResel
         }
 
         viewModel.fitLevelText.observe(viewLifecycleOwner) { text ->
-            tvInfoFitLevel.text = text
-            val colorRes = when (text) {
-                "적합" -> R.color.primary
-                "보통" -> R.color.text_secondary
-                "맞지않음" -> com.google.android.material.R.color.design_default_color_error
-                else -> R.color.text_tertiary
+            if (text.isNullOrEmpty()) {
+                layoutFitLevel.isVisible = false
+                dividerFitLevel.isVisible = false
+            } else {
+                layoutFitLevel.isVisible = true
+                dividerFitLevel.isVisible = true
+                tvInfoFitLevel.text = text
+                tvInfoFitLevel.setTextColor(ContextCompat.getColor(requireContext(), fitLevelColorRes(text)))
             }
-            tvInfoFitLevel.setTextColor(ContextCompat.getColor(requireContext(), colorRes))
         }
 
         viewModel.isSaveCompleted.observe(viewLifecycleOwner) { isCompleted ->
@@ -347,4 +352,15 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabResel
     }
 
     override fun onTabReselected() { handleBackButton() }
+
+    companion object {
+        fun fitLevelColorRes(level: String): Int {
+            return when (level) {
+                AddClothingViewModel.FIT_VERY_GOOD, AddClothingViewModel.FIT_GOOD -> R.color.fit_green
+                AddClothingViewModel.FIT_NORMAL -> R.color.text_secondary
+                AddClothingViewModel.FIT_BAD, AddClothingViewModel.FIT_VERY_BAD -> R.color.fit_red
+                else -> R.color.text_tertiary
+            }
+        }
+    }
 }

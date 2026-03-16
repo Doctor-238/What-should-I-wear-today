@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/Androidstudio/What-should-I-wear-today/**)",
+      "Bash(./gradlew assembleDebug)",
+      "Bash(cd:*)"
+    ]
+  }
+}
