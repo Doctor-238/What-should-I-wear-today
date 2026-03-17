@@ -3,15 +3,20 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:background="@color/app_background">
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recyclerView_clothing_list"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:paddingTop="10dp"
+        android:paddingHorizontal="6dp"
+        android:paddingBottom="16dp"
+        android:clipToPadding="false"
         app:layoutManager="androidx.recyclerview.widget.GridLayoutManager"
         app:spanCount="2"
-        tools:listitem="@layout/item_clothing" />
+        tools:listitem="@layout/item_clothing"/>
 
     <LinearLayout
         android:id="@+id/empty_view_container"
@@ -24,10 +29,10 @@
         tools:visibility="visible">
 
         <ImageView
-            android:layout_width="250dp"
+            android:layout_width="260dp"
             android:layout_height="wrap_content"
             android:adjustViewBounds="true"
-            android:src="@drawable/empty_closet_bubble" />
+            android:src="@drawable/empty_closet_bubble"/>
 
     </LinearLayout>
 

@@ -18,13 +18,25 @@
 
         <action
             android:id="@+id/action_navigation_home_to_saveStyleFragment"
-            app:destination="@id/saveStyleFragment" />
+            app:destination="@id/saveStyleFragment"
+            app:enterAnim="@anim/slide_up_in"
+            app:exitAnim="@anim/fade_out"
+            app:popEnterAnim="@anim/fade_in"
+            app:popExitAnim="@anim/slide_down_out" />
         <action
             android:id="@+id/action_navigation_home_to_editClothingFragment"
-            app:destination="@id/editClothingFragment" />
+            app:destination="@id/editClothingFragment"
+            app:enterAnim="@anim/enter_from_right"
+            app:exitAnim="@anim/exit_to_left"
+            app:popEnterAnim="@anim/pop_enter_from_left"
+            app:popExitAnim="@anim/pop_exit_to_right" />
         <action
             android:id="@+id/action_navigation_home_to_settingsFragment"
-            app:destination="@id/settingsFragment" />
+            app:destination="@id/settingsFragment"
+            app:enterAnim="@anim/slide_up_in"
+            app:exitAnim="@anim/fade_out"
+            app:popEnterAnim="@anim/fade_in"
+            app:popExitAnim="@anim/slide_down_out" />
     </fragment>
 
     <fragment
@@ -34,7 +46,11 @@
         tools:layout="@layout/fragment_style" >
         <action
             android:id="@+id/action_navigation_style_to_editStyleFragment"
-            app:destination="@id/editStyleFragment" />
+            app:destination="@id/editStyleFragment"
+            app:enterAnim="@anim/enter_from_right"
+            app:exitAnim="@anim/exit_to_left"
+            app:popEnterAnim="@anim/pop_enter_from_left"
+            app:popExitAnim="@anim/pop_exit_to_right" />
     </fragment>
 
     <fragment
@@ -44,10 +60,18 @@
         tools:layout="@layout/fragment_closet" >
         <action
             android:id="@+id/action_navigation_closet_to_addClothingFragment"
-            app:destination="@id/addClothingFragment" />
+            app:destination="@id/addClothingFragment"
+            app:enterAnim="@anim/enter_from_right"
+            app:exitAnim="@anim/exit_to_left"
+            app:popEnterAnim="@anim/pop_enter_from_left"
+            app:popExitAnim="@anim/pop_exit_to_right" />
         <action
             android:id="@+id/action_navigation_closet_to_editClothingFragment"
-            app:destination="@id/editClothingFragment" />
+            app:destination="@id/editClothingFragment"
+            app:enterAnim="@anim/enter_from_right"
+            app:exitAnim="@anim/exit_to_left"
+            app:popEnterAnim="@anim/pop_enter_from_left"
+            app:popExitAnim="@anim/pop_exit_to_right" />
     </fragment>
 
     <fragment
@@ -78,7 +102,11 @@
             android:defaultValue="@null" />
         <action
             android:id="@+id/action_saveStyleFragment_to_editClothingFragment"
-            app:destination="@id/editClothingFragment" />
+            app:destination="@id/editClothingFragment"
+            app:enterAnim="@anim/enter_from_right"
+            app:exitAnim="@anim/exit_to_left"
+            app:popEnterAnim="@anim/pop_enter_from_left"
+            app:popExitAnim="@anim/pop_exit_to_right" />
     </fragment>
 
     <fragment
@@ -91,7 +119,11 @@
             app:argType="long" />
         <action
             android:id="@+id/action_editStyleFragment_to_editClothingFragment"
-            app:destination="@id/editClothingFragment" />
+            app:destination="@id/editClothingFragment"
+            app:enterAnim="@anim/enter_from_right"
+            app:exitAnim="@anim/exit_to_left"
+            app:popEnterAnim="@anim/pop_enter_from_left"
+            app:popExitAnim="@anim/pop_exit_to_right" />
     </fragment>
 
     <fragment
@@ -102,6 +134,10 @@
 
     <action
         android:id="@+id/action_global_saveStyleFragment"
-        app:destination="@id/saveStyleFragment" />
+        app:destination="@id/saveStyleFragment"
+        app:enterAnim="@anim/slide_up_in"
+        app:exitAnim="@anim/fade_out"
+        app:popEnterAnim="@anim/fade_in"
+        app:popExitAnim="@anim/slide_down_out" />
 
 </navigation>

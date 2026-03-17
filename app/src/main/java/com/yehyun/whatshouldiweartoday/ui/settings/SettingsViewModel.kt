@@ -28,11 +28,8 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         _isProcessing.value = true
         viewModelScope.launch {
             try {
-                // 백그라운드 작업 취소
                 workManager.cancelUniqueWork("batch_add")
-                // 데이터베이스 클리어
                 db.clearAllData(getApplication())
-                // 설정값 초기화
                 settingsManager.resetToDefaults()
 
                 _resetComplete.postValue(true)

@@ -46,7 +46,11 @@ data class ClothingAnalysis(
     val is_wearable: Boolean,
     val category: String? = null,
     var suitable_temperature: Double? = null,
-    val color_hex: String? = null
+    val color_hex: String? = null,
+    val fit_min_height: Double? = null,
+    val fit_max_height: Double? = null,
+    val fit_min_weight: Double? = null,
+    val fit_max_weight: Double? = null
 )
 
 class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabReselectedListener {
@@ -70,6 +74,9 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabResel
 
     private lateinit var buttonTempIncrease: ImageButton
     private lateinit var buttonTempDecrease: ImageButton
+    private lateinit var tvInfoFitLevel: TextView
+    private lateinit var layoutFitLevel: View
+    private lateinit var dividerFitLevel: View
 
 
     private lateinit var onBackPressedCallback: OnBackPressedCallback
@@ -162,6 +169,9 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabResel
 
         buttonTempIncrease = view.findViewById(R.id.button_temp_increase)
         buttonTempDecrease = view.findViewById(R.id.button_temp_decrease)
+        tvInfoFitLevel = view.findViewById(R.id.tv_info_fit_level)
+        layoutFitLevel = view.findViewById(R.id.layout_fit_level)
+        dividerFitLevel = view.findViewById(R.id.divider_fit_level)
     }
 
     private fun observeViewModel() {
@@ -229,6 +239,18 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabResel
                 viewInfoColorSwatch.isVisible = true
             } else {
                 viewInfoColorSwatch.isVisible = false
+            }
+        }
+
+        viewModel.fitLevelText.observe(viewLifecycleOwner) { text ->
+            if (text.isNullOrEmpty()) {
+                layoutFitLevel.isVisible = false
+                dividerFitLevel.isVisible = false
+            } else {
+                layoutFitLevel.isVisible = true
+                dividerFitLevel.isVisible = true
+                tvInfoFitLevel.text = text
+                tvInfoFitLevel.setTextColor(ContextCompat.getColor(requireContext(), fitLevelColorRes(text)))
             }
         }
 
@@ -330,4 +352,15 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabResel
     }
 
     override fun onTabReselected() { handleBackButton() }
+
+    companion object {
+        fun fitLevelColorRes(level: String): Int {
+            return when (level) {
+                AddClothingViewModel.FIT_VERY_GOOD, AddClothingViewModel.FIT_GOOD -> R.color.fit_green
+                AddClothingViewModel.FIT_NORMAL -> R.color.text_secondary
+                AddClothingViewModel.FIT_BAD, AddClothingViewModel.FIT_VERY_BAD -> R.color.fit_red
+                else -> R.color.text_tertiary
+            }
+        }
+    }
 }

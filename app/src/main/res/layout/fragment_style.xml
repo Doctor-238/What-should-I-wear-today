@@ -5,14 +5,17 @@
     android:id="@+id/style_fragment_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/app_background"
     tools:context=".ui.style.StyleFragment">
 
     <FrameLayout
         android:id="@+id/toolbar_container_style"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:paddingTop="16dp"
-        android:paddingBottom="16dp"
+        android:background="@drawable/bg_toolbar_gradient"
+        android:paddingTop="12dp"
+        android:paddingBottom="10dp"
+        android:paddingHorizontal="16dp"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
@@ -20,14 +23,13 @@
         <androidx.constraintlayout.widget.ConstraintLayout
             android:id="@+id/toolbar_normal_style"
             android:layout_width="match_parent"
-            android:layout_height="48dp">
+            android:layout_height="46dp">
 
             <androidx.appcompat.widget.SearchView
                 android:id="@+id/search_view_style"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
-                android:layout_marginStart="16dp"
-                android:layout_marginEnd="8dp"
+                android:layout_marginEnd="10dp"
                 android:background="@drawable/bg_search_spinner"
                 app:iconifiedByDefault="false"
                 app:layout_constraintEnd_toStartOf="@+id/spinner_container_style"
@@ -35,14 +37,14 @@
                 app:layout_constraintTop_toTopOf="parent"
                 app:queryBackground="@android:color/transparent"
                 app:queryHint="스타일 이름을 검색하세요"
-                app:searchIcon="@drawable/search" />
+                app:searchIcon="@drawable/search"/>
 
             <FrameLayout
                 android:id="@+id/spinner_container_style"
                 android:layout_width="wrap_content"
                 android:layout_height="match_parent"
-                android:layout_marginEnd="16dp"
-                android:background="@drawable/bg_search_spinner"
+                android:background="@drawable/bg_settings_spinner"
+                android:elevation="2dp"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintTop_toTopOf="parent">
 
@@ -51,89 +53,93 @@
                     android:layout_width="wrap_content"
                     android:layout_height="match_parent"
                     android:background="@android:color/transparent"
-                    android:paddingStart="16dp"
-                    android:paddingEnd="32dp" />
+                    android:paddingStart="14dp"
+                    android:paddingEnd="34dp"/>
 
                 <ImageView
                     android:layout_width="16dp"
                     android:layout_height="16dp"
                     android:layout_gravity="end|center_vertical"
                     android:layout_marginEnd="12dp"
-                    android:src="@drawable/ic_dropdown_arrow"
-                    app:tint="@color/text_secondary" />
+                    android:src="@drawable/ic_dropdown_arrow"/>
             </FrameLayout>
         </androidx.constraintlayout.widget.ConstraintLayout>
 
         <androidx.constraintlayout.widget.ConstraintLayout
             android:id="@+id/toolbar_delete_style"
             android:layout_width="match_parent"
-            android:layout_height="48dp"
+            android:layout_height="46dp"
             android:visibility="gone"
             tools:visibility="visible">
 
             <ImageView
                 android:id="@+id/iv_back_delete_mode_style"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:layout_marginLeft="5dp"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:layout_marginLeft="0dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:scaleType="center"
-                android:padding="12dp"
+                android:padding="10dp"
                 android:src="@drawable/ic_arrow_back"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent" />
+                app:layout_constraintTop_toTopOf="parent"/>
 
             <androidx.appcompat.widget.SearchView
                 android:id="@+id/search_view_delete"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
-                android:layout_marginRight="8dp"
+                android:layout_marginEnd="10dp"
                 android:background="@drawable/bg_search_spinner"
                 app:iconifiedByDefault="false"
                 app:layout_constraintEnd_toStartOf="@+id/iv_select_all_style"
                 app:layout_constraintStart_toEndOf="@+id/iv_back_delete_mode_style"
                 app:layout_constraintTop_toTopOf="parent"
                 app:queryBackground="@android:color/transparent"
-                app:searchIcon="@drawable/search" />
+                app:searchIcon="@drawable/search"/>
 
             <ImageView
                 android:id="@+id/iv_select_all_style"
-                android:layout_width="32dp"
-                android:layout_height="32dp"
-                android:layout_marginEnd="8dp"
+                android:layout_width="30dp"
+                android:layout_height="30dp"
+                android:layout_marginEnd="10dp"
                 android:padding="2dp"
                 android:src="@drawable/custom_checkbox"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toStartOf="@id/btn_delete_style"
-                app:layout_constraintTop_toTopOf="parent" />
+                app:layout_constraintTop_toTopOf="parent"/>
 
             <Button
                 android:id="@+id/btn_delete_style"
                 android:layout_width="wrap_content"
                 android:layout_height="40dp"
-                android:layout_marginEnd="16dp"
+                android:layout_marginEnd="0dp"
                 android:background="@drawable/bg_delete_button"
                 app:backgroundTint="@null"
                 android:enabled="false"
-                android:minWidth="90dp"
+                android:minWidth="88dp"
                 android:text="삭제하기"
                 android:textColor="@color/white"
                 android:textStyle="bold"
+                android:textSize="13sp"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintTop_toTopOf="parent" />
+                app:layout_constraintTop_toTopOf="parent"/>
         </androidx.constraintlayout.widget.ConstraintLayout>
 
     </FrameLayout>
+
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/tabs_container"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
+        android:background="@drawable/bg_toolbar_gradient"
+        android:paddingHorizontal="8dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/toolbar_container_style">
+
         <com.google.android.material.tabs.TabLayout
             android:id="@+id/tab_layout_style_season"
             android:layout_width="0dp"
@@ -141,7 +147,7 @@
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
-            app:tabBackground="@android:color/white"
+            app:tabBackground="@android:color/transparent"
             app:tabGravity="fill"
             app:tabMode="fixed"
             app:tabSelectedTextColor="@color/tab_selected_text"
@@ -150,14 +156,15 @@
             app:tabIndicatorAnimationMode="linear"
             app:tabIndicatorColor="@color/tab_selected_text"
             app:tabIndicatorFullWidth="false"
-            app:tabIndicatorGravity="bottom"/>
+            app:tabIndicatorGravity="bottom"
+            app:tabTextAppearance="@style/TextAppearance.App.TabText"/>
     </androidx.constraintlayout.widget.ConstraintLayout>
 
     <View
         android:id="@+id/separator"
         android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:background="@color/bottom_nav_background"
+        android:layout_height="2dp"
+        android:background="@drawable/bg_section_divider"
         app:layout_constraintTop_toBottomOf="@id/tabs_container"/>
 
     <androidx.viewpager2.widget.ViewPager2
@@ -167,21 +174,21 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/separator" />
+        app:layout_constraintTop_toBottomOf="@+id/separator"/>
 
     <LinearLayout
         android:id="@+id/scroll_mode_alert_container"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="24dp"
+        android:layout_marginBottom="28dp"
         android:background="@drawable/bg_search_spinner"
-        android:elevation="4dp"
+        android:elevation="8dp"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:paddingStart="12dp"
-        android:paddingTop="8dp"
-        android:paddingEnd="12dp"
-        android:paddingBottom="8dp"
+        android:paddingStart="16dp"
+        android:paddingTop="10dp"
+        android:paddingEnd="16dp"
+        android:paddingBottom="10dp"
         android:visibility="gone"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -190,9 +197,10 @@
         tools:visibility="visible">
 
         <ImageView
-            android:layout_width="20dp"
-            android:layout_height="20dp"
-            android:src="@drawable/alert" />
+            android:layout_width="16dp"
+            android:layout_height="16dp"
+            android:src="@drawable/alert"
+            app:tint="@color/text_secondary"/>
 
         <TextView
             android:layout_width="wrap_content"
@@ -200,20 +208,22 @@
             android:layout_marginStart="8dp"
             android:text="재클릭시 스크롤 모드가 해제됩니다."
             android:textColor="@color/text_secondary"
-            android:textSize="12sp" />
+            android:textSize="12sp"/>
     </LinearLayout>
+
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/fab_add_style"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_margin="24dp"
+        android:layout_margin="20dp"
         android:src="@drawable/plus"
+        android:elevation="10dp"
         app:backgroundTint="@color/fab_color_style_tab"
-        app:elevation="4dp"
+        app:elevation="10dp"
         app:fabSize="normal"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:tint="@android:color/white"
-        tools:ignore="ContentDescription" />
+        tools:ignore="ContentDescription"/>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

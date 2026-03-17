@@ -49,6 +49,39 @@ class SettingsManager(context: Context) {
             prefs.edit().putBoolean(KEY_SHOW_RECOMMENDATION_ICON, value).commit()
         }
 
+    var bodyImageUri: String?
+        get() = prefs.getString(KEY_BODY_IMAGE_URI, null)
+        set(value) {
+            prefs.edit().putString(KEY_BODY_IMAGE_URI, value).commit()
+        }
+
+    var estimatedHeight: Float
+        get() = prefs.getFloat(KEY_ESTIMATED_HEIGHT, 0f)
+        set(value) {
+            prefs.edit().putFloat(KEY_ESTIMATED_HEIGHT, value).commit()
+        }
+
+    var estimatedWeight: Float
+        get() = prefs.getFloat(KEY_ESTIMATED_WEIGHT, 0f)
+        set(value) {
+            prefs.edit().putFloat(KEY_ESTIMATED_WEIGHT, value).commit()
+        }
+
+    val isBodyRegistered: Boolean
+        get() = estimatedHeight > 0f && estimatedWeight > 0f
+
+    var bodyFitEnabled: Boolean
+        get() = prefs.getBoolean(KEY_BODY_FIT_ENABLED, false)
+        set(value) {
+            prefs.edit().putBoolean(KEY_BODY_FIT_ENABLED, value).commit()
+        }
+
+    var bodyFitBorderEnabled: Boolean
+        get() = prefs.getBoolean(KEY_BODY_FIT_BORDER_ENABLED, true)
+        set(value) {
+            prefs.edit().putBoolean(KEY_BODY_FIT_BORDER_ENABLED, value).commit()
+        }
+
     fun getTemperatureTolerance(): Double {
         return when (temperatureRange) {
             TEMP_RANGE_NARROW -> 1.5
@@ -102,6 +135,11 @@ class SettingsManager(context: Context) {
         private const val KEY_CLOSET_SORT_TYPE = "closet_sort_type"
         private const val KEY_STYLE_SORT_TYPE = "style_sort_type"
         private const val KEY_SHOW_RECOMMENDATION_ICON = "show_recommendation_icon"
+        private const val KEY_BODY_IMAGE_URI = "body_image_uri"
+        private const val KEY_ESTIMATED_HEIGHT = "estimated_height"
+        private const val KEY_ESTIMATED_WEIGHT = "estimated_weight"
+        private const val KEY_BODY_FIT_ENABLED = "body_fit_enabled"
+        private const val KEY_BODY_FIT_BORDER_ENABLED = "body_fit_border_enabled"
 
         const val TEMP_RANGE_NARROW = "좁게"
         const val TEMP_RANGE_NORMAL = "보통"

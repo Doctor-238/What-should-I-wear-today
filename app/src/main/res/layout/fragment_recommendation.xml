@@ -13,7 +13,8 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:paddingBottom="32dp">
+        android:paddingTop="16dp"
+        android:paddingBottom="36dp">
 
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/card_weather_summary"
@@ -23,159 +24,167 @@
             android:layout_marginTop="8dp"
             android:layout_marginLeft="16dp"
             android:layout_marginRight="16dp"
-            app:cardBackgroundColor="@color/weather_card_blue_bg"
-            app:cardCornerRadius="16dp"
-            app:cardElevation="8dp"
+            android:elevation="10dp"
+            app:cardBackgroundColor="@android:color/transparent"
+            app:cardCornerRadius="28dp"
+            app:cardElevation="10dp"
             app:strokeWidth="0dp"
             tools:visibility="visible">
 
             <androidx.constraintlayout.widget.ConstraintLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:paddingStart="16dp"
-                android:paddingTop="16dp"
-                android:paddingEnd="16dp"
-                android:paddingBottom="20dp"
-                >
+                android:background="@drawable/bg_weather_card_gradient"
+                android:paddingStart="22dp"
+                android:paddingTop="22dp"
+                android:paddingEnd="22dp"
+                android:paddingBottom="26dp">
 
                 <TextView
                     android:id="@+id/tv_weather_title"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="오늘의 날씨"
-                    android:textColor="@android:color/white"
-                    android:textSize="16sp"
+                    android:textColor="#FFFFFF"
+                    android:textSize="14sp"
                     android:textStyle="bold"
+                    android:alpha="0.92"
+                    android:letterSpacing="0.02"
                     app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toTopOf="parent" />
+                    app:layout_constraintTop_toTopOf="parent"/>
 
                 <ImageView
                     android:id="@+id/iv_send_icon"
-                    android:layout_width="16dp"
-                    android:layout_height="16dp"
-                    android:layout_marginStart="4dp"
+                    android:layout_width="13dp"
+                    android:layout_height="13dp"
+                    android:layout_marginStart="6dp"
                     android:src="@drawable/send"
+                    android:alpha="0.75"
                     app:layout_constraintBottom_toBottomOf="@id/tv_weather_title"
                     app:layout_constraintStart_toEndOf="@id/tv_weather_title"
                     app:layout_constraintTop_toTopOf="@id/tv_weather_title"
-                    app:tint="@android:color/white" />
+                    app:tint="#FFFFFF"/>
 
                 <ImageView
                     android:id="@+id/iv_max_temp_icon"
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
-                    android:layout_marginTop="16dp"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:layout_marginTop="20dp"
                     android:src="@drawable/high_temperature"
+                    android:alpha="0.95"
                     app:layout_constraintEnd_toStartOf="@id/tv_max_temp"
                     app:layout_constraintHorizontal_chainStyle="packed"
                     app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@id/tv_weather_title" />
+                    app:layout_constraintTop_toBottomOf="@id/tv_weather_title"/>
 
                 <TextView
                     android:id="@+id/tv_max_temp_label"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp"
+                    android:layout_marginStart="10dp"
                     android:text="최고 기온"
-                    android:textColor="@android:color/white"
-                    android:textSize="14sp"
+                    android:textColor="#FFFFFF"
+                    android:textSize="11sp"
+                    android:alpha="0.80"
                     app:layout_constraintBottom_toTopOf="@id/tv_max_temp"
                     app:layout_constraintStart_toEndOf="@id/iv_max_temp_icon"
                     app:layout_constraintTop_toTopOf="@id/iv_max_temp_icon"
-                    app:layout_constraintVertical_chainStyle="packed" />
+                    app:layout_constraintVertical_chainStyle="packed"/>
 
                 <TextView
                     android:id="@+id/tv_max_temp"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:textColor="@android:color/white"
-                    android:textSize="32sp"
+                    android:textColor="#FF6E6E"
+                    android:textSize="34sp"
                     android:textStyle="bold"
                     app:layout_constraintBottom_toBottomOf="@id/iv_max_temp_icon"
                     app:layout_constraintStart_toStartOf="@id/tv_max_temp_label"
                     app:layout_constraintTop_toBottomOf="@id/tv_max_temp_label"
-                    tools:text="28.8°" />
+                    tools:text="6.0°"/>
 
                 <TextView
                     android:id="@+id/tv_max_feels_like"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:textColor="@android:color/white"
-                    android:textSize="14sp"
+                    android:layout_marginTop="2dp"
+                    android:textColor="#FFFFFF"
+                    android:textSize="11sp"
+                    android:alpha="0.70"
                     app:layout_constraintStart_toStartOf="@id/tv_max_temp_label"
                     app:layout_constraintTop_toBottomOf="@id/tv_max_temp"
-                    tools:text="체감 27.7°" />
-
+                    tools:text="체감 3.4°"/>
 
                 <ImageView
                     android:id="@+id/iv_min_temp_icon"
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
-                    android:layout_marginTop="16dp"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:layout_marginTop="20dp"
                     android:src="@drawable/temperature"
+                    android:alpha="0.95"
                     app:layout_constraintEnd_toStartOf="@id/tv_min_temp"
                     app:layout_constraintHorizontal_chainStyle="packed"
                     app:layout_constraintStart_toEndOf="@id/guideline_vertical"
-                    app:layout_constraintTop_toBottomOf="@id/tv_weather_title" />
+                    app:layout_constraintTop_toBottomOf="@id/tv_weather_title"/>
 
                 <TextView
                     android:id="@+id/tv_min_temp_label"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp"
+                    android:layout_marginStart="10dp"
                     android:text="최저 기온"
-                    android:textColor="@android:color/white"
-                    android:textSize="14sp"
+                    android:textColor="#FFFFFF"
+                    android:textSize="11sp"
+                    android:alpha="0.80"
                     app:layout_constraintBottom_toTopOf="@id/tv_min_temp"
                     app:layout_constraintStart_toEndOf="@id/iv_min_temp_icon"
                     app:layout_constraintTop_toTopOf="@id/iv_min_temp_icon"
-                    app:layout_constraintVertical_chainStyle="packed" />
+                    app:layout_constraintVertical_chainStyle="packed"/>
 
                 <TextView
                     android:id="@+id/tv_min_temp"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:textColor="@android:color/white"
-                    android:textSize="32sp"
+                    android:textColor="#FFFFFF"
+                    android:textSize="34sp"
                     android:textStyle="bold"
                     app:layout_constraintBottom_toBottomOf="@id/iv_min_temp_icon"
                     app:layout_constraintStart_toStartOf="@id/tv_min_temp_label"
                     app:layout_constraintTop_toBottomOf="@id/tv_min_temp_label"
-                    tools:text="12.2°" />
+                    tools:text="1.3°"/>
 
                 <TextView
                     android:id="@+id/tv_min_feels_like"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:textColor="@android:color/white"
-                    android:textSize="14sp"
+                    android:layout_marginTop="2dp"
+                    android:textColor="#FFFFFF"
+                    android:textSize="11sp"
+                    android:alpha="0.70"
                     app:layout_constraintStart_toStartOf="@id/tv_min_temp_label"
                     app:layout_constraintTop_toBottomOf="@id/tv_min_temp"
-                    tools:text="체감 11.6°" />
-
+                    tools:text="체감 0.5°"/>
 
                 <androidx.constraintlayout.widget.Guideline
                     android:id="@+id/guideline_vertical"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    app:layout_constraintGuide_percent="0.5" />
+                    app:layout_constraintGuide_percent="0.5"/>
 
                 <androidx.constraintlayout.widget.Guideline
                     android:id="@+id/guideline_horizontal_1"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    app:layout_constraintGuide_percent="0.15" />
+                    app:layout_constraintGuide_percent="0.15"/>
 
                 <androidx.constraintlayout.widget.Guideline
                     android:id="@+id/guideline_horizontal_2"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    app:layout_constraintGuide_percent="0.65" />
+                    app:layout_constraintGuide_percent="0.65"/>
 
             </androidx.constraintlayout.widget.ConstraintLayout>
 
@@ -185,30 +194,29 @@
             android:id="@+id/card_best_combination"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
+            android:layout_marginTop="14dp"
             android:layout_marginLeft="16dp"
             android:layout_marginRight="16dp"
-            app:cardBackgroundColor="@android:color/white"
-            app:cardCornerRadius="16dp"
-            app:cardElevation="4dp"
-            app:strokeColor="@color/bottom_nav_background"
-            app:strokeWidth="1dp"
+            app:cardBackgroundColor="@color/surface"
+            app:cardCornerRadius="24dp"
+            app:cardElevation="6dp"
+            app:strokeWidth="0dp"
             android:visibility="gone"
             tools:visibility="visible">
 
             <androidx.constraintlayout.widget.ConstraintLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:padding="16dp">
+                android:padding="18dp">
 
                 <ImageView
                     android:id="@+id/iv_best_combination_icon"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
                     android:src="@drawable/sun"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="@id/tv_best_combination_title"
-                    app:layout_constraintBottom_toBottomOf="@id/tv_best_combination_title" />
+                    app:layout_constraintBottom_toBottomOf="@id/tv_best_combination_title"/>
 
                 <TextView
                     android:id="@+id/tv_best_combination_title"
@@ -217,10 +225,10 @@
                     android:layout_marginStart="8dp"
                     android:text="최적의 코디"
                     android:textColor="@color/text_primary"
-                    android:textSize="18sp"
+                    android:textSize="16sp"
                     android:textStyle="bold"
                     app:layout_constraintStart_toEndOf="@id/iv_best_combination_icon"
-                    app:layout_constraintTop_toTopOf="parent" />
+                    app:layout_constraintTop_toTopOf="parent"/>
 
                 <TextView
                     android:id="@+id/tv_best_combination_subtitle"
@@ -229,9 +237,9 @@
                     android:layout_marginTop="2dp"
                     android:text="AI가 추천하는 오늘의 조합"
                     android:textColor="@color/text_secondary"
-                    android:textSize="13sp"
+                    android:textSize="12sp"
                     app:layout_constraintStart_toStartOf="@id/tv_best_combination_title"
-                    app:layout_constraintTop_toBottomOf="@id/tv_best_combination_title" />
+                    app:layout_constraintTop_toBottomOf="@id/tv_best_combination_title"/>
 
                 <Button
                     android:id="@+id/btn_save_combination"
@@ -239,19 +247,19 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="이 코디 저장"
-                    android:textSize="14sp"
+                    android:textSize="12sp"
                     android:textStyle="bold"
                     app:icon="@drawable/plus"
-                    app:iconPadding="4dp"
-                    app:iconTint="@color/settings_spinner_blue"
+                    app:iconPadding="3dp"
+                    app:iconTint="@color/primary"
                     app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintTop_toTopOf="parent" />
+                    app:layout_constraintTop_toTopOf="parent"/>
 
                 <androidx.recyclerview.widget.RecyclerView
                     android:id="@+id/rv_best_combination"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="16dp"
+                    android:layout_marginTop="14dp"
                     android:clipToPadding="false"
                     android:orientation="horizontal"
                     app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
@@ -259,7 +267,7 @@
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toBottomOf="@id/tv_best_combination_subtitle"
                     tools:itemCount="3"
-                    tools:listitem="@layout/item_recommendation_clothing_square" />
+                    tools:listitem="@layout/item_recommendation_clothing_square"/>
 
             </androidx.constraintlayout.widget.ConstraintLayout>
         </com.google.android.material.card.MaterialCardView>
@@ -273,121 +281,169 @@
             android:paddingVertical="48dp"
             android:text="날씨에 어울리는 옷이 부족합니다.\n'옷' 탭에서 옷을 더 등록해주세요!"
             android:textColor="@color/text_secondary"
-            android:textSize="16sp"
+            android:textSize="14sp"
             android:visibility="gone"
-            tools:visibility="visible" />
+            tools:visibility="visible"/>
 
-        <TextView
-            android:id="@+id/tv_tops_title"
-            android:layout_width="wrap_content"
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="32dp"
-            android:layout_marginLeft="16dp"
-            android:layout_marginRight="16dp"
-            android:text="추천 상의"
-            android:textColor="@color/text_primary"
-            android:textSize="18sp"
-            android:textStyle="bold" />
+            android:orientation="horizontal"
+            android:layout_marginTop="24dp"
+            android:layout_marginLeft="20dp"
+            android:layout_marginRight="20dp"
+            android:gravity="center_vertical">
+
+            <View
+                android:layout_width="4dp"
+                android:layout_height="20dp"
+                android:background="@drawable/bg_primary_button"
+                android:layout_marginEnd="10dp"/>
+
+            <TextView
+                android:id="@+id/tv_tops_title"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="추천 상의"
+                android:textColor="@color/text_primary"
+                android:textSize="16sp"
+                android:textStyle="bold"/>
+        </LinearLayout>
 
         <TextView
             android:id="@+id/tv_no_tops"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center"
-            android:paddingVertical="16dp"
+            android:paddingVertical="14dp"
             android:text="옷장에 날씨에 맞는 상의가 없습니다!"
             android:textColor="@color/text_secondary"
-            android:visibility="gone" />
+            android:textSize="13sp"
+            android:visibility="gone"/>
 
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/rv_tops"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
+            android:layout_marginTop="10dp"
             android:layout_marginLeft="16dp"
             android:layout_marginRight="16dp"
             android:clipToPadding="false"
+            android:paddingHorizontal="4dp"
             android:orientation="horizontal"
             app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
             tools:itemCount="3"
-            tools:listitem="@layout/item_recommendation_clothing_square" />
+            tools:listitem="@layout/item_recommendation_clothing_square"/>
 
-        <TextView
-            android:id="@+id/tv_bottoms_title"
-            android:layout_width="wrap_content"
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:orientation="horizontal"
             android:layout_marginTop="24dp"
-            android:layout_marginLeft="16dp"
-            android:layout_marginRight="16dp"
-            android:text="추천 하의"
-            android:textColor="@color/text_primary"
-            android:textSize="18sp"
-            android:textStyle="bold" />
+            android:layout_marginLeft="20dp"
+            android:layout_marginRight="20dp"
+            android:gravity="center_vertical">
+
+            <View
+                android:layout_width="4dp"
+                android:layout_height="20dp"
+                android:background="@drawable/bg_primary_button"
+                android:layout_marginEnd="10dp"/>
+
+            <TextView
+                android:id="@+id/tv_bottoms_title"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="추천 하의"
+                android:textColor="@color/text_primary"
+                android:textSize="16sp"
+                android:textStyle="bold"/>
+        </LinearLayout>
 
         <TextView
             android:id="@+id/tv_no_bottoms"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center"
-            android:paddingVertical="16dp"
+            android:paddingVertical="14dp"
             android:text="옷장에 날씨에 맞는 하의가 없습니다!"
             android:textColor="@color/text_secondary"
-            android:visibility="gone" />
+            android:textSize="13sp"
+            android:visibility="gone"/>
 
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/rv_bottoms"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
+            android:layout_marginTop="10dp"
             android:layout_marginLeft="16dp"
             android:layout_marginRight="16dp"
             android:clipToPadding="false"
+            android:paddingHorizontal="4dp"
             android:orientation="horizontal"
             app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
             tools:itemCount="5"
-            tools:listitem="@layout/item_recommendation_clothing_square" />
+            tools:listitem="@layout/item_recommendation_clothing_square"/>
 
-        <TextView
-            android:id="@+id/tv_outers_title"
-            android:layout_width="wrap_content"
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:orientation="horizontal"
             android:layout_marginTop="24dp"
-            android:layout_marginLeft="16dp"
-            android:layout_marginRight="16dp"
-            android:text="추천 아우터"
-            android:textColor="@color/text_primary"
-            android:textSize="18sp"
-            android:textStyle="bold" />
+            android:layout_marginLeft="20dp"
+            android:layout_marginRight="20dp"
+            android:gravity="center_vertical">
+
+            <View
+                android:layout_width="4dp"
+                android:layout_height="20dp"
+                android:background="@drawable/bg_primary_button"
+                android:layout_marginEnd="10dp"/>
+
+            <TextView
+                android:id="@+id/tv_outers_title"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="추천 아우터"
+                android:textColor="@color/text_primary"
+                android:textSize="16sp"
+                android:textStyle="bold"/>
+        </LinearLayout>
 
         <TextView
             android:id="@+id/tv_no_outers"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center"
-            android:paddingVertical="16dp"
+            android:paddingVertical="14dp"
             android:text="옷장에 날씨에 맞는 아우터가 없습니다!"
             android:textColor="@color/text_secondary"
-            android:visibility="gone" />
+            android:textSize="13sp"
+            android:visibility="gone"/>
 
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/rv_outers"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
+            android:layout_marginTop="10dp"
             android:layout_marginLeft="16dp"
             android:layout_marginRight="16dp"
             android:clipToPadding="false"
+            android:paddingHorizontal="4dp"
             android:orientation="horizontal"
             app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
             tools:itemCount="5"
-            tools:listitem="@layout/item_recommendation_clothing_square" />
+            tools:listitem="@layout/item_recommendation_clothing_square"/>
 
         <LinearLayout
             android:id="@+id/ll_info_container"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:layout_marginTop="24dp"
+            android:layout_marginTop="20dp"
             android:clipToPadding="false"
             android:paddingBottom="8dp"
             android:visibility="gone"
@@ -398,9 +454,10 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginHorizontal="16dp"
-                app:cardBackgroundColor="#f2f2f2"
-                app:cardCornerRadius="16dp"
+                app:cardBackgroundColor="@color/primary_light"
+                app:cardCornerRadius="20dp"
                 app:cardElevation="4dp"
+                app:strokeWidth="0dp"
                 android:visibility="gone"
                 tools:visibility="visible">
 
@@ -412,9 +469,10 @@
                     android:padding="16dp">
 
                     <ImageView
-                        android:layout_width="36dp"
-                        android:layout_height="36dp"
-                        android:src="@drawable/ic_packable_bag" />
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
+                        android:src="@drawable/ic_packable_bag"/>
+
                     <TextView
                         android:id="@+id/tv_info_temp_difference"
                         android:layout_width="0dp"
@@ -422,7 +480,7 @@
                         android:layout_weight="1"
                         android:layout_marginStart="12dp"
                         android:textColor="@color/text_primary"
-                        android:textSize="14sp"
+                        android:textSize="13sp"
                         android:lineSpacingExtra="4dp"
                         tools:text="오늘은 일교차가 큰 날이에요!\n아우터를 따로 챙겨가는 것을 추천드립니다."/>
                 </LinearLayout>
@@ -433,10 +491,11 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginHorizontal="16dp"
-                android:layout_marginTop="12dp"
-                app:cardBackgroundColor="#f2f2f2"
-                app:cardCornerRadius="16dp"
+                android:layout_marginTop="10dp"
+                app:cardBackgroundColor="@color/primary_light"
+                app:cardCornerRadius="20dp"
                 app:cardElevation="4dp"
+                app:strokeWidth="0dp"
                 android:visibility="gone"
                 tools:visibility="visible">
 
@@ -450,7 +509,8 @@
                     <ImageView
                         android:layout_width="24dp"
                         android:layout_height="24dp"
-                        android:src="@drawable/umbrella" />
+                        android:src="@drawable/umbrella"/>
+
                     <TextView
                         android:id="@+id/tv_info_rain"
                         android:layout_width="0dp"
@@ -458,7 +518,7 @@
                         android:layout_weight="1"
                         android:layout_marginStart="12dp"
                         android:textColor="@color/text_primary"
-                        android:textSize="14sp"
+                        android:textSize="13sp"
                         android:lineSpacingExtra="4dp"
                         tools:text="비가 올 예정이니 우산을 꼭 챙겨주세요!"/>
                 </LinearLayout>

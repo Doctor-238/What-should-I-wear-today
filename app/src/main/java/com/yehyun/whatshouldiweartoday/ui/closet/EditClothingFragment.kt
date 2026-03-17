@@ -65,6 +65,9 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
     private lateinit var buttonTempIncrease: ImageButton
     private lateinit var buttonTempDecrease: ImageButton
     private lateinit var iconSpecialEdit: ImageView
+    private lateinit var tvEditFitLevel: TextView
+    private lateinit var layoutEditFitLevel: View
+    private lateinit var dividerEditFitLevel: View
 
     private var toast: Toast? = null
 
@@ -112,6 +115,9 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
         buttonTempIncrease = view.findViewById(R.id.button_edit_temp_increase)
         buttonTempDecrease = view.findViewById(R.id.button_edit_temp_decrease)
         iconSpecialEdit = view.findViewById(R.id.icon_special_edit)
+        tvEditFitLevel = view.findViewById(R.id.tv_edit_fit_level)
+        layoutEditFitLevel = view.findViewById(R.id.layout_edit_fit_level)
+        dividerEditFitLevel = view.findViewById(R.id.divider_edit_fit_level)
         toolbar.inflateMenu(R.menu.edit_clothing_menu)
     }
 
@@ -206,6 +212,7 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
         switchRemoveBackground.isChecked = item.useProcessedImage
 
         updateImagePreview(item)
+        updateFitLevelDisplay(item)
 
         val isRecommended = homeViewModel.todayRecommendedClothingIds.value?.contains(item.id) ?: false
         val isPackable = homeViewModel.todayRecommendation.value?.packableOuters?.any { it.id == item.id } ?: false
@@ -243,6 +250,28 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
         } else {
             textViewTemperature.text = "상의, 하의, 아우터에만 표시됩니다."
             textViewTemperature.setTextColor(ContextCompat.getColor(requireContext(), R.color.text_secondary))
+        }
+    }
+
+    private fun updateFitLevelDisplay(item: ClothingItem) {
+        if (!settingsManager.bodyFitEnabled) {
+            layoutEditFitLevel.isVisible = false
+            dividerEditFitLevel.isVisible = false
+            return
+        }
+        layoutEditFitLevel.isVisible = true
+        dividerEditFitLevel.isVisible = true
+        if (settingsManager.isBodyRegistered) {
+            val level = AddClothingViewModel.calculateFitLevel(
+                settingsManager.estimatedHeight, settingsManager.estimatedWeight,
+                item.fitMinHeight, item.fitMaxHeight,
+                item.fitMinWeight, item.fitMaxWeight
+            )
+            tvEditFitLevel.text = level
+            tvEditFitLevel.setTextColor(ContextCompat.getColor(requireContext(), AddClothingFragment.fitLevelColorRes(level)))
+        } else {
+            tvEditFitLevel.text = "설정에서 체형을 등록해주세요"
+            tvEditFitLevel.setTextColor(ContextCompat.getColor(requireContext(), R.color.text_tertiary))
         }
     }
 

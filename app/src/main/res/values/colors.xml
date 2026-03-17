@@ -4,34 +4,69 @@
     <color name="white">#FFFFFFFF</color>
     <color name="dark_purple">#FF6200EE</color>
 
-    <color name="status_bar_blue">#7ac2e9</color>
-    <color name="app_background">#FFFFFF</color>
+    <color name="primary">#2B8EE8</color>
+    <color name="primary_dark">#1868C0</color>
+    <color name="primary_light">#E4F1FD</color>
+    <color name="primary_border">#96C8F2</color>
+
+    <color name="status_bar_blue">#3A9EED</color>
+    <color name="app_background">#E9F2FC</color>
+    <color name="surface">#FFFFFF</color>
+    <color name="surface_variant">#F5FAFF</color>
     <color name="weather_card_background">#FFFFFF</color>
-    <color name="weather_card_stroke">#E5E7EB</color>
-    <color name="text_primary">#111827</color>
-    <color name="text_secondary">#6B7281</color>
-    <color name="text_tertiary">#4B5563</color>
-    <color name="tab_selected_text">#000000</color>
-    <color name="tab_unselected_text">#9CA3AF</color>
-    <color name="weather_card_blue_bg">#b2cbe6</color>
+    <color name="weather_card_stroke">#BCDCF8</color>
 
-    <color name="bottom_nav_background">#e3e3e3</color>
+    <color name="text_primary">#0A1822</color>
+    <color name="text_secondary">#5C6E80</color>
+    <color name="text_tertiary">#94ABBA</color>
+    <color name="text_hint">#A8BCCC</color>
 
-    <color name="settings_section_title">#8A8A8A</color>
+    <color name="tab_selected_text">#2B8EE8</color>
+    <color name="tab_unselected_text">#94AEBF</color>
+    <color name="weather_card_blue_bg">#96CCF4</color>
+
+    <color name="bottom_nav_background">#FFFFFF</color>
+    <color name="bottom_nav_surface">#FFFFFF</color>
+    <color name="nav_border">#CBE0F2</color>
+
+    <color name="settings_section_title">#94ABBA</color>
     <color name="settings_card_background">#FFFFFF</color>
-    <color name="settings_spinner_blue">#0EB4FC</color>
-    <color name="settings_reset_button_text">#FF4646</color>
-    <color name="slider_track_inactive_color">#E0E0E0</color>
+    <color name="settings_spinner_blue">#2B8EE8</color>
+    <color name="settings_reset_button_text">#E03030</color>
+
+    <color name="slider_track_inactive_color">#C4DFF4</color>
     <color name="slider_thumb_color">#FFFFFF</color>
-    <color name="clothing_item_border">#7ac2e9</color>
 
-    <color name="style_card_background">#e4f4fe</color>
-    <color name="style_background">#f1e5d9</color>
-    <color name="search_view_stroke_color">#EAEAEA</color>
-    <color name="fab_color_style_tab">#88CCFD</color>
-    <color name="temp_high_red">#FF6B6B</color>
-    <color name="temp_low_blue">#54A0FF</color>
+    <color name="clothing_item_border">#B4D2EC</color>
+    <color name="input_border">#BDD2E6</color>
+    <color name="search_bg">#F2F8FF</color>
 
-    <color name="delete_button_red_active">#FF4646</color>
-    <color name="delete_button_red_inactive">#FFBDBD</color>
+    <color name="style_card_background">#E4F1FD</color>
+    <color name="style_background">#FFF2E8</color>
+    <color name="fab_color_style_tab">#2B8EE8</color>
+
+    <color name="temp_high_red">#FF5050</color>
+    <color name="temp_low_blue">#82BFFF</color>
+
+    <color name="delete_button_red_active">#E03030</color>
+    <color name="delete_button_red_inactive">#FFB8B6</color>
+
+    <color name="button_plus_green">#28C456</color>
+    <color name="button_minus_red">#FF3C34</color>
+
+    <color name="chip_selected_bg">#2B8EE8</color>
+    <color name="chip_unselected_bg">#EBF5FF</color>
+
+    <color name="bottom_nav_item_selected_bg">#00000000</color>
+
+    <color name="card_border">#C0D8EE</color>
+    <color name="divider_color">#D0E4F2</color>
+    <color name="ic_launcher_background">#F0F8FF</color>
+
+    <color name="card_shadow_color">#142B8EE8</color>
+    <color name="card_inner_highlight">#FAFCFF</color>
+    <color name="toolbar_end_color">#E9F2FC</color>
+
+    <color name="fit_green">#4CAF50</color>
+    <color name="fit_red">#E03030</color>
 </resources>
