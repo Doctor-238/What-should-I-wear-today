@@ -82,6 +82,10 @@
         <argument
             android:name="clothingItemId"
             app:argType="integer" />
+        <argument
+            android:name="fromStyleEdit"
+            app:argType="boolean"
+            android:defaultValue="false" />
     </fragment>
 
     <fragment

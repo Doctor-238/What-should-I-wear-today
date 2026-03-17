@@ -371,7 +371,7 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
         AlertDialog.Builder(requireContext())
             .setTitle("삭제 확인")
             .setMessage("'${viewModel.currentClothingItem.value?.name}' 을(를) 정말 삭제하시겠습니까?")
-            .setPositiveButton("예") { _, _ -> viewModel.deleteClothingItem() }
+            .setPositiveButton("예") { _, _ -> viewModel.deleteClothingItem(args.fromStyleEdit) }
             .setNegativeButton("아니오", null)
             .show()
     }

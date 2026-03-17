@@ -162,7 +162,7 @@ class SaveStyleFragment : Fragment(R.layout.fragment_save_style), OnTabReselecte
             },
             onItemLongClick = { _, position ->
                 adapter.currentList.getOrNull(position)?.let { item ->
-                    val action = SaveStyleFragmentDirections.actionSaveStyleFragmentToEditClothingFragment(item.id)
+                    val action = SaveStyleFragmentDirections.actionSaveStyleFragmentToEditClothingFragment(item.id, fromStyleEdit = true)
                     findNavController().navigate(action)
                 }
             },

@@ -240,7 +240,7 @@ class EditStyleFragment : Fragment(R.layout.fragment_edit_style), OnTabReselecte
             },
             onItemLongClick = { _, position ->
                 adapterForSelected.currentList.getOrNull(position)?.let {
-                    val action = EditStyleFragmentDirections.actionEditStyleFragmentToEditClothingFragment(it.id)
+                    val action = EditStyleFragmentDirections.actionEditStyleFragmentToEditClothingFragment(it.id, fromStyleEdit = true)
                     findNavController().navigate(action)
                 }
             },
@@ -276,7 +276,7 @@ class EditStyleFragment : Fragment(R.layout.fragment_edit_style), OnTabReselecte
             },
             onItemLongClick = { _, position ->
                 adapterForAll.currentList.getOrNull(position)?.let { item ->
-                    val action = EditStyleFragmentDirections.actionEditStyleFragmentToEditClothingFragment(item.id)
+                    val action = EditStyleFragmentDirections.actionEditStyleFragmentToEditClothingFragment(item.id, fromStyleEdit = true)
                     findNavController().navigate(action)
                 }
             },
