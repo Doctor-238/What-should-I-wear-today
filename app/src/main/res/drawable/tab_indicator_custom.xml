@@ -1,18 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:left="8dp" android:right="8dp" android:bottom="0dp">
+    <!-- Glow effect underneath -->
+    <item android:top="1dp">
         <shape android:shape="rectangle">
-            <solid android:color="#402B8EE8"/>
-            <size android:height="4dp"/>
+            <solid android:color="#287B6AE8"/>
+            <size android:height="5dp"/>
             <corners android:radius="10dp"/>
         </shape>
     </item>
-    <item android:left="8dp" android:right="8dp" android:bottom="1dp">
+    <!-- Main indicator: purple-blue gradient bar -->
+    <item>
         <shape android:shape="rectangle">
             <gradient
-                android:angle="270"
-                android:startColor="#2B8EE8"
-                android:endColor="#1868C0"
+                android:angle="0"
+                android:startColor="#8B6CE0"
+                android:centerColor="#7B6AE8"
+                android:endColor="#5B7EF0"
                 android:type="linear"/>
             <size android:height="3dp"/>
             <corners android:radius="10dp"/>

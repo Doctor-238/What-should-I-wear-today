@@ -48,7 +48,7 @@ class HomeFragment : Fragment(), OnTabReselectedListener {
                 homeViewModel.stopLoading()
             }
         } else {
-            if (shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_COARSE_LOCATION)) {
+            if (shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_FINE_LOCATION)) {
                 showToast("위치 권한이 거부되어 날씨 정보를 가져올 수 없습니다.")
                 homeViewModel.stopLoading()
             } else {
@@ -131,7 +131,7 @@ class HomeFragment : Fragment(), OnTabReselectedListener {
     private fun checkAndRefresh() {
         if (!isAdded) return
 
-        if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+        if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             requestLocationPermission()
             return
         }
@@ -154,7 +154,7 @@ class HomeFragment : Fragment(), OnTabReselectedListener {
     }
 
     private fun requestLocationPermission() {
-        if (shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_COARSE_LOCATION)) {
+        if (shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_FINE_LOCATION)) {
             view?.post {
                 if (!isAdded) return@post
 
@@ -163,7 +163,7 @@ class HomeFragment : Fragment(), OnTabReselectedListener {
                     .setMessage("현재 위치의 날씨 정보를 가져오기 위해 위치 권한이 필요합니다.")
                     .setPositiveButton("권한 허용") { _, _ ->
                         homeViewModel.permissionRequestedThisSession = true
-                        locationPermissionRequest.launch(Manifest.permission.ACCESS_COARSE_LOCATION)
+                        locationPermissionRequest.launch(Manifest.permission.ACCESS_FINE_LOCATION)
                     }
                     .setNegativeButton("거부") { _, _ ->
                         homeViewModel.stopLoading()
@@ -180,7 +180,7 @@ class HomeFragment : Fragment(), OnTabReselectedListener {
         } else {
             if (!homeViewModel.permissionRequestedThisSession) {
                 homeViewModel.permissionRequestedThisSession = true
-                locationPermissionRequest.launch(Manifest.permission.ACCESS_COARSE_LOCATION)
+                locationPermissionRequest.launch(Manifest.permission.ACCESS_FINE_LOCATION)
             } else {
                 homeViewModel.stopLoading()
                 showToast("위치 권한이 거부되었습니다. 앱 설정에서 권한을 허용해주세요.")
@@ -270,33 +270,20 @@ class HomeFragment : Fragment(), OnTabReselectedListener {
     private fun updateTabAppearance(selectedPosition: Int, animate: Boolean) {
         if (_binding == null) return
 
-        val todayColor = if (selectedPosition == 0) R.color.tab_selected_text else R.color.tab_unselected_text
-        val tomorrowColor = if (selectedPosition == 1) R.color.tab_selected_text else R.color.tab_unselected_text
-
-        binding.tvTabToday.setTextColor(ContextCompat.getColor(requireContext(), todayColor))
-        binding.tvTabTomorrow.setTextColor(ContextCompat.getColor(requireContext(), tomorrowColor))
-
-        val indicatorTarget = if (selectedPosition == 0) binding.tvTabToday else binding.tvTabTomorrow
-
-        indicatorTarget.post {
-            if (_binding == null) return@post
-
-            val indicatorWidth = indicatorTarget.width / 2
-            val targetCenter = binding.tabsContainer.left + indicatorTarget.left + (indicatorTarget.width / 2)
-            val indicatorStart = targetCenter - (indicatorWidth / 2)
-
-            val params = binding.viewTabIndicator.layoutParams
-            params.width = indicatorWidth
-            binding.viewTabIndicator.layoutParams = params
-
-            if (animate) {
-                binding.viewTabIndicator.animate()
-                    .x(indicatorStart.toFloat())
-                    .setDuration(250)
-                    .start()
-            } else {
-                binding.viewTabIndicator.x = indicatorStart.toFloat()
-            }
+        if (selectedPosition == 0) {
+            binding.tvTabToday.setBackgroundResource(R.drawable.bg_tab_pill_selected)
+            binding.tvTabToday.setTextColor(ContextCompat.getColor(requireContext(), R.color.white))
+            binding.tvTabToday.elevation = 4f
+            binding.tvTabTomorrow.setBackgroundResource(R.drawable.bg_tab_pill_unselected)
+            binding.tvTabTomorrow.setTextColor(ContextCompat.getColor(requireContext(), R.color.tab_unselected_text))
+            binding.tvTabTomorrow.elevation = 0f
+        } else {
+            binding.tvTabTomorrow.setBackgroundResource(R.drawable.bg_tab_pill_selected)
+            binding.tvTabTomorrow.setTextColor(ContextCompat.getColor(requireContext(), R.color.white))
+            binding.tvTabTomorrow.elevation = 4f
+            binding.tvTabToday.setBackgroundResource(R.drawable.bg_tab_pill_unselected)
+            binding.tvTabToday.setTextColor(ContextCompat.getColor(requireContext(), R.color.tab_unselected_text))
+            binding.tvTabToday.elevation = 0f
         }
     }
 

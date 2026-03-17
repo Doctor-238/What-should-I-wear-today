@@ -3,7 +3,19 @@
     "allow": [
       "Read(//c/Androidstudio/What-should-I-wear-today/**)",
       "Bash(./gradlew assembleDebug)",
-      "Bash(cd:*)"
+      "Bash(cd:*)",
+      "Bash(find C:AndroidstudioWhat-should-I-wear-todayappsrcmainresdrawable -name *.xml)",
+      "Bash(./gradlew compileDebugKotlin)",
+      "Bash(./gradlew processDebugResources)",
+      "Bash(then echo:*)",
+      "Bash(else echo:*)",
+      "Bash(fi)",
+      "Bash(done)",
+      "Bash(for file:*)",
+      "Bash(do echo:*)",
+      "Read(//c/Androidstudio/What-should-I-wear-today/app/src/main/**)",
+      "Bash(./gradlew clean:*)",
+      "Bash(./gradlew compileDebugKotlin processDebugResources)"
     ]
   }
 }

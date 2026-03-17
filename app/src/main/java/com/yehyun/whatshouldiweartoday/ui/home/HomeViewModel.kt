@@ -106,7 +106,8 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         fetchJob = viewModelScope.launch {
             startLoading()
             try {
-                if (ActivityCompat.checkSelfPermission(getApplication(), Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                if (ActivityCompat.checkSelfPermission(getApplication(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
+                    && ActivityCompat.checkSelfPermission(getApplication(), Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
                     throw SecurityException("위치 권한이 없습니다.")
                 }
                 val location = getFreshLocation()
@@ -131,7 +132,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         }
 
         return fusedLocationClient.getCurrentLocation(
-            Priority.PRIORITY_BALANCED_POWER_ACCURACY,
+            Priority.PRIORITY_HIGH_ACCURACY,
             cancellationTokenSource.token
         ).await()
     }

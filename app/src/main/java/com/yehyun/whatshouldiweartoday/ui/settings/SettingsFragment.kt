@@ -248,14 +248,14 @@ class SettingsFragment : Fragment(), OnTabReselectedListener {
     private fun setupSpinners() {
         val rangeOptions = listOf(SettingsManager.TEMP_RANGE_NARROW, SettingsManager.TEMP_RANGE_NORMAL, SettingsManager.TEMP_RANGE_WIDE)
         val tempRangeAdapter = ArrayAdapter(requireContext(), R.layout.spinner_item_centered, rangeOptions).apply {
-            setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+            setDropDownViewResource(R.layout.spinner_dropdown_item)
         }
         binding.spinnerTempRange.adapter = tempRangeAdapter
         binding.spinnerTempRange.setSelection(rangeOptions.indexOf(settingsManager.temperatureRange))
 
         val aiModelOptions = listOf("빠름", "느림")
         val aiModelAdapter = ArrayAdapter(requireContext(), R.layout.spinner_item_centered, aiModelOptions).apply {
-            setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+            setDropDownViewResource(R.layout.spinner_dropdown_item)
         }
         binding.spinnerAiModel.adapter = aiModelAdapter
         binding.spinnerAiModel.setSelection(if (settingsManager.aiModel == SettingsManager.AI_MODEL_FAST) 0 else 1)

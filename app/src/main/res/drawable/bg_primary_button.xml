@@ -1,38 +1,42 @@
 <?xml version="1.0" encoding="utf-8"?>
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Deep shadow -->
     <item android:top="4dp" android:left="3dp" android:right="3dp" android:bottom="-2dp">
         <shape android:shape="rectangle">
-            <solid android:color="#281868C0"/>
-            <corners android:radius="30dp"/>
+            <solid android:color="#301868C0"/>
+            <corners android:radius="28dp"/>
         </shape>
     </item>
-    <item android:top="2dp" android:left="1dp" android:right="1dp" android:bottom="-1dp">
+    <!-- Mid shadow -->
+    <item android:top="2dp" android:left="2dp" android:right="2dp" android:bottom="-1dp">
         <shape android:shape="rectangle">
-            <solid android:color="#141060A8"/>
-            <corners android:radius="30dp"/>
+            <solid android:color="#181060A8"/>
+            <corners android:radius="28dp"/>
         </shape>
     </item>
+    <!-- Main gradient: blue → purple-blue → indigo -->
     <item>
         <shape android:shape="rectangle">
             <gradient
-                android:angle="270"
-                android:startColor="#5BBEF8"
-                android:centerColor="#2B8EE8"
-                android:endColor="#1668C4"
+                android:angle="135"
+                android:startColor="#5B8AF0"
+                android:centerColor="#6B7AEE"
+                android:endColor="#7B6AE8"
                 android:type="linear"/>
             <corners android:radius="28dp"/>
         </shape>
     </item>
-    <item android:bottom="14dp">
+    <!-- Glass highlight for 3D -->
+    <item android:bottom="16dp" android:left="4dp" android:right="4dp">
         <shape android:shape="rectangle">
             <gradient
                 android:angle="270"
-                android:startColor="#18FFFFFF"
+                android:startColor="#28FFFFFF"
                 android:endColor="#00FFFFFF"
                 android:type="linear"/>
             <corners
-                android:topLeftRadius="28dp"
-                android:topRightRadius="28dp"
+                android:topLeftRadius="26dp"
+                android:topRightRadius="26dp"
                 android:bottomLeftRadius="2dp"
                 android:bottomRightRadius="2dp"/>
         </shape>

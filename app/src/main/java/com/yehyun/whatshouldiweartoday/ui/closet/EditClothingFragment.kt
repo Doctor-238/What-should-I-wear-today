@@ -68,6 +68,7 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
     private lateinit var tvEditFitLevel: TextView
     private lateinit var layoutEditFitLevel: View
     private lateinit var dividerEditFitLevel: View
+    private lateinit var tvEditTempHint: TextView
 
     private var toast: Toast? = null
 
@@ -118,7 +119,7 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
         tvEditFitLevel = view.findViewById(R.id.tv_edit_fit_level)
         layoutEditFitLevel = view.findViewById(R.id.layout_edit_fit_level)
         dividerEditFitLevel = view.findViewById(R.id.divider_edit_fit_level)
-        toolbar.inflateMenu(R.menu.edit_clothing_menu)
+        tvEditTempHint = view.findViewById(R.id.tv_edit_temp_hint)
     }
 
     private fun observeViewModel() {
@@ -237,6 +238,8 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
 
         buttonTempIncrease.isVisible = isTempCategory
         buttonTempDecrease.isVisible = isTempCategory
+        textViewTemperature.isVisible = isTempCategory
+        tvEditTempHint.isVisible = !isTempCategory
 
         if (isTempCategory) {
             val tolerance = settingsManager.getTemperatureTolerance()
@@ -247,9 +250,6 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
             val maxTemp = adjustedTemp + tolerance
             textViewTemperature.text = "%.1f°C ~ %.1f°C".format(minTemp, maxTemp)
             textViewTemperature.setTextColor(ContextCompat.getColor(requireContext(), R.color.text_primary))
-        } else {
-            textViewTemperature.text = "상의, 하의, 아우터에만 표시됩니다."
-            textViewTemperature.setTextColor(ContextCompat.getColor(requireContext(), R.color.text_secondary))
         }
     }
 

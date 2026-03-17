@@ -11,7 +11,7 @@
         android:id="@+id/toolbar"
         android:layout_width="0dp"
         android:layout_height="?attr/actionBarSize"
-        android:background="@drawable/bg_toolbar_gradient"
+        android:background="@drawable/bg_header_unified"
         android:elevation="0dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -25,8 +25,8 @@
     <View
         android:id="@+id/toolbar_divider"
         android:layout_width="match_parent"
-        android:layout_height="2dp"
-        android:background="@drawable/bg_section_divider"
+        android:layout_height="12dp"
+        android:background="@drawable/bg_header_to_content_fade"
         app:layout_constraintTop_toBottomOf="@id/toolbar"/>
 
     <ScrollView
@@ -34,6 +34,7 @@
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:clipToPadding="false"
+        android:clipChildren="false"
         android:fillViewport="true"
         android:scrollbars="none"
         app:layout_constraintBottom_toBottomOf="parent"
@@ -179,9 +180,10 @@
                             android:textColor="@color/text_tertiary"
                             android:textSize="11sp"
                             android:gravity="end"
-                            android:layout_marginEnd="8dp"
+                            android:layout_marginStart="8dp"
+                            android:visibility="gone"
                             app:layout_constraintBottom_toBottomOf="parent"
-                            app:layout_constraintEnd_toStartOf="@id/button_temp_decrease"
+                            app:layout_constraintEnd_toEndOf="parent"
                             app:layout_constraintStart_toEndOf="@id/tv_temp_label"
                             app:layout_constraintTop_toTopOf="parent"/>
 
@@ -313,7 +315,7 @@
 
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/textInputLayout_name"
-                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                style="@style/Widget.App.TextInputLayout"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
@@ -326,7 +328,7 @@
                 app:counterEnabled="true"
                 app:counterMaxLength="20"
                 app:boxStrokeColor="@color/text_input_box_stroke_color"
-                app:hintTextColor="@color/tab_selected_text"
+                app:hintTextColor="@color/primary"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/card_ai_info">
