@@ -194,6 +194,21 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
+        <com.google.android.material.floatingactionbutton.FloatingActionButton
+            android:id="@+id/fab_shopping"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="24dp"
+            android:layout_marginRight="24dp"
+            android:layout_marginBottom="12dp"
+            android:src="@drawable/ic_shopping_web"
+            android:elevation="12dp"
+            app:elevation="12dp"
+            app:backgroundTint="@color/fab_color_style_tab"
+            app:fabSize="normal"
+            app:tint="@android:color/white"
+            tools:ignore="ContentDescription"/>
+
         <com.yehyun.whatshouldiweartoday.ui.custom.ProgressFab
             android:id="@+id/fab_batch_add"
             android:layout_width="wrap_content"
