@@ -92,7 +92,7 @@ class TodayRecoWidgetProvider : AppWidgetProvider() {
                 PendingIntent.FLAG_UPDATE_CURRENT
             }
 
-            val primaryColor = Color.parseColor("#0EB4FC"); val secondaryColor = Color.DKGRAY
+            val primaryColor = Color.parseColor("#2B8EE8"); val secondaryColor = Color.parseColor("#9AA8B8")
             remoteViews.setTextColor(R.id.tv_widget_today, if (isToday) primaryColor else secondaryColor)
             remoteViews.setTextColor(R.id.tv_widget_tomorrow, if (isToday) secondaryColor else primaryColor)
 

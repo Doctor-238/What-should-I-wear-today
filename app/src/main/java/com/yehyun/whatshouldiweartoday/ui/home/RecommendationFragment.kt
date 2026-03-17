@@ -85,20 +85,27 @@ class RecommendationFragment : Fragment(R.layout.fragment_recommendation) {
 
         val minTempTextView = view.findViewById<TextView>(R.id.tv_min_temp)
         minTempTextView.text = String.format(Locale.KOREAN, "%.1f°", summary.minTemp)
-        minTempTextView.setTextColor(ContextCompat.getColor(requireContext(), R.color.temp_low_blue))
+        minTempTextView.setTextColor(ContextCompat.getColor(requireContext(), R.color.temp_min_text))
 
         view.findViewById<TextView>(R.id.tv_max_feels_like).text = String.format(Locale.KOREAN, "체감 %.1f°", summary.maxFeelsLike)
         view.findViewById<TextView>(R.id.tv_min_feels_like).text = String.format(Locale.KOREAN, "체감 %.1f°", summary.minFeelsLike)
     }
 
     private fun setRecommendationVisibility(view: View, show: Boolean) {
-        view.findViewById<TextView>(R.id.tv_no_recommendation).isVisible = !show
+        view.findViewById<TextView>(R.id.tv_no_recommendation).isVisible = false
+        view.findViewById<com.google.android.material.card.MaterialCardView>(R.id.card_no_recommendation).isVisible = !show
         view.findViewById<com.google.android.material.card.MaterialCardView>(R.id.card_best_combination).isVisible = show
-        view.findViewById<TextView>(R.id.tv_tops_title).isVisible = show
+        val topsTitle = view.findViewById<TextView>(R.id.tv_tops_title)
+        topsTitle.isVisible = show
+        (topsTitle.parent as? View)?.isVisible = show
         view.findViewById<RecyclerView>(R.id.rv_tops).isVisible = show
-        view.findViewById<TextView>(R.id.tv_bottoms_title).isVisible = show
+        val bottomsTitle = view.findViewById<TextView>(R.id.tv_bottoms_title)
+        bottomsTitle.isVisible = show
+        (bottomsTitle.parent as? View)?.isVisible = show
         view.findViewById<RecyclerView>(R.id.rv_bottoms).isVisible = show
-        view.findViewById<TextView>(R.id.tv_outers_title).isVisible = show
+        val outersTitle = view.findViewById<TextView>(R.id.tv_outers_title)
+        outersTitle.isVisible = show
+        (outersTitle.parent as? View)?.isVisible = show
         view.findViewById<RecyclerView>(R.id.rv_outers).isVisible = show
         view.findViewById<View>(R.id.ll_info_container).isVisible = false
 

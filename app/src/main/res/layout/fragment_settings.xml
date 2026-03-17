@@ -6,19 +6,25 @@
     android:layout_height="match_parent"
     android:background="@color/app_background"
     android:scrollbars="none"
+    android:clipToPadding="false"
+    android:clipChildren="false"
     tools:context=".ui.settings.SettingsFragment">
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:clipToPadding="false"
+        android:clipChildren="false"
         android:paddingBottom="32dp">
 
         <androidx.constraintlayout.widget.ConstraintLayout
             android:id="@+id/settings_header"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:background="@drawable/bg_toolbar_gradient"
-            android:paddingTop="20dp"
+            android:background="@drawable/bg_header_unified"
+            android:clipToPadding="false"
+            android:clipChildren="false"
+            android:paddingTop="24dp"
             android:paddingBottom="16dp"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
@@ -56,8 +62,8 @@
         <View
             android:id="@+id/header_divider"
             android:layout_width="match_parent"
-            android:layout_height="2dp"
-            android:background="@drawable/bg_section_divider"
+            android:layout_height="12dp"
+            android:background="@drawable/bg_header_to_content_fade"
             app:layout_constraintTop_toBottomOf="@id/settings_header"/>
 
         <TextView
@@ -469,30 +475,44 @@
 
                 <Button
                     android:id="@+id/button_body_manual"
-                    style="@style/Widget.Material3.Button.TonalButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="36dp"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="0dp"
+                    android:layout_height="40dp"
+                    android:layout_marginTop="14dp"
+                    android:layout_marginEnd="6dp"
                     android:text="수동 입력"
-                    android:textSize="12sp"
+                    android:textColor="@color/accent_purple"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
                     android:visibility="gone"
-                    app:cornerRadius="18dp"
+                    app:cornerRadius="20dp"
+                    app:strokeColor="@color/accent_purple"
+                    app:strokeWidth="1.5dp"
                     app:layout_constraintEnd_toStartOf="@id/button_body_register"
-                    app:layout_constraintTop_toTopOf="@id/button_body_register"
-                    app:layout_constraintBottom_toBottomOf="@id/button_body_register"
-                    android:layout_marginEnd="8dp"/>
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/tv_body_status"/>
 
                 <Button
                     android:id="@+id/button_body_register"
-                    style="@style/Widget.Material3.Button.TonalButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="36dp"
+                    style="@style/Widget.Material3.Button"
+                    android:layout_width="0dp"
+                    android:layout_height="40dp"
+                    android:layout_marginTop="14dp"
+                    android:layout_marginStart="6dp"
                     android:text="사진 등록"
-                    android:textSize="12sp"
+                    android:textColor="@color/white"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
                     android:visibility="gone"
-                    app:cornerRadius="18dp"
-                    app:layout_constraintBottom_toBottomOf="@id/tv_body_status"
+                    app:backgroundTint="@color/accent_purple"
+                    app:cornerRadius="20dp"
+                    app:icon="@drawable/ic_add_photo"
+                    app:iconTint="@color/white"
+                    app:iconGravity="textStart"
+                    app:iconPadding="4dp"
                     app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintTop_toTopOf="@id/tv_body_label"/>
+                    app:layout_constraintStart_toEndOf="@id/button_body_manual"
+                    app:layout_constraintTop_toBottomOf="@id/tv_body_status"/>
 
                 <ProgressBar
                     android:id="@+id/progressBar_body"
@@ -515,7 +535,7 @@
                     android:visibility="gone"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@id/tv_body_status"/>
+                    app:layout_constraintTop_toBottomOf="@id/button_body_register"/>
 
             </androidx.constraintlayout.widget.ConstraintLayout>
         </com.google.android.material.card.MaterialCardView>
@@ -823,16 +843,15 @@
             android:id="@+id/card_reset"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginHorizontal="16dp"
+            android:layout_marginHorizontal="20dp"
             android:layout_marginTop="40dp"
             android:layout_marginBottom="16dp"
             android:clickable="true"
             android:focusable="true"
-            app:cardBackgroundColor="@color/surface"
-            app:cardCornerRadius="24dp"
+            app:cardBackgroundColor="@android:color/transparent"
+            app:cardCornerRadius="28dp"
             app:cardElevation="6dp"
-            app:strokeColor="#FFCDD2"
-            app:strokeWidth="1dp"
+            app:strokeWidth="0dp"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/card_credits"
@@ -842,10 +861,11 @@
                 android:id="@+id/button_reset_all"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:background="@drawable/bg_button_danger"
                 android:gravity="center"
                 android:padding="18dp"
                 android:text="전체 초기화하기"
-                android:textColor="@color/settings_reset_button_text"
+                android:textColor="@color/white"
                 android:textSize="15sp"
                 android:textStyle="bold"/>
 

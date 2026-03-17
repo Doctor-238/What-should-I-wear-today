@@ -1,20 +1,30 @@
 <?xml version="1.0" encoding="utf-8"?>
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Subtle shadow -->
     <item android:top="2dp" android:left="1dp" android:right="1dp">
         <shape android:shape="rectangle">
-            <solid android:color="#14183050"/>
-            <corners android:radius="18dp"/>
+            <solid android:color="#0C2B8EE8"/>
+            <corners android:radius="16dp"/>
         </shape>
     </item>
+    <!-- Main background with gradient -->
     <item>
         <shape android:shape="rectangle">
             <gradient
                 android:angle="270"
-                android:startColor="#EEF6FF"
-                android:endColor="#E4F1FD"
+                android:startColor="#FFFFFF"
+                android:endColor="#F6FAFF"
                 android:type="linear"/>
-            <corners android:radius="16dp"/>
-            <stroke android:width="1.5dp" android:color="@color/primary_border"/>
+            <corners android:radius="14dp"/>
+            <stroke android:width="1.5dp" android:color="#C0D8F0"/>
+        </shape>
+    </item>
+    <!-- Accent left border -->
+    <item android:top="4dp" android:bottom="4dp" android:right="-1dp">
+        <shape android:shape="rectangle">
+            <solid android:color="#00000000"/>
+            <corners android:radius="14dp"/>
+            <stroke android:width="0dp" android:color="#00000000"/>
         </shape>
     </item>
 </layer-list>

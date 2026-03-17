@@ -77,6 +77,7 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabResel
     private lateinit var tvInfoFitLevel: TextView
     private lateinit var layoutFitLevel: View
     private lateinit var dividerFitLevel: View
+    private lateinit var tvTempOnlyLabel: TextView
 
 
     private lateinit var onBackPressedCallback: OnBackPressedCallback
@@ -172,6 +173,7 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabResel
         tvInfoFitLevel = view.findViewById(R.id.tv_info_fit_level)
         layoutFitLevel = view.findViewById(R.id.layout_fit_level)
         dividerFitLevel = view.findViewById(R.id.divider_fit_level)
+        tvTempOnlyLabel = view.findViewById(R.id.tv_temp_only_label)
     }
 
     private fun observeViewModel() {
@@ -215,6 +217,8 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabResel
         viewModel.isTemperatureVisible.observe(viewLifecycleOwner) { isVisible ->
             buttonTempIncrease.isVisible = isVisible
             buttonTempDecrease.isVisible = isVisible
+            tvInfoTemperature.isVisible = isVisible
+            tvTempOnlyLabel.isVisible = !isVisible
             val textColorRes = if (isVisible) R.color.text_primary else R.color.text_secondary
             tvInfoTemperature.setTextColor(ContextCompat.getColor(requireContext(), textColorRes))
         }

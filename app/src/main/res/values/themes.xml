@@ -2,7 +2,7 @@
     <style name="Base.Theme.WhatshouldIweartoday" parent="Theme.Material3.Light.NoActionBar">
         <item name="colorPrimary">@color/primary</item>
         <item name="colorPrimaryVariant">@color/primary_dark</item>
-        <item name="colorSecondary">@color/primary</item>
+        <item name="colorSecondary">@color/accent_purple</item>
         <item name="android:statusBarColor">@color/status_bar_blue</item>
         <item name="android:windowLightStatusBar">false</item>
         <item name="android:windowBackground">@color/app_background</item>
@@ -17,13 +17,13 @@
 
     <style name="Widget.App.CardView" parent="Widget.MaterialComponents.CardView">
         <item name="cardCornerRadius">24dp</item>
-        <item name="cardElevation">6dp</item>
+        <item name="cardElevation">10dp</item>
         <item name="cardPreventCornerOverlap">true</item>
         <item name="cardUseCompatPadding">false</item>
     </style>
 
     <style name="Widget.App.BottomNav" parent="Widget.MaterialComponents.BottomNavigationView">
-        <item name="elevation">20dp</item>
+        <item name="elevation">24dp</item>
     </style>
 
     <style name="ThemeOverlay.App.MaterialAlertDialog" parent="ThemeOverlay.Material3.MaterialAlertDialog">
@@ -58,7 +58,7 @@
 
     <style name="CardElevated" parent="">
         <item name="cardCornerRadius">24dp</item>
-        <item name="cardElevation">6dp</item>
+        <item name="cardElevation">10dp</item>
         <item name="strokeWidth">0dp</item>
         <item name="cardBackgroundColor">@color/surface</item>
     </style>
@@ -68,7 +68,7 @@
         <item name="android:paddingHorizontal">32dp</item>
         <item name="android:textSize">15sp</item>
         <item name="android:letterSpacing">0.01</item>
-        <item name="android:elevation">4dp</item>
+        <item name="android:elevation">8dp</item>
     </style>
 
     <style name="Widget.App.Chip" parent="Widget.MaterialComponents.Chip.Choice">
@@ -76,7 +76,7 @@
         <item name="chipStrokeWidth">1.5dp</item>
         <item name="android:textSize">13sp</item>
         <item name="chipMinHeight">36dp</item>
-        <item name="android:elevation">2dp</item>
+        <item name="android:elevation">4dp</item>
     </style>
 
     <style name="TextAppearance.App.SectionTitle" parent="TextAppearance.Material3.LabelLarge">
@@ -107,13 +107,25 @@
     </style>
 
     <style name="Widget.App.FloatingActionButton" parent="Widget.MaterialComponents.FloatingActionButton">
-        <item name="android:elevation">10dp</item>
-        <item name="pressedTranslationZ">6dp</item>
+        <item name="android:elevation">14dp</item>
+        <item name="pressedTranslationZ">8dp</item>
     </style>
+
     <style name="TextAppearance.App.TabText" parent="TextAppearance.Material3.LabelLarge">
         <item name="android:textSize">14sp</item>
         <item name="android:textStyle">bold</item>
         <item name="android:letterSpacing">0.01</item>
+    </style>
+
+    <style name="Widget.App.TextInputLayout" parent="Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+        <item name="boxBackgroundColor">#FAFBFF</item>
+        <item name="boxCornerRadiusBottomEnd">16dp</item>
+        <item name="boxCornerRadiusBottomStart">16dp</item>
+        <item name="boxCornerRadiusTopEnd">16dp</item>
+        <item name="boxCornerRadiusTopStart">16dp</item>
+        <item name="boxStrokeColor">@color/text_input_box_stroke_color</item>
+        <item name="boxStrokeWidth">1.5dp</item>
+        <item name="hintTextColor">@color/accent_purple</item>
     </style>
 
     <style name="Widget.App.BottomNavIndicator" parent="@style/Widget.Material3.BottomNavigationView.ActiveIndicator">
