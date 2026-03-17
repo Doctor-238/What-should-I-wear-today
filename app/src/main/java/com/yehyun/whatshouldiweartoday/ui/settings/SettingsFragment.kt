@@ -140,8 +140,13 @@ class SettingsFragment : Fragment(), OnTabReselectedListener {
 
         mainViewModel.isBodyAnalyzing.observe(viewLifecycleOwner) { isAnalyzing ->
             binding.progressBarBody.isVisible = isAnalyzing
-            if (settingsManager.bodyFitEnabled) {
-                binding.buttonBodyRegister.isVisible = !isAnalyzing
+            if (isAnalyzing) {
+                binding.tvBodyStatus.isVisible = false
+            } else {
+                if (settingsManager.bodyFitEnabled) {
+                    binding.tvBodyStatus.isVisible = true
+                }
+                updateBodyStatus()
             }
         }
 
@@ -290,12 +295,11 @@ class SettingsFragment : Fragment(), OnTabReselectedListener {
                 settingsManager.estimatedHeight, settingsManager.estimatedWeight
             )
             binding.buttonBodyRegister.text = "사진 재등록"
-            binding.buttonBodyManual.text = "수동 수정"
         } else {
             binding.tvBodyStatus.text = "미등록"
             binding.buttonBodyRegister.text = "사진 등록"
-            binding.buttonBodyManual.text = "수동 입력"
         }
+        binding.buttonBodyManual.text = "수동 등록"
     }
 
     private fun updateBodySectionVisibility() {

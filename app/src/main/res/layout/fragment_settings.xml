@@ -465,13 +465,13 @@
                     android:id="@+id/tv_body_status"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="3dp"
+                    android:layout_marginStart="8dp"
                     android:text="미등록"
                     android:textColor="@color/text_secondary"
                     android:textSize="12sp"
                     android:visibility="gone"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@id/tv_body_label"/>
+                    app:layout_constraintStart_toEndOf="@id/tv_body_label"
+                    app:layout_constraintBaseline_toBaselineOf="@id/tv_body_label"/>
 
                 <Button
                     android:id="@+id/button_body_manual"
@@ -490,7 +490,7 @@
                     app:strokeWidth="1.5dp"
                     app:layout_constraintEnd_toStartOf="@id/button_body_register"
                     app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@id/tv_body_status"/>
+                    app:layout_constraintTop_toBottomOf="@id/tv_body_label"/>
 
                 <Button
                     android:id="@+id/button_body_register"
@@ -512,17 +512,17 @@
                     app:iconPadding="4dp"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toEndOf="@id/button_body_manual"
-                    app:layout_constraintTop_toBottomOf="@id/tv_body_status"/>
+                    app:layout_constraintTop_toBottomOf="@id/tv_body_label"/>
 
                 <ProgressBar
                     android:id="@+id/progressBar_body"
-                    style="?android:attr/progressBarStyleSmall"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:indeterminateTint="@color/primary"
                     android:visibility="gone"
-                    app:layout_constraintBottom_toBottomOf="@id/button_body_register"
                     app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintTop_toTopOf="@id/button_body_register"/>
+                    app:layout_constraintTop_toTopOf="@id/tv_body_label"
+                    app:layout_constraintBottom_toBottomOf="@id/tv_body_label"/>
 
                 <TextView
                     android:id="@+id/tv_body_note"
