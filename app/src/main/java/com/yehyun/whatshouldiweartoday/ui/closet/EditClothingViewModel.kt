@@ -143,14 +143,16 @@ class EditClothingViewModel(application: Application) : AndroidViewModel(applica
         }
     }
 
-    fun deleteClothingItem() {
+    fun deleteClothingItem(skipOrphanCleanup: Boolean = false) {
         if (_isProcessing.value == true) return
         _currentClothingItem.value?.let { itemToDelete ->
             _isProcessing.value = true
             viewModelScope.launch {
                 try {
                     repository.delete(itemToDelete)
-                    styleDao.deleteOrphanedStyles()
+                    if (!skipOrphanCleanup) {
+                        styleDao.deleteOrphanedStyles()
+                    }
                     _isDeleteComplete.postValue(true)
                 } finally {
                     _isProcessing.postValue(false)
