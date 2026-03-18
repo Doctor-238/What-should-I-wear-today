@@ -19,5 +19,6 @@ data class ClothingItem(
     val fitMinHeight: Double? = null,
     val fitMaxHeight: Double? = null,
     val fitMinWeight: Double? = null,
-    val fitMaxWeight: Double? = null
+    val fitMaxWeight: Double? = null,
+    val purpose: String = ""
 )

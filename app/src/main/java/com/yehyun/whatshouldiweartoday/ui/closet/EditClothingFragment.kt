@@ -69,6 +69,9 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
     private lateinit var layoutEditFitLevel: View
     private lateinit var dividerEditFitLevel: View
     private lateinit var tvEditTempHint: TextView
+    private lateinit var tvEditPurpose: TextView
+    private lateinit var layoutEditPurpose: View
+    private lateinit var dividerEditPurpose: View
 
     private var toast: Toast? = null
 
@@ -120,6 +123,9 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
         layoutEditFitLevel = view.findViewById(R.id.layout_edit_fit_level)
         dividerEditFitLevel = view.findViewById(R.id.divider_edit_fit_level)
         tvEditTempHint = view.findViewById(R.id.tv_edit_temp_hint)
+        tvEditPurpose = view.findViewById(R.id.tv_edit_purpose)
+        layoutEditPurpose = view.findViewById(R.id.layout_edit_purpose)
+        dividerEditPurpose = view.findViewById(R.id.divider_edit_purpose)
     }
 
     private fun observeViewModel() {
@@ -214,6 +220,7 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
 
         updateImagePreview(item)
         updateFitLevelDisplay(item)
+        updatePurposeDisplay(item)
 
         val isRecommended = homeViewModel.todayRecommendedClothingIds.value?.contains(item.id) ?: false
         val isPackable = homeViewModel.todayRecommendation.value?.packableOuters?.any { it.id == item.id } ?: false
@@ -272,6 +279,18 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
         } else {
             tvEditFitLevel.text = "설정에서 체형을 등록해주세요"
             tvEditFitLevel.setTextColor(ContextCompat.getColor(requireContext(), R.color.text_tertiary))
+        }
+    }
+
+    private fun updatePurposeDisplay(item: ClothingItem) {
+        val purposes = item.purpose.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+        if (purposes.isEmpty()) {
+            layoutEditPurpose.isVisible = false
+            dividerEditPurpose.isVisible = false
+        } else {
+            layoutEditPurpose.isVisible = true
+            dividerEditPurpose.isVisible = true
+            tvEditPurpose.text = purposes.joinToString(", ")
         }
     }
 

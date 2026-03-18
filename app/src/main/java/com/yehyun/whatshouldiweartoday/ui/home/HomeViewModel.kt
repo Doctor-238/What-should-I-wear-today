@@ -245,6 +245,8 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         val fitEnabled = settingsManager.bodyFitEnabled && settingsManager.isBodyRegistered
         val userHeight = settingsManager.estimatedHeight
         val userWeight = settingsManager.estimatedWeight
+        val purposeEnabled = settingsManager.clothingPurposeEnabled
+        val selectedPurpose = settingsManager.selectedPurpose
 
         fun fitOrder(item: ClothingItem): Int {
             if (!fitEnabled) return 0
@@ -256,12 +258,19 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             return AddClothingViewModel.fitLevelToOrder(level)
         }
 
+        fun purposeOrder(item: ClothingItem): Int {
+            if (!purposeEnabled) return 0
+            val purposes = item.purpose.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+            return if (purposes.contains(selectedPurpose)) 0 else 1
+        }
+
         fun bestPick(items: List<ClothingItem>): ClothingItem? {
-            if (!fitEnabled) {
+            if (!purposeEnabled && !fitEnabled) {
                 return items.minByOrNull { abs(it.suitableTemperature + settingsManager.getTemperatureTolerance() - 1 - maxTempCriteria) }
             }
             return items.sortedWith(
-                compareBy<ClothingItem> { fitOrder(it) }
+                compareBy<ClothingItem> { purposeOrder(it) }
+                    .thenBy { fitOrder(it) }
                     .thenBy { abs(it.suitableTemperature + settingsManager.getTemperatureTolerance() - 1 - maxTempCriteria) }
             ).firstOrNull()
         }
@@ -284,7 +293,8 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             _todayRecommendedClothingIds.postValue(allRecommendedIds)
         }
 
-        val fitThenTempComparator = compareBy<ClothingItem> { fitOrder(it) }
+        val fitThenTempComparator = compareBy<ClothingItem> { purposeOrder(it) }
+            .thenBy { fitOrder(it) }
             .thenByDescending { it.suitableTemperature }
 
         return RecommendationResult(

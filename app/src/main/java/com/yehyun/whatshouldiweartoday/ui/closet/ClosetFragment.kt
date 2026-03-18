@@ -39,6 +39,7 @@ import com.google.android.material.tabs.TabLayoutMediator
 import com.yehyun.whatshouldiweartoday.MainViewModel
 import com.yehyun.whatshouldiweartoday.R
 import com.yehyun.whatshouldiweartoday.databinding.FragmentClosetBinding
+import com.yehyun.whatshouldiweartoday.data.preference.SettingsManager
 import com.yehyun.whatshouldiweartoday.ui.OnTabReselectedListener
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -388,10 +389,18 @@ class ClosetFragment : Fragment(), OnTabReselectedListener {
             }
 
             val batchId = "batch_${System.currentTimeMillis()}"
+
+            // Write paths to file to avoid WorkManager 10KB Data limit
+            val pathsFile = withContext(Dispatchers.IO) {
+                val file = File(requireContext().cacheDir, "batch_paths_$batchId.txt")
+                file.writeText(imagePaths.joinToString("\n"))
+                file
+            }
+
             val workRequest = OneTimeWorkRequestBuilder<BatchAddWorker>()
                 .setInputData(workDataOf(
                     BatchAddWorker.KEY_BATCH_ID to batchId,
-                    BatchAddWorker.KEY_IMAGE_PATHS to imagePaths,
+                    BatchAddWorker.KEY_PATHS_FILE to pathsFile.absolutePath,
                     BatchAddWorker.KEY_API to getString(R.string.gemini_api_key)
                 ))
                 .build()
@@ -435,7 +444,10 @@ class ClosetFragment : Fragment(), OnTabReselectedListener {
 
     private fun setupSortSpinner() {
         val spinner: Spinner = binding.spinnerSort
-        val sortOptions = listOf("최신순", "오래된 순", "이름 오름차순", "이름 내림차순", "온도 오름차순", "온도 내림차순")
+        val settingsManager = SettingsManager(requireContext())
+        val baseSortOptions = listOf("최신순", "오래된 순", "이름 오름차순", "이름 내림차순", "온도 오름차순", "온도 내림차순")
+        val purposeOptions = settingsManager.getAllPurposes()
+        val sortOptions = baseSortOptions + purposeOptions
         val arrayAdapter = ArrayAdapter(requireContext(), R.layout.spinner_item_centered_normal, sortOptions)
         arrayAdapter.setDropDownViewResource(R.layout.spinner_dropdown_item)
         spinner.adapter = arrayAdapter

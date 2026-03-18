@@ -65,6 +65,7 @@
     <color name="style_card_background">#EDE8F8</color>
     <color name="style_background">#FFF2E8</color>
     <color name="fab_color_style_tab">#2B8EE8</color>
+    <color name="fab_color_light_purple">#B39DDB</color>
 
     <color name="temp_high_red">#FF5050</color>
     <color name="temp_low_blue">#B8DFFF</color>

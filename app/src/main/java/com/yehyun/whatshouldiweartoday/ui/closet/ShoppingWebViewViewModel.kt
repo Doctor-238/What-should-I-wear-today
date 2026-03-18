@@ -11,6 +11,7 @@ import androidx.lifecycle.viewModelScope
 import com.google.ai.client.generativeai.type.content
 import com.yehyun.whatshouldiweartoday.R
 import com.yehyun.whatshouldiweartoday.ai.AiModelProvider
+import com.yehyun.whatshouldiweartoday.data.preference.SettingsManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -28,6 +29,7 @@ import java.util.Locale
 class ShoppingWebViewViewModel(application: Application) : AndroidViewModel(application) {
 
     private val apiKey = application.getString(R.string.gemini_api_key)
+    private val settingsManager = SettingsManager(application)
 
     private val _isProcessing = MutableLiveData(false)
     val isProcessing: LiveData<Boolean> = _isProcessing
@@ -109,6 +111,16 @@ class ShoppingWebViewViewModel(application: Application) : AndroidViewModel(appl
     private suspend fun detectAndCropClothing(screenshot: Bitmap): CaptureResult {
         val model = AiModelProvider.getModel(getApplication(), apiKey)
         val resized = resizeBitmap(screenshot, 1024)
+        val isNormalMode = settingsManager.shoppingDetectionSensitivity == SettingsManager.SHOPPING_DETECTION_NORMAL
+
+        val normalModeFilter = if (isNormalMode) """
+
+                ADDITIONAL FILTERING (Normal mode):
+                - ONLY include items where a clothing/wearable item is the MAIN PRODUCT being sold.
+                - EXCLUDE product cards where clothing appears incidentally (e.g., a person wearing clothes while showcasing a non-clothing product like electronics, furniture, cosmetics, food, etc.)
+                - EXCLUDE non-photographic images: simple graphics, illustrations, icons, flat-design images, or computer-generated artwork. Only include real photographs.
+                - If a product card shows a person but the main product being advertised is NOT clothing (e.g., laptop, phone, headphones, cosmetics), do NOT include it even if clothing is visible on the person.
+        """.trimIndent() else ""
 
         val inputContent = content {
             image(resized)
@@ -125,6 +137,7 @@ class ShoppingWebViewViewModel(application: Application) : AndroidViewModel(appl
                 4. Do NOT include whitespace or padding outside the actual photo area
                 5. Crop TIGHTLY to just the clothing product photo boundaries
                 6. Each bounding box should capture the FULL clothing item visible in the photo, not just a portion
+                $normalModeFilter
 
                 Return JSON with:
                 - "clothing_detected": boolean (true if any clothing product photos found)
@@ -211,18 +224,34 @@ class ShoppingWebViewViewModel(application: Application) : AndroidViewModel(appl
         val model = AiModelProvider.getModel(getApplication(), apiKey)
         val clothingPaths = mutableListOf<String>()
 
+        val isNormalMode = settingsManager.shoppingDetectionSensitivity == SettingsManager.SHOPPING_DETECTION_NORMAL
+
         downloadedImages.chunked(5).forEach { chunk ->
             val results = chunk.map { (path, bitmap) ->
                 viewModelScope.async(Dispatchers.IO) {
                     try {
                         val resized = resizeBitmap(bitmap, 256)
-                        val inputContent = content {
-                            image(resized)
-                            text("""
+                        val promptText = if (isNormalMode) {
+                            """
+                                Is this image a clothing/wearable item that is the MAIN PRODUCT being sold? (clothes, shoes, bags, hats, accessories - anything a person can wear, carry, or put on their body)
+                                Return JSON: {"is_clothing": true} or {"is_clothing": false}
+                                Return false for:
+                                - Logos, icons, banners, UI elements, text images
+                                - Non-photographic images (simple graphics, illustrations, flat-design artwork, computer-generated images)
+                                - Images where a person is shown but the main product is NOT clothing (e.g., person holding a laptop, using a phone, advertising cosmetics or electronics — clothing is visible but incidental)
+                                - Any non-fashion item, even if a person wearing clothes appears in the image
+                                Only return true if the clothing/wearable IS the primary product being showcased in this image.
+                            """.trimIndent()
+                        } else {
+                            """
                                 Is this image a clothing/wearable item? (clothes, shoes, bags, hats, accessories - anything a person can wear, carry, or put on their body)
                                 Return JSON: {"is_clothing": true} or {"is_clothing": false}
                                 Return false for: logos, icons, banners, UI elements, people without clear clothing focus, text images, non-fashion items.
-                            """.trimIndent())
+                            """.trimIndent()
+                        }
+                        val inputContent = content {
+                            image(resized)
+                            text(promptText)
                         }
                         val response = model.generateContent(inputContent)
                         val json = Json { ignoreUnknownKeys = true }

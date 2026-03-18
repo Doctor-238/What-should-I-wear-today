@@ -116,6 +116,7 @@ class SettingsFragment : Fragment(), OnTabReselectedListener {
         setupTopBar()
         setupSpinners()
         setupSliders()
+        setupPurposeSection()
         setupListeners()
         observeViewModel()
     }
@@ -147,6 +148,22 @@ class SettingsFragment : Fragment(), OnTabReselectedListener {
                     binding.tvBodyStatus.isVisible = true
                 }
                 updateBodyStatus()
+            }
+        }
+
+        viewModel.isPurposeValidating.observe(viewLifecycleOwner) { isValidating ->
+            binding.progressBarPurpose.isVisible = isValidating
+            binding.buttonAddPurpose.isEnabled = !isValidating
+        }
+
+        viewModel.purposeValidationResult.observe(viewLifecycleOwner) { event ->
+            event.getContentIfNotHandled()?.let { result ->
+                showToast(result.message)
+                if (result.isValid) {
+                    refreshCustomPurposeList()
+                    setupPurposeSpinner()
+                    mainViewModel.notifySettingsChanged()
+                }
             }
         }
 
@@ -264,6 +281,15 @@ class SettingsFragment : Fragment(), OnTabReselectedListener {
         }
         binding.spinnerAiModel.adapter = aiModelAdapter
         binding.spinnerAiModel.setSelection(if (settingsManager.aiModel == SettingsManager.AI_MODEL_FAST) 0 else 1)
+
+        val detectionOptions = listOf("민감", "보통")
+        val detectionAdapter = ArrayAdapter(requireContext(), R.layout.spinner_item_centered, detectionOptions).apply {
+            setDropDownViewResource(R.layout.spinner_dropdown_item)
+        }
+        binding.spinnerShoppingDetection.adapter = detectionAdapter
+        binding.spinnerShoppingDetection.setSelection(
+            if (settingsManager.shoppingDetectionSensitivity == SettingsManager.SHOPPING_DETECTION_SENSITIVE) 0 else 1
+        )
     }
 
     private fun setupSliders() {
@@ -279,6 +305,8 @@ class SettingsFragment : Fragment(), OnTabReselectedListener {
 
         binding.sliderSensitivity.value = settingsManager.sensitivityLevel.toFloat()
         updateSensitivityLabel(settingsManager.sensitivityLevel)
+
+        updateShoppingDetectionLabel(settingsManager.shoppingDetectionSensitivity)
 
         binding.switchShowRecoIcon.isChecked = settingsManager.showRecommendationIcon
 
@@ -315,9 +343,121 @@ class SettingsFragment : Fragment(), OnTabReselectedListener {
         binding.tvBodyNote.isVisible = enabled
     }
 
+    private fun setupPurposeSection() {
+        binding.switchPurpose.isChecked = settingsManager.clothingPurposeEnabled
+        updatePurposeSectionVisibility()
+        setupPurposeSpinner()
+        refreshCustomPurposeList()
+
+        binding.switchPurpose.setOnCheckedChangeListener { _, isChecked ->
+            settingsManager.clothingPurposeEnabled = isChecked
+            updatePurposeSectionVisibility()
+            mainViewModel.notifySettingsChanged()
+        }
+
+        binding.spinnerPurposeContainer.setOnClickListener { binding.spinnerPurpose.performClick() }
+
+        binding.buttonAddPurpose.setOnClickListener { showAddPurposeDialog() }
+    }
+
+    private fun updatePurposeSectionVisibility() {
+        val enabled = settingsManager.clothingPurposeEnabled
+        binding.dividerPurpose1.isVisible = enabled
+        binding.tvPurposeSelectLabel.isVisible = enabled
+        binding.spinnerPurposeContainer.isVisible = enabled
+        binding.dividerPurpose2.isVisible = enabled
+        binding.tvPurposeCustomLabel.isVisible = enabled
+        binding.buttonAddPurpose.isVisible = enabled
+        binding.layoutCustomPurposes.isVisible = enabled
+        binding.progressBarPurpose.isVisible = false
+        binding.tvPurposeNote.isVisible = enabled
+    }
+
+    private fun setupPurposeSpinner() {
+        val allPurposes = settingsManager.getAllPurposes()
+        val purposeAdapter = ArrayAdapter(requireContext(), R.layout.spinner_item_centered, allPurposes).apply {
+            setDropDownViewResource(R.layout.spinner_dropdown_item)
+        }
+        binding.spinnerPurpose.adapter = purposeAdapter
+        val currentIndex = allPurposes.indexOf(settingsManager.selectedPurpose)
+        if (currentIndex >= 0) {
+            binding.spinnerPurpose.setSelection(currentIndex)
+        }
+
+        binding.spinnerPurpose.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                settingsManager.selectedPurpose = allPurposes[position]
+                mainViewModel.notifySettingsChanged()
+            }
+            override fun onNothingSelected(parent: AdapterView<*>?) {}
+        }
+    }
+
+    private fun refreshCustomPurposeList() {
+        binding.layoutCustomPurposes.removeAllViews()
+        val customPurposes = settingsManager.customPurposes.sorted()
+        for (purpose in customPurposes) {
+            val itemLayout = LinearLayout(requireContext()).apply {
+                orientation = LinearLayout.HORIZONTAL
+                setPadding(0, 8, 0, 8)
+                gravity = android.view.Gravity.CENTER_VERTICAL
+            }
+
+            val textView = android.widget.TextView(requireContext()).apply {
+                text = purpose
+                textSize = 14f
+                setTextColor(resources.getColor(R.color.text_primary, null))
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            }
+            itemLayout.addView(textView)
+
+            val deleteButton = ImageView(requireContext()).apply {
+                setImageResource(R.drawable.ic_close)
+                layoutParams = LinearLayout.LayoutParams(64, 64)
+                setPadding(16, 16, 16, 16)
+                setOnClickListener {
+                    AlertDialog.Builder(requireContext())
+                        .setMessage("'$purpose' 용도를 삭제하시겠습니까?")
+                        .setPositiveButton("예") { _, _ ->
+                            settingsManager.removeCustomPurpose(purpose)
+                            refreshCustomPurposeList()
+                            setupPurposeSpinner()
+                            mainViewModel.notifySettingsChanged()
+                            showToast("'$purpose' 용도가 삭제되었습니다.")
+                        }
+                        .setNegativeButton("아니오", null)
+                        .show()
+                }
+            }
+            itemLayout.addView(deleteButton)
+            binding.layoutCustomPurposes.addView(itemLayout)
+        }
+    }
+
+    private fun showAddPurposeDialog() {
+        val editText = EditText(requireContext()).apply {
+            hint = "용도 입력 (예: 운동용, 출근용)"
+            inputType = InputType.TYPE_CLASS_TEXT
+            setPadding(64, 32, 64, 32)
+        }
+
+        AlertDialog.Builder(requireContext())
+            .setTitle("옷 용도 추가")
+            .setView(editText)
+            .setPositiveButton("추가") { _, _ ->
+                val purpose = editText.text.toString().trim()
+                if (purpose.isNotEmpty()) {
+                    viewModel.validateAndAddPurpose(purpose, getString(R.string.gemini_api_key))
+                }
+            }
+            .setNegativeButton("취소", null)
+            .show()
+    }
+
     private fun setupListeners() {
         binding.spinnerTempRangeContainer.setOnClickListener { binding.spinnerTempRange.performClick() }
         binding.spinnerAiModelContainer.setOnClickListener { binding.spinnerAiModel.performClick() }
+        binding.spinnerShoppingDetectionContainer.setOnClickListener { binding.spinnerShoppingDetection.performClick() }
 
         binding.spinnerTempRange.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
@@ -332,6 +472,14 @@ class SettingsFragment : Fragment(), OnTabReselectedListener {
                 settingsManager.aiModel = if (position == 0) SettingsManager.AI_MODEL_FAST else SettingsManager.AI_MODEL_ACCURATE
                 updateAiModelLabel(settingsManager.aiModel)
                 mainViewModel.notifySettingsChanged()
+            }
+            override fun onNothingSelected(p0: AdapterView<*>?) {}
+        }
+
+        binding.spinnerShoppingDetection.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                settingsManager.shoppingDetectionSensitivity = if (position == 0) SettingsManager.SHOPPING_DETECTION_SENSITIVE else SettingsManager.SHOPPING_DETECTION_NORMAL
+                updateShoppingDetectionLabel(settingsManager.shoppingDetectionSensitivity)
             }
             override fun onNothingSelected(p0: AdapterView<*>?) {}
         }
@@ -398,7 +546,7 @@ class SettingsFragment : Fragment(), OnTabReselectedListener {
 
     private fun updateConstitutionLabel(level: Int) {
         binding.tvConstitutionValue.text = when (level) {
-            1 -> "더위 많이 탐"; 2 -> "더위 조금 탐"; 4 -> "추위 조금 탐"; 5 -> "추위 많이 탐"; else -> "보통"
+            1 -> "추위 많이 탐"; 2 -> "추위 조금 탐"; 4 -> "더위 조금 탐"; 5 -> "더위 많이 탐"; else -> "보통"
         }
     }
 
@@ -410,6 +558,10 @@ class SettingsFragment : Fragment(), OnTabReselectedListener {
 
     private fun updateAiModelLabel(model: String) {
         binding.tvAiModelValue.text = if (model == SettingsManager.AI_MODEL_FAST) "정확도 감소" else "정확도 증가"
+    }
+
+    private fun updateShoppingDetectionLabel(sensitivity: String) {
+        binding.tvShoppingDetectionValue.text = if (sensitivity == SettingsManager.SHOPPING_DETECTION_SENSITIVE) "모든 옷 감지" else "옷이 메인인 상품만 감지"
     }
 
     override fun onDestroyView() {

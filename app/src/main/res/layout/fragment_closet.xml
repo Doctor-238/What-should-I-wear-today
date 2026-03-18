@@ -204,7 +204,7 @@
             android:src="@drawable/ic_shopping_web"
             android:elevation="12dp"
             app:elevation="12dp"
-            app:backgroundTint="@color/fab_color_style_tab"
+            app:backgroundTint="@color/fab_color_light_purple"
             app:fabSize="normal"
             app:tint="@android:color/white"
             tools:ignore="ContentDescription"/>

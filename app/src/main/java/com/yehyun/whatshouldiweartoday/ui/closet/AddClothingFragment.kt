@@ -50,7 +50,8 @@ data class ClothingAnalysis(
     val fit_min_height: Double? = null,
     val fit_max_height: Double? = null,
     val fit_min_weight: Double? = null,
-    val fit_max_weight: Double? = null
+    val fit_max_weight: Double? = null,
+    val purposes: List<String>? = null
 )
 
 class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabReselectedListener {
@@ -78,6 +79,9 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabResel
     private lateinit var layoutFitLevel: View
     private lateinit var dividerFitLevel: View
     private lateinit var tvTempOnlyLabel: TextView
+    private lateinit var tvInfoPurpose: TextView
+    private lateinit var layoutPurpose: View
+    private lateinit var dividerPurpose: View
 
 
     private lateinit var onBackPressedCallback: OnBackPressedCallback
@@ -174,6 +178,9 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabResel
         layoutFitLevel = view.findViewById(R.id.layout_fit_level)
         dividerFitLevel = view.findViewById(R.id.divider_fit_level)
         tvTempOnlyLabel = view.findViewById(R.id.tv_temp_only_label)
+        tvInfoPurpose = view.findViewById(R.id.tv_info_purpose)
+        layoutPurpose = view.findViewById(R.id.layout_purpose)
+        dividerPurpose = view.findViewById(R.id.divider_purpose)
     }
 
     private fun observeViewModel() {
@@ -255,6 +262,17 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabResel
                 dividerFitLevel.isVisible = true
                 tvInfoFitLevel.text = text
                 tvInfoFitLevel.setTextColor(ContextCompat.getColor(requireContext(), fitLevelColorRes(text)))
+            }
+        }
+
+        viewModel.purposeText.observe(viewLifecycleOwner) { text ->
+            if (text.isNullOrEmpty()) {
+                layoutPurpose.isVisible = false
+                dividerPurpose.isVisible = false
+            } else {
+                layoutPurpose.isVisible = true
+                dividerPurpose.isVisible = true
+                tvInfoPurpose.text = text
             }
         }
 
