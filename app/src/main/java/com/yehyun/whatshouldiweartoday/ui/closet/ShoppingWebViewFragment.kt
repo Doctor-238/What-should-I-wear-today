@@ -4,7 +4,6 @@ import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
-import android.graphics.Canvas
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -29,6 +28,8 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkInfo
+import androidx.work.WorkManager
 import androidx.work.workDataOf
 import com.yehyun.whatshouldiweartoday.R
 import com.yehyun.whatshouldiweartoday.databinding.FragmentShoppingWebviewBinding
@@ -36,8 +37,19 @@ import com.yehyun.whatshouldiweartoday.ui.OnTabReselectedListener
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.File
+import java.io.FileOutputStream
 
 class ShoppingWebViewFragment : Fragment(), OnTabReselectedListener {
+
+    companion object {
+        // Persist WebView state per platform across fragment recreations (in-memory only)
+        private val webViewStates = mutableMapOf<String, Bundle>()
+
+        fun clearWebViewStates() {
+            webViewStates.clear()
+        }
+    }
 
     private var _binding: FragmentShoppingWebviewBinding? = null
     private val binding get() = _binding!!
@@ -47,7 +59,9 @@ class ShoppingWebViewFragment : Fragment(), OnTabReselectedListener {
     private lateinit var platform: ShoppingPlatform
     private var hasRedirectedToPurchaseHistory = false
     private var wasOnLoginPage = false
+    private var loginFlowComplete = false
     private var lastFabClickTime = 0L
+    private var isCropMode = false
 
     private var toast: Toast? = null
 
@@ -85,39 +99,36 @@ class ShoppingWebViewFragment : Fragment(), OnTabReselectedListener {
         setupFabs()
         setupObservers()
         setupBackPressHandler()
-        loadInitialUrl()
+
+        // (#1) Restore WebView state if previously saved, otherwise load initial URL
+        val savedState = webViewStates[platform.name]
+        if (savedState != null) {
+            binding.webView.restoreState(savedState)
+            loginFlowComplete = true
+        } else {
+            loadInitialUrl()
+        }
     }
 
     // JS to inject on every page to hide WebView fingerprints
     private val antiDetectionJs = """
         (function() {
-            // Hide webdriver flag (Selenium/automation detection)
             Object.defineProperty(navigator, 'webdriver', { get: () => false });
-
-            // Override plugins to look like real Chrome
             Object.defineProperty(navigator, 'plugins', {
                 get: () => [1, 2, 3, 4, 5]
             });
-
-            // Override languages
             Object.defineProperty(navigator, 'languages', {
                 get: () => ['ko-KR', 'ko', 'en-US', 'en']
             });
-
-            // Hide automation-related properties
             delete window.cdc_adoQpoasnfa76pfcZLmcfl_Array;
             delete window.cdc_adoQpoasnfa76pfcZLmcfl_Promise;
             delete window.cdc_adoQpoasnfa76pfcZLmcfl_Symbol;
-
-            // Override Chrome property
             window.chrome = {
                 runtime: {},
                 loadTimes: function() {},
                 csi: function() {},
                 app: { isInstalled: false }
             };
-
-            // Override permissions query
             const originalQuery = window.navigator.permissions.query;
             window.navigator.permissions.query = (parameters) => (
                 parameters.name === 'notifications' ?
@@ -159,15 +170,31 @@ class ShoppingWebViewFragment : Fragment(), OnTabReselectedListener {
         }
 
         webView.webViewClient = object : WebViewClient() {
+            // (#6) Handle all URL schemes properly including social login deep links
             override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
                 val url = request?.url?.toString() ?: return false
 
-                // Handle intent:// URLs (some Korean apps use this)
+                // Standard HTTP(S) URLs - let WebView handle normally
+                if (url.startsWith("http://") || url.startsWith("https://")) {
+                    return false
+                }
+
+                // Handle intent:// URLs (Korean apps use this for deep links)
                 if (url.startsWith("intent://")) {
                     try {
                         val intent = Intent.parseUri(url, Intent.URI_INTENT_SCHEME)
                         if (intent.resolveActivity(requireContext().packageManager) != null) {
                             startActivity(intent)
+                        } else {
+                            // App not installed - try Play Store
+                            val packageName = intent.`package`
+                            if (packageName != null) {
+                                try {
+                                    startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=$packageName")))
+                                } catch (e: Exception) {
+                                    startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=$packageName")))
+                                }
+                            }
                         }
                     } catch (e: Exception) {
                         // Ignore
@@ -185,7 +212,13 @@ class ShoppingWebViewFragment : Fragment(), OnTabReselectedListener {
                     return true
                 }
 
-                return false
+                // Handle all other custom schemes (social login: kakaotalk://, naverlogin://, etc.)
+                try {
+                    startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                } catch (e: Exception) {
+                    // App for this scheme is not installed - silently ignore
+                }
+                return true
             }
 
             override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
@@ -226,8 +259,9 @@ class ShoppingWebViewFragment : Fragment(), OnTabReselectedListener {
         }
     }
 
+    // (#2) Only redirect once during initial login flow, then let user browse freely
     private fun handleLoginRedirect(url: String?) {
-        if (url == null) return
+        if (url == null || loginFlowComplete) return
 
         // Case 1: We tried purchase history but got redirected to login (stale cookies)
         if (hasRedirectedToPurchaseHistory && platform.isLoginPage(url)) {
@@ -246,13 +280,17 @@ class ShoppingWebViewFragment : Fragment(), OnTabReselectedListener {
         // detect navigation away from login page and redirect to purchase history
         if (!platform.supportsRedirect && wasOnLoginPage && !isOnLogin && !hasRedirectedToPurchaseHistory) {
             hasRedirectedToPurchaseHistory = true
+            loginFlowComplete = true // Don't interfere with any future navigation
             binding.webView.loadUrl(platform.purchaseHistoryUrl)
         }
 
         // For platforms WITH redirect support:
         // The login URL already contains redirect param,
         // so after login the site itself navigates to purchase history.
-        // No manual redirect needed.
+        // After first successful load, stop monitoring.
+        if (hasRedirectedToPurchaseHistory && !platform.isLoginPage(url)) {
+            loginFlowComplete = true
+        }
     }
 
     private fun loadInitialUrl() {
@@ -275,33 +313,84 @@ class ShoppingWebViewFragment : Fragment(), OnTabReselectedListener {
     }
 
     private fun setupFabs() {
-        // Plus button - capture screenshot and detect clothing
-        binding.fabCapture.setOnClickListener {
-            if (System.currentTimeMillis() - lastFabClickTime < 700) return@setOnClickListener
-            lastFabClickTime = System.currentTimeMillis()
-
-            captureScreenAndDetect()
-        }
-
         // Multi-add button - extract all images from webpage
         binding.fabBatchExtract.setOnClickListener {
             if (System.currentTimeMillis() - lastFabClickTime < 700) return@setOnClickListener
             lastFabClickTime = System.currentTimeMillis()
-
             showExtractAllDialog()
+        }
+
+        // + button: enter crop mode or confirm crop
+        binding.fabCapture.setOnClickListener {
+            if (isCropMode) {
+                confirmCrop()
+            } else {
+                enterCropMode()
+            }
+        }
+
+        // Fold: hide FABs, show small unfold button
+        binding.fabFold.setOnClickListener {
+            if (isCropMode) exitCropMode()
+            binding.fabContainer.visibility = View.GONE
+            binding.fabUnfold.visibility = View.VISIBLE
+        }
+
+        // Unfold: show FABs, hide unfold button
+        binding.fabUnfold.setOnClickListener {
+            binding.fabContainer.visibility = View.VISIBLE
+            binding.fabUnfold.visibility = View.GONE
         }
     }
 
-    private fun captureScreenAndDetect() {
-        val webView = binding.webView
-        try {
-            val bitmap = Bitmap.createBitmap(webView.width, webView.height, Bitmap.Config.ARGB_8888)
-            val canvas = Canvas(bitmap)
-            webView.draw(canvas)
+    private fun enterCropMode() {
+        isCropMode = true
+        binding.cropOverlay.visibility = View.VISIBLE
+        binding.fabBatchExtract.visibility = View.GONE
+        binding.fabCapture.setImageResource(R.drawable.ic_check)
+        // Disable WebView scrolling during crop
+        binding.webView.setOnTouchListener { _, _ -> true }
+    }
 
-            viewModel.detectClothingFromScreenshot(bitmap)
-        } catch (e: Exception) {
-            showToast("화면 캡처에 실패했습니다.")
+    private fun exitCropMode() {
+        isCropMode = false
+        binding.cropOverlay.visibility = View.GONE
+        binding.fabBatchExtract.visibility = View.VISIBLE
+        binding.fabCapture.setImageResource(R.drawable.plus)
+        binding.webView.setOnTouchListener(null)
+    }
+
+    private fun confirmCrop() {
+        val webView = binding.webView
+        val cropRectF = binding.cropOverlay.getCropRectF()
+
+        // Capture the WebView as a bitmap
+        val bitmap = Bitmap.createBitmap(webView.width, webView.height, Bitmap.Config.ARGB_8888)
+        val canvas = android.graphics.Canvas(bitmap)
+        webView.draw(canvas)
+
+        // Calculate pixel crop rect
+        val left = (cropRectF.left * bitmap.width).toInt().coerceIn(0, bitmap.width - 1)
+        val top = (cropRectF.top * bitmap.height).toInt().coerceIn(0, bitmap.height - 1)
+        val right = (cropRectF.right * bitmap.width).toInt().coerceIn(left + 1, bitmap.width)
+        val bottom = (cropRectF.bottom * bitmap.height).toInt().coerceIn(top + 1, bitmap.height)
+
+        val croppedBitmap = Bitmap.createBitmap(bitmap, left, top, right - left, bottom - top)
+        bitmap.recycle()
+
+        // Save to cache and send to batch add
+        viewLifecycleOwner.lifecycleScope.launch {
+            val path = withContext(Dispatchers.IO) {
+                val file = File(requireContext().cacheDir, "crop_${System.currentTimeMillis()}.jpg")
+                FileOutputStream(file).use { out ->
+                    croppedBitmap.compress(Bitmap.CompressFormat.JPEG, 90, out)
+                }
+                croppedBitmap.recycle()
+                file.absolutePath
+            }
+
+            exitCropMode()
+            checkPermissionAndStartBatchAdd(arrayOf(path))
         }
     }
 
@@ -357,16 +446,40 @@ class ShoppingWebViewFragment : Fragment(), OnTabReselectedListener {
             binding.tvLoadingMessage.text = message
         }
 
-        viewModel.captureResult.observe(viewLifecycleOwner) { result ->
-            handleCaptureResult(result)
+        // (#3) Only observe extractResult (captureResult removed)
+        viewModel.extractResult.observe(viewLifecycleOwner) { result ->
+            handleExtractResult(result)
         }
 
-        viewModel.extractResult.observe(viewLifecycleOwner) { result ->
-            handleCaptureResult(result)
-        }
+        // (#4) Sync batch add progress with closet screen
+        WorkManager.getInstance(requireContext())
+            .getWorkInfosForUniqueWorkLiveData("batch_add")
+            .observe(viewLifecycleOwner) { workInfos ->
+                if (_binding == null) return@observe
+
+                if (workInfos.isNullOrEmpty()) {
+                    binding.fabBatchExtract.hideProgress()
+                    return@observe
+                }
+
+                val allFinished = workInfos.all { it.state.isFinished }
+                val runningWork = workInfos.firstOrNull { it.state == WorkInfo.State.RUNNING }
+
+                if (allFinished) {
+                    binding.fabBatchExtract.hideProgress()
+                } else if (runningWork != null) {
+                    val progress = runningWork.progress
+                    val current = progress.getInt(BatchAddWorker.PROGRESS_CURRENT, 0)
+                    val total = progress.getInt(BatchAddWorker.PROGRESS_TOTAL, 1)
+                    val percentage = if (total > 0) (current * 100 / total) else 0
+                    binding.fabBatchExtract.showProgress(percentage)
+                } else {
+                    binding.fabBatchExtract.showProgress(0)
+                }
+            }
     }
 
-    private fun handleCaptureResult(result: ShoppingWebViewViewModel.CaptureResult) {
+    private fun handleExtractResult(result: ShoppingWebViewViewModel.CaptureResult) {
         if (!result.success) {
             showToast(result.message)
             return
@@ -393,7 +506,7 @@ class ShoppingWebViewFragment : Fragment(), OnTabReselectedListener {
     private var pendingBatchPaths: Array<String>? = null
 
     private fun startBatchAddWorker(imagePaths: Array<String>) {
-        val workManager = androidx.work.WorkManager.getInstance(requireContext())
+        val workManager = WorkManager.getInstance(requireContext())
 
         viewLifecycleOwner.lifecycleScope.launch {
             val hasRunningWork = withContext(Dispatchers.IO) {
@@ -404,11 +517,19 @@ class ShoppingWebViewFragment : Fragment(), OnTabReselectedListener {
             }
 
             val batchId = "batch_shopping_${System.currentTimeMillis()}"
+
+            // Write paths to file to avoid WorkManager 10KB Data limit
+            val pathsFile = withContext(Dispatchers.IO) {
+                val file = File(requireContext().cacheDir, "batch_paths_$batchId.txt")
+                file.writeText(imagePaths.joinToString("\n"))
+                file
+            }
+
             val workRequest = OneTimeWorkRequestBuilder<BatchAddWorker>()
                 .setInputData(
                     workDataOf(
                         BatchAddWorker.KEY_BATCH_ID to batchId,
-                        BatchAddWorker.KEY_IMAGE_PATHS to imagePaths,
+                        BatchAddWorker.KEY_PATHS_FILE to pathsFile.absolutePath,
                         BatchAddWorker.KEY_API to getString(R.string.gemini_api_key)
                     )
                 )
@@ -427,7 +548,9 @@ class ShoppingWebViewFragment : Fragment(), OnTabReselectedListener {
     private fun setupBackPressHandler() {
         val callback = object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                if (binding.webView.canGoBack()) {
+                if (isCropMode) {
+                    exitCropMode()
+                } else if (binding.webView.canGoBack()) {
                     binding.webView.goBack()
                 }
                 // Don't pop fragment - user uses bottom nav "옷" tab to exit
@@ -466,7 +589,12 @@ class ShoppingWebViewFragment : Fragment(), OnTabReselectedListener {
         findNavController().popBackStack(R.id.navigation_closet, false)
     }
 
+    // (#1) Save WebView state before destroying for restoration on re-entry
     override fun onDestroyView() {
+        val state = Bundle()
+        binding.webView.saveState(state)
+        webViewStates[platform.name] = state
+
         binding.webView.destroy()
         toast?.cancel()
         super.onDestroyView()
