@@ -88,6 +88,12 @@ class SettingsManager(context: Context) {
             prefs.edit().putBoolean(KEY_BODY_FIT_BORDER_ENABLED, value).commit()
         }
 
+    var extendedForecastEnabled: Boolean
+        get() = prefs.getBoolean(KEY_EXTENDED_FORECAST_ENABLED, false)
+        set(value) {
+            prefs.edit().putBoolean(KEY_EXTENDED_FORECAST_ENABLED, value).commit()
+        }
+
     var clothingPurposeEnabled: Boolean
         get() = prefs.getBoolean(KEY_CLOTHING_PURPOSE_ENABLED, false)
         set(value) {
@@ -180,6 +186,7 @@ class SettingsManager(context: Context) {
         private const val KEY_ESTIMATED_WEIGHT = "estimated_weight"
         private const val KEY_BODY_FIT_ENABLED = "body_fit_enabled"
         private const val KEY_BODY_FIT_BORDER_ENABLED = "body_fit_border_enabled"
+        private const val KEY_EXTENDED_FORECAST_ENABLED = "extended_forecast_enabled"
         private const val KEY_CLOTHING_PURPOSE_ENABLED = "clothing_purpose_enabled"
         private const val KEY_SELECTED_PURPOSE = "selected_purpose"
         private const val KEY_CUSTOM_PURPOSES = "custom_purposes"
