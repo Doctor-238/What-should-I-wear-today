@@ -310,6 +310,8 @@ class SettingsFragment : Fragment(), OnTabReselectedListener {
 
         binding.switchShowRecoIcon.isChecked = settingsManager.showRecommendationIcon
 
+        binding.switchExtendedForecast.isChecked = settingsManager.extendedForecastEnabled
+
         binding.switchBodyFit.isChecked = settingsManager.bodyFitEnabled
         binding.switchBodyBorder.isChecked = settingsManager.bodyFitBorderEnabled
 
@@ -524,6 +526,10 @@ class SettingsFragment : Fragment(), OnTabReselectedListener {
         binding.switchShowRecoIcon.setOnCheckedChangeListener { _, isChecked ->
             settingsManager.showRecommendationIcon = isChecked
             mainViewModel.notifySettingsChanged()
+        }
+
+        binding.switchExtendedForecast.setOnCheckedChangeListener { _, isChecked ->
+            settingsManager.extendedForecastEnabled = isChecked
         }
     }
 

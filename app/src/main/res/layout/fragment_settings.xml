@@ -403,6 +403,113 @@
                         android:layout_marginEnd="14dp"
                         android:src="@drawable/ic_dropdown_arrow"/>
                 </FrameLayout>
+
+                <View
+                    android:id="@+id/divider_sensitivity"
+                    android:layout_width="0dp"
+                    android:layout_height="1dp"
+                    android:layout_marginTop="18dp"
+                    android:background="@color/divider_color"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/tv_shopping_detection_value"/>
+
+                <TextView
+                    android:id="@+id/tv_sensitivity_label"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="18dp"
+                    android:text="배경제거 민감도"
+                    android:textColor="@color/text_primary"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/divider_sensitivity"/>
+
+                <TextView
+                    android:id="@+id/tv_sensitivity_value"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/primary"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintTop_toTopOf="@id/tv_sensitivity_label"
+                    tools:text="보통"/>
+
+                <androidx.constraintlayout.widget.ConstraintLayout
+                    android:id="@+id/sensitivity_slider_container"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/tv_sensitivity_label">
+
+                    <com.google.android.material.slider.Slider
+                        android:id="@+id/slider_sensitivity"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:stepSize="1.0"
+                        android:value="3.0"
+                        android:valueFrom="1.0"
+                        android:valueTo="5.0"
+                        app:labelBehavior="gone"
+                        app:layout_constraintBottom_toBottomOf="parent"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="parent"
+                        app:thumbColor="@android:color/transparent"
+                        app:thumbElevation="0dp"
+                        app:trackColorActive="@color/primary"
+                        app:trackColorInactive="@color/slider_track_inactive_color"
+                        app:trackHeight="8dp"/>
+
+                    <ImageView
+                        android:id="@+id/thumb_sensitivity_fake"
+                        android:layout_width="26dp"
+                        android:layout_height="26dp"
+                        android:elevation="6dp"
+                        android:src="@drawable/slider_thumb_circle"
+                        app:layout_constraintBottom_toBottomOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="parent"/>
+                </androidx.constraintlayout.widget.ConstraintLayout>
+
+                <TextView
+                    android:id="@+id/tv_sensitivity_min_label"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:text="둔감"
+                    android:textColor="@color/text_tertiary"
+                    android:textSize="11sp"
+                    app:layout_constraintStart_toStartOf="@id/sensitivity_slider_container"
+                    app:layout_constraintTop_toBottomOf="@id/sensitivity_slider_container"/>
+
+                <TextView
+                    android:id="@+id/tv_sensitivity_max_label"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:text="민감"
+                    android:textColor="@color/text_tertiary"
+                    android:textSize="11sp"
+                    app:layout_constraintEnd_toEndOf="@id/sensitivity_slider_container"
+                    app:layout_constraintTop_toBottomOf="@id/sensitivity_slider_container"/>
+
+                <TextView
+                    android:id="@+id/tv_sensitivity_note"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:text="※ 민감도 변경은 새롭게 추가하는 옷부터 적용됩니다."
+                    android:textColor="@color/text_tertiary"
+                    android:textSize="11sp"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/tv_sensitivity_max_label"/>
+
             </androidx.constraintlayout.widget.ConstraintLayout>
         </com.google.android.material.card.MaterialCardView>
 
@@ -783,138 +890,6 @@
         </com.google.android.material.card.MaterialCardView>
 
         <TextView
-            android:id="@+id/tv_header_background"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="24dp"
-            android:layout_marginTop="28dp"
-            android:text="배경"
-            android:textColor="@color/settings_section_title"
-            android:textSize="11sp"
-            android:letterSpacing="0.12"
-            android:textAllCaps="true"
-            android:textStyle="bold"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/card_purpose"/>
-
-        <com.google.android.material.card.MaterialCardView
-            android:id="@+id/card_background"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginHorizontal="16dp"
-            android:layout_marginTop="10dp"
-            app:cardBackgroundColor="@color/surface"
-            app:cardCornerRadius="24dp"
-            app:cardElevation="6dp"
-            app:strokeWidth="0dp"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/tv_header_background">
-
-            <androidx.constraintlayout.widget.ConstraintLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:padding="18dp">
-
-                <TextView
-                    android:id="@+id/tv_sensitivity_label"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="배경제거 민감도"
-                    android:textColor="@color/text_primary"
-                    android:textSize="14sp"
-                    android:textStyle="bold"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toTopOf="parent"/>
-
-                <TextView
-                    android:id="@+id/tv_sensitivity_value"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:textColor="@color/primary"
-                    android:textSize="13sp"
-                    android:textStyle="bold"
-                    app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintTop_toTopOf="@id/tv_sensitivity_label"
-                    tools:text="보통"/>
-
-                <androidx.constraintlayout.widget.ConstraintLayout
-                    android:id="@+id/sensitivity_slider_container"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@id/tv_sensitivity_label">
-
-                    <com.google.android.material.slider.Slider
-                        android:id="@+id/slider_sensitivity"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:stepSize="1.0"
-                        android:value="3.0"
-                        android:valueFrom="1.0"
-                        android:valueTo="5.0"
-                        app:labelBehavior="gone"
-                        app:layout_constraintBottom_toBottomOf="parent"
-                        app:layout_constraintEnd_toEndOf="parent"
-                        app:layout_constraintStart_toStartOf="parent"
-                        app:layout_constraintTop_toTopOf="parent"
-                        app:thumbColor="@android:color/transparent"
-                        app:thumbElevation="0dp"
-                        app:trackColorActive="@color/primary"
-                        app:trackColorInactive="@color/slider_track_inactive_color"
-                        app:trackHeight="8dp"/>
-
-                    <ImageView
-                        android:id="@+id/thumb_sensitivity_fake"
-                        android:layout_width="26dp"
-                        android:layout_height="26dp"
-                        android:elevation="6dp"
-                        android:src="@drawable/slider_thumb_circle"
-                        app:layout_constraintBottom_toBottomOf="parent"
-                        app:layout_constraintStart_toStartOf="parent"
-                        app:layout_constraintTop_toTopOf="parent"/>
-                </androidx.constraintlayout.widget.ConstraintLayout>
-
-                <TextView
-                    android:id="@+id/tv_sensitivity_min_label"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
-                    android:text="둔감"
-                    android:textColor="@color/text_tertiary"
-                    android:textSize="11sp"
-                    app:layout_constraintStart_toStartOf="@id/sensitivity_slider_container"
-                    app:layout_constraintTop_toBottomOf="@id/sensitivity_slider_container"/>
-
-                <TextView
-                    android:id="@+id/tv_sensitivity_max_label"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
-                    android:text="민감"
-                    android:textColor="@color/text_tertiary"
-                    android:textSize="11sp"
-                    app:layout_constraintEnd_toEndOf="@id/sensitivity_slider_container"
-                    app:layout_constraintTop_toBottomOf="@id/sensitivity_slider_container"/>
-
-                <TextView
-                    android:id="@+id/tv_sensitivity_note"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="16dp"
-                    android:text="※ 민감도 변경은 새롭게 추가하는 옷부터 적용됩니다."
-                    android:textColor="@color/text_tertiary"
-                    android:textSize="11sp"
-                    app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@id/tv_sensitivity_max_label"/>
-
-            </androidx.constraintlayout.widget.ConstraintLayout>
-        </com.google.android.material.card.MaterialCardView>
-
-        <TextView
             android:id="@+id/tv_header_misc"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -927,7 +902,7 @@
             android:textAllCaps="true"
             android:textStyle="bold"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/card_background"/>
+            app:layout_constraintTop_toBottomOf="@id/card_purpose"/>
 
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/card_misc"
@@ -979,6 +954,50 @@
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toBottomOf="@id/switch_show_reco_icon"/>
+
+                <View
+                    android:id="@+id/divider_extended_forecast"
+                    android:layout_width="0dp"
+                    android:layout_height="1dp"
+                    android:layout_marginTop="16dp"
+                    android:background="@color/divider_color"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/tv_reco_icon_note"/>
+
+                <TextView
+                    android:id="@+id/tv_extended_forecast_label"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:text="확장 예보 탭"
+                    android:textColor="@color/text_primary"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    app:layout_constraintBottom_toBottomOf="@+id/switch_extended_forecast"
+                    app:layout_constraintEnd_toStartOf="@+id/switch_extended_forecast"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="@+id/switch_extended_forecast"/>
+
+                <com.google.android.material.switchmaterial.SwitchMaterial
+                    android:id="@+id/switch_extended_forecast"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/divider_extended_forecast"/>
+
+                <TextView
+                    android:id="@+id/tv_extended_forecast_note"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:text="※ 홈 화면에 3일뒤~4일뒤 날씨 예보 탭을 추가합니다. 활성화 시 '오늘/내일' 옆에 확장 탭이 표시되며, 해당 탭을 한 번 더 누르면 날짜를 변경할 수 있습니다."
+                    android:textColor="@color/text_tertiary"
+                    android:textSize="11sp"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/switch_extended_forecast"/>
 
             </androidx.constraintlayout.widget.ConstraintLayout>
         </com.google.android.material.card.MaterialCardView>

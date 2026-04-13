@@ -11,6 +11,8 @@ import android.provider.Settings
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.PopupMenu
+import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
@@ -22,6 +24,7 @@ import androidx.navigation.fragment.navArgs
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import androidx.viewpager2.widget.ViewPager2
 import com.yehyun.whatshouldiweartoday.R
+import com.yehyun.whatshouldiweartoday.data.preference.SettingsManager
 import com.yehyun.whatshouldiweartoday.databinding.FragmentHomeBinding
 import com.yehyun.whatshouldiweartoday.ui.OnTabReselectedListener
 
@@ -34,6 +37,8 @@ class HomeFragment : Fragment(), OnTabReselectedListener {
     private val args: HomeFragmentArgs by navArgs()
 
     private var toast: Toast? = null
+    private lateinit var settingsManager: SettingsManager
+    private var extendedEnabled = false
 
     private var locationDialog: AlertDialog? = null
 
@@ -68,10 +73,13 @@ class HomeFragment : Fragment(), OnTabReselectedListener {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        settingsManager = SettingsManager(requireContext())
+        extendedEnabled = settingsManager.extendedForecastEnabled
         binding.ivSettings.setOnClickListener { findNavController().navigate(R.id.action_navigation_home_to_settingsFragment) }
 
         setupSwipeRefreshLayout()
         setupCustomTabs()
+        applyExtendedTabVisibility()
         setupViewPager()
 
         if (args.targetTab != 0) { homeViewModel.requestTabSwitch(args.targetTab) }
@@ -96,8 +104,16 @@ class HomeFragment : Fragment(), OnTabReselectedListener {
 
     override fun onResume() {
         super.onResume()
+        val newExtended = settingsManager.extendedForecastEnabled
+        if (newExtended != extendedEnabled) {
+            extendedEnabled = newExtended
+            applyExtendedTabVisibility()
+            setupViewPager()
+            if (!extendedEnabled && binding.viewPagerHome.currentItem == 2) {
+                binding.viewPagerHome.currentItem = 0
+            }
+        }
         checkAndRefresh()
-
     }
 
     override fun onDestroyView() {
@@ -232,8 +248,12 @@ class HomeFragment : Fragment(), OnTabReselectedListener {
     }
 
     private fun setupViewPager() {
-        binding.viewPagerHome.adapter = HomeViewPagerAdapter(this)
+        binding.viewPagerHome.adapter = HomeViewPagerAdapter(this, extendedEnabled)
         binding.viewPagerHome.isUserInputEnabled = false
+    }
+
+    private fun applyExtendedTabVisibility() {
+        binding.tvTabExtended.visibility = if (extendedEnabled) View.VISIBLE else View.GONE
     }
 
     private fun setupCustomTabs() {
@@ -251,6 +271,14 @@ class HomeFragment : Fragment(), OnTabReselectedListener {
                 binding.viewPagerHome.currentItem = 1
             }
         }
+        binding.tvTabExtended.setOnClickListener {
+            if (binding.viewPagerHome.currentItem == 2) {
+                // 이미 선택된 상태에서 다시 누르면 드롭다운 표시
+                showExtendedDayDropdown(binding.tvTabExtended)
+            } else {
+                binding.viewPagerHome.currentItem = 2
+            }
+        }
 
         binding.viewPagerHome.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
             private var isInitialSelection = true
@@ -265,25 +293,48 @@ class HomeFragment : Fragment(), OnTabReselectedListener {
                 }
             }
         })
+
+        homeViewModel.selectedExtendedDay.observe(viewLifecycleOwner) { day ->
+            if (_binding != null) {
+                binding.tvTabExtended.text = "${day}일뒤"
+            }
+        }
+    }
+
+    private fun showExtendedDayDropdown(anchor: TextView) {
+        val available = homeViewModel.availableExtendedDays.value
+            ?: (HomeViewModel.MIN_EXTENDED_DAY..HomeViewModel.MAX_EXTENDED_DAY).toList()
+        val days = if (available.isEmpty()) (HomeViewModel.MIN_EXTENDED_DAY..HomeViewModel.MAX_EXTENDED_DAY).toList() else available
+
+        val popup = PopupMenu(requireContext(), anchor)
+        days.forEachIndexed { index, day ->
+            popup.menu.add(0, day, index, "${day}일뒤")
+        }
+        popup.setOnMenuItemClickListener { menuItem ->
+            homeViewModel.setSelectedExtendedDay(menuItem.itemId)
+            true
+        }
+        popup.show()
     }
 
     private fun updateTabAppearance(selectedPosition: Int, animate: Boolean) {
         if (_binding == null) return
 
-        if (selectedPosition == 0) {
-            binding.tvTabToday.setBackgroundResource(R.drawable.bg_tab_pill_selected)
-            binding.tvTabToday.setTextColor(ContextCompat.getColor(requireContext(), R.color.white))
-            binding.tvTabToday.elevation = 4f
-            binding.tvTabTomorrow.setBackgroundResource(R.drawable.bg_tab_pill_unselected)
-            binding.tvTabTomorrow.setTextColor(ContextCompat.getColor(requireContext(), R.color.tab_unselected_text))
-            binding.tvTabTomorrow.elevation = 0f
+        val tabs = if (extendedEnabled) {
+            listOf(binding.tvTabToday, binding.tvTabTomorrow, binding.tvTabExtended)
         } else {
-            binding.tvTabTomorrow.setBackgroundResource(R.drawable.bg_tab_pill_selected)
-            binding.tvTabTomorrow.setTextColor(ContextCompat.getColor(requireContext(), R.color.white))
-            binding.tvTabTomorrow.elevation = 4f
-            binding.tvTabToday.setBackgroundResource(R.drawable.bg_tab_pill_unselected)
-            binding.tvTabToday.setTextColor(ContextCompat.getColor(requireContext(), R.color.tab_unselected_text))
-            binding.tvTabToday.elevation = 0f
+            listOf(binding.tvTabToday, binding.tvTabTomorrow)
+        }
+        tabs.forEachIndexed { index, tab ->
+            if (index == selectedPosition) {
+                tab.setBackgroundResource(R.drawable.bg_tab_pill_selected)
+                tab.setTextColor(ContextCompat.getColor(requireContext(), R.color.white))
+                tab.elevation = 4f
+            } else {
+                tab.setBackgroundResource(R.drawable.bg_tab_pill_unselected)
+                tab.setTextColor(ContextCompat.getColor(requireContext(), R.color.tab_unselected_text))
+                tab.elevation = 0f
+            }
         }
     }
 
