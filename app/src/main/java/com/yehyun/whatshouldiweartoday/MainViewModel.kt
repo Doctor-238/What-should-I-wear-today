@@ -20,11 +20,12 @@ data class BodyAnalysis(
     val is_person: Boolean,
     val estimated_height: Double? = null,
     val estimated_weight: Double? = null,
+    val estimated_waist: Double? = null,
     val failure_reason: String? = null
 )
 
 sealed class BodyAnalysisState {
-    data class Success(val height: Float, val weight: Float) : BodyAnalysisState()
+    data class Success(val height: Float, val weight: Float, val waist: Float) : BodyAnalysisState()
     data class Error(val message: String) : BodyAnalysisState()
 }
 
@@ -67,11 +68,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 val inputContent = com.google.ai.client.generativeai.type.content {
                     image(resizedBitmap)
                     text("""
-                        You are a body type analyzer. Analyze the person in the image and estimate their height and weight.
-                        Your JSON response MUST contain ONLY: "is_person", "estimated_height", "estimated_weight", "failure_reason".
+                        You are a body type analyzer. Analyze the person in the image and estimate their height, weight, and waist circumference.
+                        Your JSON response MUST contain ONLY: "is_person", "estimated_height", "estimated_weight", "estimated_waist", "failure_reason".
                         - "is_person": (boolean) True if a single person is clearly visible in a full-body shot and body proportions can be estimated. False otherwise.
                         - "estimated_height": (double) Estimated height in cm (e.g., 167.5, 173.0). null if is_person is false.
                         - "estimated_weight": (double) Estimated weight in kg (e.g., 62.0, 78.5). null if is_person is false.
+                        - "estimated_waist": (double) Estimated waist circumference in cm (e.g., 72.0, 84.5). Use visual proportions at natural waistline. null if is_person is false or waistline cannot be seen clearly.
                         - "failure_reason": (string or null) If "is_person" is false, provide exactly one of these values:
                           "not_person" - no person is visible in the image
                           "not_full_body" - a person is visible but the image is not a full-body shot (e.g., only upper body, face close-up)
@@ -87,10 +89,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 if (analysis.is_person && analysis.estimated_height != null && analysis.estimated_weight != null) {
                     settingsManager.estimatedHeight = analysis.estimated_height.toFloat()
                     settingsManager.estimatedWeight = analysis.estimated_weight.toFloat()
+                    // Waist is optional — only overwrite if AI actually provided a value.
+                    val waistValue = analysis.estimated_waist?.toFloat() ?: 0f
+                    if (waistValue > 0f) {
+                        settingsManager.estimatedWaist = waistValue
+                    }
                     _bodyAnalysisResult.postValue(
                         Event(BodyAnalysisState.Success(
                             analysis.estimated_height.toFloat(),
-                            analysis.estimated_weight.toFloat()
+                            analysis.estimated_weight.toFloat(),
+                            waistValue
                         ))
                     )
                     _settingsChangedEvent.postValue(Event(Unit))

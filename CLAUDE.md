@@ -94,4 +94,4 @@ Special cases: rain probability ≥40% triggers umbrella notification; temperatu
 - **ML Kit Selfie Segmentation** — background removal from clothing photos
 
 Respond as concisely as possible, and omit unnecessary greetings or extra explanations.
-인사말 금지. 완료후 출력말은 성공,실패(실패시 이유까지만)만 출력.
+인사말 금지. 완료후 출력말은 성공,실패(실패시 이유까지만)만 출력. 변경사항 요약도 하지마

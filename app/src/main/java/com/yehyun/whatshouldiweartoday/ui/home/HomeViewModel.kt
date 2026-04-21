@@ -309,12 +309,14 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         val purposeEnabled = settingsManager.clothingPurposeEnabled
         val selectedPurpose = settingsManager.selectedPurpose
 
+        val userWaist = settingsManager.estimatedWaist
         fun fitOrder(item: ClothingItem): Int {
             if (!fitEnabled) return 0
             val level = AddClothingViewModel.calculateFitLevel(
-                userHeight, userWeight,
+                userHeight, userWeight, userWaist,
                 item.fitMinHeight, item.fitMaxHeight,
-                item.fitMinWeight, item.fitMaxWeight
+                item.fitMinWeight, item.fitMaxWeight,
+                item.fitMinWaist, item.fitMaxWaist
             )
             return AddClothingViewModel.fitLevelToOrder(level)
         }

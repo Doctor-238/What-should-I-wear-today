@@ -261,6 +261,8 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
                         fitMaxHeight = analysisResult.fit_max_height,
                         fitMinWeight = analysisResult.fit_min_weight,
                         fitMaxWeight = analysisResult.fit_max_weight,
+                        fitMinWaist = analysisResult.fit_min_waist,
+                        fitMaxWaist = analysisResult.fit_max_waist,
                         purpose = purposeStr
                     )
                     clothingDao.insert(newItem)
@@ -319,7 +321,7 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
                     text("""
                         You are a Precise Climate & Fashion Analyst for Korean weather.
                         Your task is to analyze the clothing item in the image and provide a detailed analysis in a strict JSON format, without any additional text or explanations.
-                        Your JSON response MUST contain ONLY the following keys: "is_wearable", "category", "suitable_temperature", "color_hex", "fit_min_height", "fit_max_height", "fit_min_weight", "fit_max_weight", "purposes".
+                        Your JSON response MUST contain ONLY the following keys: "is_wearable", "category", "suitable_temperature", "color_hex", "fit_min_height", "fit_max_height", "fit_min_weight", "fit_max_weight", "fit_min_waist", "fit_max_waist", "purposes".
                         - "is_wearable": (boolean) If the image contains at least one wearable clothing item, this is True. If the image contains multiple clothing items, focus on the PRIMARY/MAIN item that appears to be the subject or focus of the photo (NOT necessarily the largest one). Only return False if the image contains no clothing at all (e.g. food, scenery, etc.).
                         - "category": (string) If wearable, one of '상의', '하의', '아우터', '신발', '가방', '모자', '기타'.
                         - "color_hex": (string) If wearable, the dominant color of the item as a hex string.
@@ -328,8 +330,10 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
                         - "fit_max_height": (double) Maximum height in cm for wearing this item (e.g., 180.0).
                         - "fit_min_weight": (double) Minimum weight in kg for wearing this item (e.g., 45.0).
                         - "fit_max_weight": (double) Maximum weight in kg for wearing this item (e.g., 75.0).
+                        - "fit_min_waist": (double or null) Minimum waist circumference in cm that this item fits (e.g., 68.0). Use null ONLY for items where the waistline is irrelevant (oversized tops, shoes, bags, hats, loose jackets). Bottoms and fitted tops MUST have a value.
+                        - "fit_max_waist": (double or null) Maximum waist circumference in cm that this item fits (e.g., 88.0). Follow the same rule as fit_min_waist.
                         - "purposes": (array of strings) If wearable, select the 1 or 2 MOST suitable purposes from this list: [$purposeListStr]. Pick only the best fitting ones. Maximum 2 purposes per item.
-                        Estimate the body size range this clothing would fit. For free-size/stretchy items, use wider ranges. Base on visual cues: size labels, proportions, material stretch.
+                        Estimate the body size range this clothing would fit. For free-size/stretchy items, use wider ranges. Base on visual cues: size labels, proportions, material stretch. Waist range should be the user's waist circumference, not the garment's flat measurement.
                     """.trimIndent())
                 }
                 val response = model.generateContent(inputContent)
@@ -383,9 +387,17 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
         return Bitmap.createScaledBitmap(bitmap, resizedWidth, resizedHeight, false)
     }
 
+    private fun uniqueSuffix(): String {
+        // Milliseconds + random tail avoids collisions when multiple images
+        // are saved within the same second in a batch.
+        val millis = System.currentTimeMillis()
+        val rand = (Math.random() * 0x10000).toInt().toString(16).padStart(4, '0')
+        return "${millis}_$rand"
+    }
+
     private fun saveBitmapToInternalStorage(bitmap: Bitmap, prefix: String): String? {
         val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
-        val fileName = "$prefix$timeStamp.jpg"
+        val fileName = "$prefix${timeStamp}_${uniqueSuffix()}.jpg"
         return try {
             val file = File(context.filesDir, fileName)
             FileOutputStream(file).use { stream ->
@@ -400,7 +412,7 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
 
     private fun savePngToInternalStorage(bitmap: Bitmap, prefix: String): String? {
         val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
-        val fileName = "$prefix$timeStamp.png"
+        val fileName = "$prefix${timeStamp}_${uniqueSuffix()}.png"
         return try {
             val file = File(context.filesDir, fileName)
             FileOutputStream(file).use { stream ->

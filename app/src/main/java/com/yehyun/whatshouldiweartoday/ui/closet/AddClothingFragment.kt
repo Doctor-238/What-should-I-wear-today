@@ -51,6 +51,8 @@ data class ClothingAnalysis(
     val fit_max_height: Double? = null,
     val fit_min_weight: Double? = null,
     val fit_max_weight: Double? = null,
+    val fit_min_waist: Double? = null,
+    val fit_max_waist: Double? = null,
     val purposes: List<String>? = null
 )
 

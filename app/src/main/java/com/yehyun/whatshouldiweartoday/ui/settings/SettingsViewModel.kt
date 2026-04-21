@@ -95,7 +95,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         viewModelScope.launch {
             try {
                 workManager.cancelUniqueWork("batch_add")
-                db.clearAllData(getApplication())
+                db.clearAllData()
                 settingsManager.resetToDefaults()
 
                 // Clear WebView login cookies and saved page states
