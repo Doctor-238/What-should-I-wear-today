@@ -11,7 +11,7 @@
         android:id="@+id/toolbar_edit"
         android:layout_width="0dp"
         android:layout_height="?attr/actionBarSize"
-        android:background="@drawable/bg_toolbar_gradient"
+        android:background="@drawable/bg_header_unified"
         android:elevation="0dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -26,8 +26,8 @@
     <View
         android:id="@+id/toolbar_divider"
         android:layout_width="match_parent"
-        android:layout_height="2dp"
-        android:background="@drawable/bg_section_divider"
+        android:layout_height="12dp"
+        android:background="@drawable/bg_header_to_content_fade"
         app:layout_constraintTop_toBottomOf="@id/toolbar_edit"/>
 
     <ScrollView
@@ -35,6 +35,8 @@
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:scrollbars="none"
+        android:clipToPadding="false"
+        android:clipChildren="false"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -99,6 +101,7 @@
                     android:paddingHorizontal="20dp"
                     android:paddingVertical="4dp">
 
+                    <!-- FIX #4: Temperature area — hint only shows for non-temp categories, replacing temp controls -->
                     <androidx.constraintlayout.widget.ConstraintLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -116,6 +119,7 @@
                             app:layout_constraintStart_toStartOf="parent"
                             app:layout_constraintTop_toTopOf="parent"/>
 
+                        <!-- Hint: only visible when category is NOT 상의/하의/아우터 -->
                         <TextView
                             android:id="@+id/tv_edit_temp_hint"
                             android:layout_width="0dp"
@@ -124,12 +128,14 @@
                             android:textColor="@color/text_tertiary"
                             android:textSize="11sp"
                             android:gravity="end"
-                            android:layout_marginEnd="10dp"
-                            app:layout_constraintBottom_toBottomOf="parent"
-                            app:layout_constraintEnd_toStartOf="@id/button_edit_temp_decrease"
+                            android:layout_marginStart="8dp"
+                            android:visibility="gone"
+                            app:layout_constraintBottom_toBottomOf="@id/tv_edit_temp_label"
+                            app:layout_constraintEnd_toEndOf="parent"
                             app:layout_constraintStart_toEndOf="@id/tv_edit_temp_label"
-                            app:layout_constraintTop_toTopOf="parent"/>
+                            app:layout_constraintTop_toTopOf="@id/tv_edit_temp_label"/>
 
+                        <!-- Temperature controls: only visible when category IS 상의/하의/아우터 -->
                         <ImageButton
                             android:id="@+id/button_edit_temp_decrease"
                             android:layout_width="32dp"
@@ -231,6 +237,44 @@
                     </RelativeLayout>
 
                     <View
+                        android:id="@+id/divider_edit_purpose"
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:background="@color/divider_color"
+                        android:visibility="gone"/>
+
+                    <RelativeLayout
+                        android:id="@+id/layout_edit_purpose"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:paddingVertical="14dp"
+                        android:visibility="gone">
+                        <TextView
+                            android:id="@+id/tv_purpose_label_edit"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="용도"
+                            android:textStyle="bold"
+                            android:layout_alignParentStart="true"
+                            android:layout_centerVertical="true"
+                            android:textColor="@color/text_primary"
+                            android:textSize="14sp"/>
+                        <TextView
+                            android:id="@+id/tv_edit_purpose"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_alignParentEnd="true"
+                            android:layout_centerVertical="true"
+                            android:layout_toEndOf="@id/tv_purpose_label_edit"
+                            android:layout_marginStart="16dp"
+                            android:gravity="end"
+                            android:textColor="@color/primary"
+                            android:textSize="13sp"
+                            android:textStyle="bold"
+                            tools:text="일상용, 활동용"/>
+                    </RelativeLayout>
+
+                    <View
                         android:layout_width="match_parent"
                         android:layout_height="1dp"
                         android:background="@color/divider_color"/>
@@ -263,7 +307,7 @@
 
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/textInputLayout_edit_name"
-                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                style="@style/Widget.App.TextInputLayout"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginHorizontal="20dp"
@@ -275,7 +319,7 @@
                 app:boxStrokeColor="@color/text_input_box_stroke_color"
                 app:counterEnabled="true"
                 app:counterMaxLength="20"
-                app:hintTextColor="@color/tab_selected_text"
+                app:hintTextColor="@color/primary"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/card_ai_info_edit">
@@ -397,20 +441,21 @@
 
             <Button
                 android:id="@+id/button_delete"
-                style="@style/Widget.Material3.Button.OutlinedButton"
                 android:layout_width="0dp"
                 android:layout_height="56dp"
                 android:layout_marginTop="28dp"
                 android:layout_marginHorizontal="20dp"
                 android:text="삭제하기"
-                android:textColor="?attr/colorError"
+                android:textColor="@color/white"
                 android:textStyle="bold"
                 android:textSize="15sp"
-                app:cornerRadius="28dp"
+                android:background="@drawable/bg_button_danger"
+                android:elevation="6dp"
+                android:stateListAnimator="@null"
+                app:backgroundTint="@null"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/chipGroup_edit_category"
-                app:strokeColor="?attr/colorError"/>
+                app:layout_constraintTop_toBottomOf="@id/chipGroup_edit_category"/>
 
         </androidx.constraintlayout.widget.ConstraintLayout>
 

@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Shadow -->
+    <item android:top="4dp" android:left="3dp" android:right="3dp" android:bottom="0dp">
+        <shape android:shape="rectangle">
+            <solid android:color="#10306ECC"/>
+            <corners android:radius="28dp"/>
+        </shape>
+    </item>
+    <!-- Main card: warm ivory → soft lavender gradient -->
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:angle="135"
+                android:startColor="#FFF8F2"
+                android:centerColor="#F8F2FF"
+                android:endColor="#EEF0FF"
+                android:type="linear"/>
+            <corners android:radius="24dp"/>
+            <stroke android:width="1dp" android:color="#E0D8EE"/>
+        </shape>
+    </item>
+    <!-- Inner highlight -->
+    <item android:bottom="30dp" android:left="2dp" android:right="2dp">
+        <shape android:shape="rectangle">
+            <gradient
+                android:angle="270"
+                android:startColor="#14FFFFFF"
+                android:endColor="#00FFFFFF"
+                android:type="linear"/>
+            <corners
+                android:topLeftRadius="24dp"
+                android:topRightRadius="24dp"
+                android:bottomLeftRadius="4dp"
+                android:bottomRightRadius="4dp"/>
+        </shape>
+    </item>
+</layer-list>

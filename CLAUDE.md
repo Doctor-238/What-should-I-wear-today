@@ -92,3 +92,6 @@ Special cases: rain probability ≥40% triggers umbrella notification; temperatu
 - **OpenWeatherMap** — weather forecast (API key stored in `local.properties` or BuildConfig)
 - **Google Gemini** — clothing image analysis + outfit recommendation (API key in BuildConfig)
 - **ML Kit Selfie Segmentation** — background removal from clothing photos
+
+Respond as concisely as possible, and omit unnecessary greetings or extra explanations.
+인사말 금지. 완료후 출력말은 성공,실패(실패시 이유까지만)만 출력.

@@ -72,6 +72,13 @@
             app:exitAnim="@anim/exit_to_left"
             app:popEnterAnim="@anim/pop_enter_from_left"
             app:popExitAnim="@anim/pop_exit_to_right" />
+        <action
+            android:id="@+id/action_navigation_closet_to_shoppingFragment"
+            app:destination="@id/shoppingFragment"
+            app:enterAnim="@anim/enter_from_right"
+            app:exitAnim="@anim/exit_to_left"
+            app:popEnterAnim="@anim/pop_enter_from_left"
+            app:popExitAnim="@anim/pop_exit_to_right" />
     </fragment>
 
     <fragment
@@ -82,6 +89,10 @@
         <argument
             android:name="clothingItemId"
             app:argType="integer" />
+        <argument
+            android:name="fromStyleEdit"
+            app:argType="boolean"
+            android:defaultValue="false" />
     </fragment>
 
     <fragment
@@ -124,6 +135,30 @@
             app:exitAnim="@anim/exit_to_left"
             app:popEnterAnim="@anim/pop_enter_from_left"
             app:popExitAnim="@anim/pop_exit_to_right" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/shoppingFragment"
+        android:name="com.yehyun.whatshouldiweartoday.ui.closet.ShoppingFragment"
+        android:label="ShoppingFragment"
+        tools:layout="@layout/fragment_shopping" >
+        <action
+            android:id="@+id/action_shoppingFragment_to_shoppingWebViewFragment"
+            app:destination="@id/shoppingWebViewFragment"
+            app:enterAnim="@anim/enter_from_right"
+            app:exitAnim="@anim/exit_to_left"
+            app:popEnterAnim="@anim/pop_enter_from_left"
+            app:popExitAnim="@anim/pop_exit_to_right" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/shoppingWebViewFragment"
+        android:name="com.yehyun.whatshouldiweartoday.ui.closet.ShoppingWebViewFragment"
+        android:label="ShoppingWebViewFragment"
+        tools:layout="@layout/fragment_shopping_webview" >
+        <argument
+            android:name="platform_name"
+            app:argType="string" />
     </fragment>
 
     <fragment

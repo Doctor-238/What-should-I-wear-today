@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Soft shadow -->
+    <item android:top="2dp" android:left="2dp" android:right="2dp">
+        <shape android:shape="rectangle">
+            <solid android:color="#0E504030"/>
+            <corners android:radius="16dp"/>
+        </shape>
+    </item>
+    <!-- Warm cream-ivory gradient -->
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:angle="135"
+                android:startColor="#FAF6F0"
+                android:centerColor="#F6F2EC"
+                android:endColor="#F2EDE6"
+                android:type="linear"/>
+            <corners android:radius="14dp"/>
+            <stroke android:width="1dp" android:color="#E8DED2"/>
+        </shape>
+    </item>
+</layer-list>

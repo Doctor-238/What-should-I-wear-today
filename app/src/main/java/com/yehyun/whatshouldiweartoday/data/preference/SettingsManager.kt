@@ -31,6 +31,12 @@ class SettingsManager(context: Context) {
             prefs.edit().putString(KEY_AI_MODEL, value).commit()
         }
 
+    var shoppingDetectionSensitivity: String
+        get() = prefs.getString(KEY_SHOPPING_DETECTION, SHOPPING_DETECTION_SENSITIVE) ?: SHOPPING_DETECTION_SENSITIVE
+        set(value) {
+            prefs.edit().putString(KEY_SHOPPING_DETECTION, value).commit()
+        }
+
     var closetSortType: String
         get() = prefs.getString(KEY_CLOSET_SORT_TYPE, "최신순") ?: "최신순"
         set(value) {
@@ -82,6 +88,45 @@ class SettingsManager(context: Context) {
             prefs.edit().putBoolean(KEY_BODY_FIT_BORDER_ENABLED, value).commit()
         }
 
+    var extendedForecastEnabled: Boolean
+        get() = prefs.getBoolean(KEY_EXTENDED_FORECAST_ENABLED, false)
+        set(value) {
+            prefs.edit().putBoolean(KEY_EXTENDED_FORECAST_ENABLED, value).commit()
+        }
+
+    var clothingPurposeEnabled: Boolean
+        get() = prefs.getBoolean(KEY_CLOTHING_PURPOSE_ENABLED, false)
+        set(value) {
+            prefs.edit().putBoolean(KEY_CLOTHING_PURPOSE_ENABLED, value).commit()
+        }
+
+    var selectedPurpose: String
+        get() = prefs.getString(KEY_SELECTED_PURPOSE, DEFAULT_PURPOSES.first()) ?: DEFAULT_PURPOSES.first()
+        set(value) {
+            prefs.edit().putString(KEY_SELECTED_PURPOSE, value).commit()
+        }
+
+    var customPurposes: Set<String>
+        get() = prefs.getStringSet(KEY_CUSTOM_PURPOSES, emptySet()) ?: emptySet()
+        set(value) {
+            prefs.edit().putStringSet(KEY_CUSTOM_PURPOSES, value).commit()
+        }
+
+    fun getAllPurposes(): List<String> {
+        return DEFAULT_PURPOSES + customPurposes.sorted()
+    }
+
+    fun addCustomPurpose(purpose: String): Boolean {
+        val allPurposes = getAllPurposes()
+        if (allPurposes.any { it == purpose }) return false
+        customPurposes = customPurposes + purpose
+        return true
+    }
+
+    fun removeCustomPurpose(purpose: String) {
+        customPurposes = customPurposes - purpose
+    }
+
     fun getTemperatureTolerance(): Double {
         return when (temperatureRange) {
             TEMP_RANGE_NARROW -> 1.5
@@ -92,10 +137,10 @@ class SettingsManager(context: Context) {
 
     fun getConstitutionAdjustment(): Double {
         return when (constitutionLevel) {
-            1 -> -3.0  // 더위 많이 탐
-            2 -> -1.5  // 더위 조금 탐
-            4 -> 1.5   // 추위 조금 탐
-            5 -> 3.0   // 추위 많이 탐
+            1 -> 3.0   // 추위 많이 탐
+            2 -> 1.5   // 추위 조금 탐
+            4 -> -1.5  // 더위 조금 탐
+            5 -> -3.0  // 더위 많이 탐
             else -> 0.0 // 보통
         }
     }
@@ -132,6 +177,7 @@ class SettingsManager(context: Context) {
         private const val KEY_CONSTITUTION = "constitution_level"
         private const val KEY_SENSITIVITY = "sensitivity_level"
         private const val KEY_AI_MODEL = "ai_model"
+        private const val KEY_SHOPPING_DETECTION = "shopping_detection_sensitivity"
         private const val KEY_CLOSET_SORT_TYPE = "closet_sort_type"
         private const val KEY_STYLE_SORT_TYPE = "style_sort_type"
         private const val KEY_SHOW_RECOMMENDATION_ICON = "show_recommendation_icon"
@@ -140,11 +186,19 @@ class SettingsManager(context: Context) {
         private const val KEY_ESTIMATED_WEIGHT = "estimated_weight"
         private const val KEY_BODY_FIT_ENABLED = "body_fit_enabled"
         private const val KEY_BODY_FIT_BORDER_ENABLED = "body_fit_border_enabled"
+        private const val KEY_EXTENDED_FORECAST_ENABLED = "extended_forecast_enabled"
+        private const val KEY_CLOTHING_PURPOSE_ENABLED = "clothing_purpose_enabled"
+        private const val KEY_SELECTED_PURPOSE = "selected_purpose"
+        private const val KEY_CUSTOM_PURPOSES = "custom_purposes"
+
+        val DEFAULT_PURPOSES = listOf("격식있는 자리용", "일상용", "활동용", "데이트용", "집앞용")
 
         const val TEMP_RANGE_NARROW = "좁게"
         const val TEMP_RANGE_NORMAL = "보통"
         const val TEMP_RANGE_WIDE = "넓게"
         const val AI_MODEL_FAST = "fast"
         const val AI_MODEL_ACCURATE = "accurate"
+        const val SHOPPING_DETECTION_SENSITIVE = "sensitive"
+        const val SHOPPING_DETECTION_NORMAL = "normal"
     }
 }

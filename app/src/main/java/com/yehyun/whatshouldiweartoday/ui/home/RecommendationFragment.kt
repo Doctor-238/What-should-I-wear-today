@@ -19,7 +19,8 @@ import java.util.Locale
 class RecommendationFragment : Fragment(R.layout.fragment_recommendation) {
 
     private val homeViewModel: HomeViewModel by activityViewModels()
-    private val isToday: Boolean by lazy { arguments?.getBoolean(ARG_IS_TODAY, true) ?: true }
+    private val mode: Int by lazy { arguments?.getInt(ARG_MODE, MODE_TODAY) ?: MODE_TODAY }
+    private val isToday: Boolean get() = mode == MODE_TODAY
     private lateinit var scrollView: ScrollView
 
     fun canScrollUp(): Boolean {
@@ -46,15 +47,28 @@ class RecommendationFragment : Fragment(R.layout.fragment_recommendation) {
         view.findViewById<RecyclerView>(R.id.rv_bottoms).adapter = RecommendationAdapter(onClothingItemClicked)
         view.findViewById<RecyclerView>(R.id.rv_outers).adapter = RecommendationAdapter(onClothingItemClicked)
 
-        if (!isToday) {
-            view.findViewById<TextView>(R.id.tv_weather_title).text = "내일의 날씨"
-            view.findViewById<TextView>(R.id.tv_best_combination_subtitle).text = "AI가 추천하는 내일의 조합"
+        when (mode) {
+            MODE_TOMORROW -> {
+                view.findViewById<TextView>(R.id.tv_weather_title).text = "내일의 날씨"
+                view.findViewById<TextView>(R.id.tv_best_combination_subtitle).text = "AI가 추천하는 내일의 조합"
+            }
+            MODE_EXTENDED -> {
+                // 제목은 selectedExtendedDay observer에서 동적으로 갱신
+            }
         }
     }
 
     private fun observeViewModel(view: View) {
-        val weatherSummaryLiveData = if (isToday) homeViewModel.todayWeatherSummary else homeViewModel.tomorrowWeatherSummary
-        val recommendationLiveData = if (isToday) homeViewModel.todayRecommendation else homeViewModel.tomorrowRecommendation
+        val weatherSummaryLiveData = when (mode) {
+            MODE_TODAY -> homeViewModel.todayWeatherSummary
+            MODE_TOMORROW -> homeViewModel.tomorrowWeatherSummary
+            else -> homeViewModel.extendedWeatherSummary
+        }
+        val recommendationLiveData = when (mode) {
+            MODE_TODAY -> homeViewModel.todayRecommendation
+            MODE_TOMORROW -> homeViewModel.tomorrowRecommendation
+            else -> homeViewModel.extendedRecommendation
+        }
 
         weatherSummaryLiveData.observe(viewLifecycleOwner) { summary ->
             val weatherCard = view.findViewById<com.google.android.material.card.MaterialCardView>(R.id.card_weather_summary)
@@ -76,6 +90,14 @@ class RecommendationFragment : Fragment(R.layout.fragment_recommendation) {
                 setRecommendationVisibility(view, false)
             }
         }
+
+        if (mode == MODE_EXTENDED) {
+            homeViewModel.selectedExtendedDay.observe(viewLifecycleOwner) { day ->
+                val label = "${day}일뒤"
+                view.findViewById<TextView>(R.id.tv_weather_title).text = "${label}의 날씨"
+                view.findViewById<TextView>(R.id.tv_best_combination_subtitle).text = "AI가 추천하는 ${label}의 조합"
+            }
+        }
     }
 
     private fun bindWeatherSummary(view: View, summary: DailyWeatherSummary) {
@@ -85,20 +107,27 @@ class RecommendationFragment : Fragment(R.layout.fragment_recommendation) {
 
         val minTempTextView = view.findViewById<TextView>(R.id.tv_min_temp)
         minTempTextView.text = String.format(Locale.KOREAN, "%.1f°", summary.minTemp)
-        minTempTextView.setTextColor(ContextCompat.getColor(requireContext(), R.color.temp_low_blue))
+        minTempTextView.setTextColor(ContextCompat.getColor(requireContext(), R.color.temp_min_text))
 
         view.findViewById<TextView>(R.id.tv_max_feels_like).text = String.format(Locale.KOREAN, "체감 %.1f°", summary.maxFeelsLike)
         view.findViewById<TextView>(R.id.tv_min_feels_like).text = String.format(Locale.KOREAN, "체감 %.1f°", summary.minFeelsLike)
     }
 
     private fun setRecommendationVisibility(view: View, show: Boolean) {
-        view.findViewById<TextView>(R.id.tv_no_recommendation).isVisible = !show
+        view.findViewById<TextView>(R.id.tv_no_recommendation).isVisible = false
+        view.findViewById<com.google.android.material.card.MaterialCardView>(R.id.card_no_recommendation).isVisible = !show
         view.findViewById<com.google.android.material.card.MaterialCardView>(R.id.card_best_combination).isVisible = show
-        view.findViewById<TextView>(R.id.tv_tops_title).isVisible = show
+        val topsTitle = view.findViewById<TextView>(R.id.tv_tops_title)
+        topsTitle.isVisible = show
+        (topsTitle.parent as? View)?.isVisible = show
         view.findViewById<RecyclerView>(R.id.rv_tops).isVisible = show
-        view.findViewById<TextView>(R.id.tv_bottoms_title).isVisible = show
+        val bottomsTitle = view.findViewById<TextView>(R.id.tv_bottoms_title)
+        bottomsTitle.isVisible = show
+        (bottomsTitle.parent as? View)?.isVisible = show
         view.findViewById<RecyclerView>(R.id.rv_bottoms).isVisible = show
-        view.findViewById<TextView>(R.id.tv_outers_title).isVisible = show
+        val outersTitle = view.findViewById<TextView>(R.id.tv_outers_title)
+        outersTitle.isVisible = show
+        (outersTitle.parent as? View)?.isVisible = show
         view.findViewById<RecyclerView>(R.id.rv_outers).isVisible = show
         view.findViewById<View>(R.id.ll_info_container).isVisible = false
 
@@ -179,10 +208,14 @@ class RecommendationFragment : Fragment(R.layout.fragment_recommendation) {
     }
 
     companion object {
-        private const val ARG_IS_TODAY = "is_today"
-        fun newInstance(isToday: Boolean) = RecommendationFragment().apply {
+        private const val ARG_MODE = "mode"
+        const val MODE_TODAY = 0
+        const val MODE_TOMORROW = 1
+        const val MODE_EXTENDED = 2
+
+        fun newInstance(mode: Int) = RecommendationFragment().apply {
             arguments = Bundle().apply {
-                putBoolean(ARG_IS_TODAY, isToday)
+                putInt(ARG_MODE, mode)
             }
         }
     }

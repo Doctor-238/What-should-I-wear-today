@@ -9,7 +9,7 @@ import kotlinx.coroutines.withContext
 import java.io.File
 
 
-@Database(entities = [ClothingItem::class, SavedStyle::class, StyleItemCrossRef::class], version = 14, exportSchema = false)
+@Database(entities = [ClothingItem::class, SavedStyle::class, StyleItemCrossRef::class], version = 15, exportSchema = false)
 
 abstract class AppDatabase : RoomDatabase() {
 
@@ -61,7 +61,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "clothing_database"
                 )
-                    .fallbackToDestructiveMigration()
+                    .addMigrations(*ALL_MIGRATIONS)
                     .build()
                 INSTANCE = instance
                 instance

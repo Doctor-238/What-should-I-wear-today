@@ -11,6 +11,8 @@ import android.provider.Settings
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.PopupMenu
+import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
@@ -22,6 +24,7 @@ import androidx.navigation.fragment.navArgs
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import androidx.viewpager2.widget.ViewPager2
 import com.yehyun.whatshouldiweartoday.R
+import com.yehyun.whatshouldiweartoday.data.preference.SettingsManager
 import com.yehyun.whatshouldiweartoday.databinding.FragmentHomeBinding
 import com.yehyun.whatshouldiweartoday.ui.OnTabReselectedListener
 
@@ -34,6 +37,8 @@ class HomeFragment : Fragment(), OnTabReselectedListener {
     private val args: HomeFragmentArgs by navArgs()
 
     private var toast: Toast? = null
+    private lateinit var settingsManager: SettingsManager
+    private var extendedEnabled = false
 
     private var locationDialog: AlertDialog? = null
 
@@ -48,7 +53,7 @@ class HomeFragment : Fragment(), OnTabReselectedListener {
                 homeViewModel.stopLoading()
             }
         } else {
-            if (shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_COARSE_LOCATION)) {
+            if (shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_FINE_LOCATION)) {
                 showToast("위치 권한이 거부되어 날씨 정보를 가져올 수 없습니다.")
                 homeViewModel.stopLoading()
             } else {
@@ -68,10 +73,13 @@ class HomeFragment : Fragment(), OnTabReselectedListener {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        settingsManager = SettingsManager(requireContext())
+        extendedEnabled = settingsManager.extendedForecastEnabled
         binding.ivSettings.setOnClickListener { findNavController().navigate(R.id.action_navigation_home_to_settingsFragment) }
 
         setupSwipeRefreshLayout()
         setupCustomTabs()
+        applyExtendedTabVisibility()
         setupViewPager()
 
         if (args.targetTab != 0) { homeViewModel.requestTabSwitch(args.targetTab) }
@@ -96,8 +104,16 @@ class HomeFragment : Fragment(), OnTabReselectedListener {
 
     override fun onResume() {
         super.onResume()
+        val newExtended = settingsManager.extendedForecastEnabled
+        if (newExtended != extendedEnabled) {
+            extendedEnabled = newExtended
+            applyExtendedTabVisibility()
+            setupViewPager()
+            if (!extendedEnabled && binding.viewPagerHome.currentItem == 2) {
+                binding.viewPagerHome.currentItem = 0
+            }
+        }
         checkAndRefresh()
-
     }
 
     override fun onDestroyView() {
@@ -131,7 +147,7 @@ class HomeFragment : Fragment(), OnTabReselectedListener {
     private fun checkAndRefresh() {
         if (!isAdded) return
 
-        if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+        if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             requestLocationPermission()
             return
         }
@@ -154,7 +170,7 @@ class HomeFragment : Fragment(), OnTabReselectedListener {
     }
 
     private fun requestLocationPermission() {
-        if (shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_COARSE_LOCATION)) {
+        if (shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_FINE_LOCATION)) {
             view?.post {
                 if (!isAdded) return@post
 
@@ -163,7 +179,7 @@ class HomeFragment : Fragment(), OnTabReselectedListener {
                     .setMessage("현재 위치의 날씨 정보를 가져오기 위해 위치 권한이 필요합니다.")
                     .setPositiveButton("권한 허용") { _, _ ->
                         homeViewModel.permissionRequestedThisSession = true
-                        locationPermissionRequest.launch(Manifest.permission.ACCESS_COARSE_LOCATION)
+                        locationPermissionRequest.launch(Manifest.permission.ACCESS_FINE_LOCATION)
                     }
                     .setNegativeButton("거부") { _, _ ->
                         homeViewModel.stopLoading()
@@ -180,7 +196,7 @@ class HomeFragment : Fragment(), OnTabReselectedListener {
         } else {
             if (!homeViewModel.permissionRequestedThisSession) {
                 homeViewModel.permissionRequestedThisSession = true
-                locationPermissionRequest.launch(Manifest.permission.ACCESS_COARSE_LOCATION)
+                locationPermissionRequest.launch(Manifest.permission.ACCESS_FINE_LOCATION)
             } else {
                 homeViewModel.stopLoading()
                 showToast("위치 권한이 거부되었습니다. 앱 설정에서 권한을 허용해주세요.")
@@ -232,8 +248,12 @@ class HomeFragment : Fragment(), OnTabReselectedListener {
     }
 
     private fun setupViewPager() {
-        binding.viewPagerHome.adapter = HomeViewPagerAdapter(this)
+        binding.viewPagerHome.adapter = HomeViewPagerAdapter(this, extendedEnabled)
         binding.viewPagerHome.isUserInputEnabled = false
+    }
+
+    private fun applyExtendedTabVisibility() {
+        binding.tvTabExtended.visibility = if (extendedEnabled) View.VISIBLE else View.GONE
     }
 
     private fun setupCustomTabs() {
@@ -251,6 +271,14 @@ class HomeFragment : Fragment(), OnTabReselectedListener {
                 binding.viewPagerHome.currentItem = 1
             }
         }
+        binding.tvTabExtended.setOnClickListener {
+            if (binding.viewPagerHome.currentItem == 2) {
+                // 이미 선택된 상태에서 다시 누르면 드롭다운 표시
+                showExtendedDayDropdown(binding.tvTabExtended)
+            } else {
+                binding.viewPagerHome.currentItem = 2
+            }
+        }
 
         binding.viewPagerHome.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
             private var isInitialSelection = true
@@ -265,37 +293,47 @@ class HomeFragment : Fragment(), OnTabReselectedListener {
                 }
             }
         })
+
+        homeViewModel.selectedExtendedDay.observe(viewLifecycleOwner) { day ->
+            if (_binding != null) {
+                binding.tvTabExtended.text = "${day}일뒤"
+            }
+        }
+    }
+
+    private fun showExtendedDayDropdown(anchor: TextView) {
+        val available = homeViewModel.availableExtendedDays.value
+            ?: (HomeViewModel.MIN_EXTENDED_DAY..HomeViewModel.MAX_EXTENDED_DAY).toList()
+        val days = if (available.isEmpty()) (HomeViewModel.MIN_EXTENDED_DAY..HomeViewModel.MAX_EXTENDED_DAY).toList() else available
+
+        val popup = PopupMenu(requireContext(), anchor)
+        days.forEachIndexed { index, day ->
+            popup.menu.add(0, day, index, "${day}일뒤")
+        }
+        popup.setOnMenuItemClickListener { menuItem ->
+            homeViewModel.setSelectedExtendedDay(menuItem.itemId)
+            true
+        }
+        popup.show()
     }
 
     private fun updateTabAppearance(selectedPosition: Int, animate: Boolean) {
         if (_binding == null) return
 
-        val todayColor = if (selectedPosition == 0) R.color.tab_selected_text else R.color.tab_unselected_text
-        val tomorrowColor = if (selectedPosition == 1) R.color.tab_selected_text else R.color.tab_unselected_text
-
-        binding.tvTabToday.setTextColor(ContextCompat.getColor(requireContext(), todayColor))
-        binding.tvTabTomorrow.setTextColor(ContextCompat.getColor(requireContext(), tomorrowColor))
-
-        val indicatorTarget = if (selectedPosition == 0) binding.tvTabToday else binding.tvTabTomorrow
-
-        indicatorTarget.post {
-            if (_binding == null) return@post
-
-            val indicatorWidth = indicatorTarget.width / 2
-            val targetCenter = binding.tabsContainer.left + indicatorTarget.left + (indicatorTarget.width / 2)
-            val indicatorStart = targetCenter - (indicatorWidth / 2)
-
-            val params = binding.viewTabIndicator.layoutParams
-            params.width = indicatorWidth
-            binding.viewTabIndicator.layoutParams = params
-
-            if (animate) {
-                binding.viewTabIndicator.animate()
-                    .x(indicatorStart.toFloat())
-                    .setDuration(250)
-                    .start()
+        val tabs = if (extendedEnabled) {
+            listOf(binding.tvTabToday, binding.tvTabTomorrow, binding.tvTabExtended)
+        } else {
+            listOf(binding.tvTabToday, binding.tvTabTomorrow)
+        }
+        tabs.forEachIndexed { index, tab ->
+            if (index == selectedPosition) {
+                tab.setBackgroundResource(R.drawable.bg_tab_pill_selected)
+                tab.setTextColor(ContextCompat.getColor(requireContext(), R.color.white))
+                tab.elevation = 4f
             } else {
-                binding.viewTabIndicator.x = indicatorStart.toFloat()
+                tab.setBackgroundResource(R.drawable.bg_tab_pill_unselected)
+                tab.setTextColor(ContextCompat.getColor(requireContext(), R.color.tab_unselected_text))
+                tab.elevation = 0f
             }
         }
     }

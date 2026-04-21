@@ -116,19 +116,28 @@ class ClosetViewModel(application: Application) : AndroidViewModel(application) 
                 clothesList.filter { it.name.contains(query, ignoreCase = true) }
             }
 
-            val sorted = when (sort) {
-                "오래된 순" -> filtered.sortedBy { it.timestamp }
-                "이름 오름차순" -> filtered.sortedBy { it.name }
-                "이름 내림차순" -> filtered.sortedByDescending { it.name }
-                "온도 오름차순" -> filtered.sortedWith(
+            val allPurposes = settingsManager.getAllPurposes()
+
+            val sorted = when {
+                sort == "오래된 순" -> filtered.sortedBy { it.timestamp }
+                sort == "이름 오름차순" -> filtered.sortedBy { it.name }
+                sort == "이름 내림차순" -> filtered.sortedByDescending { it.name }
+                sort == "온도 오름차순" -> filtered.sortedWith(
                     compareBy<ClothingItem> { it.category !in listOf("상의", "하의", "아우터") }
                         .thenBy { it.suitableTemperature }
                 )
-                "온도 내림차순" -> filtered.sortedWith(
+                sort == "온도 내림차순" -> filtered.sortedWith(
                     compareBy<ClothingItem> { it.category !in listOf("상의", "하의", "아우터") }
                         .thenByDescending { it.suitableTemperature }
                 )
-                else -> filtered.sortedByDescending { it.timestamp } // "최신순"
+                sort == "최신순" -> filtered.sortedByDescending { it.timestamp }
+                allPurposes.contains(sort) -> filtered.sortedWith(
+                    compareBy<ClothingItem> {
+                        val purposes = it.purpose.split(",").map { p -> p.trim() }
+                        if (purposes.contains(sort)) 0 else 1
+                    }.thenByDescending { it.timestamp }
+                )
+                else -> filtered.sortedByDescending { it.timestamp }
             }
 
             val groupedByCategory = sorted.groupBy { it.category }

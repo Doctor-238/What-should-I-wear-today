@@ -74,15 +74,12 @@ class SaveStyleAdapter(
                 cardView.strokeWidth = strokeWidthPx
                 cardView.strokeColor = ContextCompat.getColor(context, R.color.settings_spinner_blue)
             } else {
-                val fitColor = currentItem?.let { getFitBorderColor(context, it) }
-                    ?: ContextCompat.getColor(context, R.color.weather_card_blue_bg)
                 val defaultColor = ContextCompat.getColor(context, R.color.weather_card_blue_bg)
-                val thickness = if (fitColor != defaultColor) 2.5f else 1.5f
                 val strokeWidthPx = TypedValue.applyDimension(
-                    TypedValue.COMPLEX_UNIT_DIP, thickness, context.resources.displayMetrics
+                    TypedValue.COMPLEX_UNIT_DIP, 1.5f, context.resources.displayMetrics
                 ).toInt()
                 cardView.strokeWidth = strokeWidthPx
-                cardView.strokeColor = fitColor
+                cardView.strokeColor = defaultColor
             }
 
             if (settingsManager.showRecommendationIcon) {
