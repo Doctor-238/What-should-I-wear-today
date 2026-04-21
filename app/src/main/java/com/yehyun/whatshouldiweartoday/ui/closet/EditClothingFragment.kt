@@ -270,9 +270,10 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
         dividerEditFitLevel.isVisible = true
         if (settingsManager.isBodyRegistered) {
             val level = AddClothingViewModel.calculateFitLevel(
-                settingsManager.estimatedHeight, settingsManager.estimatedWeight,
+                settingsManager.estimatedHeight, settingsManager.estimatedWeight, settingsManager.estimatedWaist,
                 item.fitMinHeight, item.fitMaxHeight,
-                item.fitMinWeight, item.fitMaxWeight
+                item.fitMinWeight, item.fitMaxWeight,
+                item.fitMinWaist, item.fitMaxWaist
             )
             tvEditFitLevel.text = level
             tvEditFitLevel.setTextColor(ContextCompat.getColor(requireContext(), AddClothingFragment.fitLevelColorRes(level)))

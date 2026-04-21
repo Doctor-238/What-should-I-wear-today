@@ -367,6 +367,10 @@ class ShoppingWebViewFragment : Fragment(), OnTabReselectedListener {
         // Capture the WebView as a bitmap
         val bitmap = Bitmap.createBitmap(webView.width, webView.height, Bitmap.Config.ARGB_8888)
         val canvas = android.graphics.Canvas(bitmap)
+        // Apply scroll offset so the bitmap reflects the current viewport,
+        // not the page origin (0,0). Without this, WebView.draw() on a software
+        // canvas can render from the top of the page regardless of scroll state.
+        canvas.translate(-webView.scrollX.toFloat(), -webView.scrollY.toFloat())
         webView.draw(canvas)
 
         // Calculate pixel crop rect
@@ -376,7 +380,6 @@ class ShoppingWebViewFragment : Fragment(), OnTabReselectedListener {
         val bottom = (cropRectF.bottom * bitmap.height).toInt().coerceIn(top + 1, bitmap.height)
 
         val croppedBitmap = Bitmap.createBitmap(bitmap, left, top, right - left, bottom - top)
-        bitmap.recycle()
 
         // Save to cache and send to batch add
         viewLifecycleOwner.lifecycleScope.launch {
@@ -386,6 +389,7 @@ class ShoppingWebViewFragment : Fragment(), OnTabReselectedListener {
                     croppedBitmap.compress(Bitmap.CompressFormat.JPEG, 90, out)
                 }
                 croppedBitmap.recycle()
+                bitmap.recycle()
                 file.absolutePath
             }
 

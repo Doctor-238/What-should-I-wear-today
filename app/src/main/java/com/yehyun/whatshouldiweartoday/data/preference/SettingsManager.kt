@@ -73,8 +73,18 @@ class SettingsManager(context: Context) {
             prefs.edit().putFloat(KEY_ESTIMATED_WEIGHT, value).commit()
         }
 
+    // Optional — 0f means "not provided". Waist is used only when > 0.
+    var estimatedWaist: Float
+        get() = prefs.getFloat(KEY_ESTIMATED_WAIST, 0f)
+        set(value) {
+            prefs.edit().putFloat(KEY_ESTIMATED_WAIST, value).commit()
+        }
+
     val isBodyRegistered: Boolean
         get() = estimatedHeight > 0f && estimatedWeight > 0f
+
+    val isWaistRegistered: Boolean
+        get() = estimatedWaist > 0f
 
     var bodyFitEnabled: Boolean
         get() = prefs.getBoolean(KEY_BODY_FIT_ENABLED, false)
@@ -184,6 +194,7 @@ class SettingsManager(context: Context) {
         private const val KEY_BODY_IMAGE_URI = "body_image_uri"
         private const val KEY_ESTIMATED_HEIGHT = "estimated_height"
         private const val KEY_ESTIMATED_WEIGHT = "estimated_weight"
+        private const val KEY_ESTIMATED_WAIST = "estimated_waist"
         private const val KEY_BODY_FIT_ENABLED = "body_fit_enabled"
         private const val KEY_BODY_FIT_BORDER_ENABLED = "body_fit_border_enabled"
         private const val KEY_EXTENDED_FORECAST_ENABLED = "extended_forecast_enabled"
