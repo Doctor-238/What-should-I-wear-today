@@ -113,9 +113,10 @@ class RecommendationAdapter(
                 return defaultColor
             }
             val level = AddClothingViewModel.calculateFitLevel(
-                settingsManager.estimatedHeight, settingsManager.estimatedWeight,
+                settingsManager.estimatedHeight, settingsManager.estimatedWeight, settingsManager.estimatedWaist,
                 item.fitMinHeight, item.fitMaxHeight,
-                item.fitMinWeight, item.fitMaxWeight
+                item.fitMinWeight, item.fitMaxWeight,
+                item.fitMinWaist, item.fitMaxWaist
             )
             return when (level) {
                 AddClothingViewModel.FIT_VERY_GOOD, AddClothingViewModel.FIT_GOOD ->

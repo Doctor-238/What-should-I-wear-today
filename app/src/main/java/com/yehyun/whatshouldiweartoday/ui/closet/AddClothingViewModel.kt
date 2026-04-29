@@ -191,6 +191,7 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
 
                 val purposeStr = analysis.purposes?.take(2)?.joinToString(",") ?: ""
 
+                val safeColorHex = analysis.color_hex?.takeIf { isValidHexCode(it) } ?: "#000000"
                 val newClothingItem = ClothingItem(
                     name = name,
                     imageUri = originalPath,
@@ -199,11 +200,13 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
                     category = analysis.category!!,
                     suitableTemperature = finalTemp,
                     baseTemperature = baseTemp,
-                    colorHex = analysis.color_hex!!,
+                    colorHex = safeColorHex,
                     fitMinHeight = analysis.fit_min_height,
                     fitMaxHeight = analysis.fit_max_height,
                     fitMinWeight = analysis.fit_min_weight,
                     fitMaxWeight = analysis.fit_max_weight,
+                    fitMinWaist = analysis.fit_min_waist,
+                    fitMaxWaist = analysis.fit_max_waist,
                     purpose = purposeStr
                 )
                 withContext(Dispatchers.IO) {
@@ -231,7 +234,7 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
                     text("""
                         You are a Precise Climate & Fashion Analyst for Korean weather.
                         Your task is to analyze the clothing item in the image and provide a detailed analysis in a strict JSON format, without any additional text or explanations.
-                        Your JSON response MUST contain ONLY the following keys: "is_wearable", "category", "suitable_temperature", "color_hex", "fit_min_height", "fit_max_height", "fit_min_weight", "fit_max_weight", "purposes".
+                        Your JSON response MUST contain ONLY the following keys: "is_wearable", "category", "suitable_temperature", "color_hex", "fit_min_height", "fit_max_height", "fit_min_weight", "fit_max_weight", "fit_min_waist", "fit_max_waist", "purposes".
                         - "is_wearable": (boolean) If the image contains at least one wearable clothing item, this is True. If the image contains multiple clothing items, focus on the PRIMARY/MAIN item that appears to be the subject or focus of the photo (NOT necessarily the largest one). Only return False if the image contains no clothing at all (e.g. food, scenery, etc.).
                         - "category": (string) If wearable, one of '상의', '하의', '아우터', '신발', '가방', '모자', '기타'.
                         - "color_hex": (string) If wearable, the dominant color of the item as a hex string.
@@ -240,8 +243,10 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
                         - "fit_max_height": (double) Maximum height in cm for wearing this item (e.g., 180.0).
                         - "fit_min_weight": (double) Minimum weight in kg for wearing this item (e.g., 45.0).
                         - "fit_max_weight": (double) Maximum weight in kg for wearing this item (e.g., 75.0).
+                        - "fit_min_waist": (double or null) Minimum waist circumference in cm that this item fits (e.g., 68.0). Use null ONLY for items where the waistline is irrelevant (oversized tops, shoes, bags, hats, loose jackets). Bottoms and fitted tops MUST have a value.
+                        - "fit_max_waist": (double or null) Maximum waist circumference in cm that this item fits (e.g., 88.0). Follow the same rule as fit_min_waist.
                         - "purposes": (array of strings) If wearable, select the 1 or 2 MOST suitable purposes from this list: [$purposeListStr]. Pick only the best fitting ones. Maximum 2 purposes per item.
-                        Estimate the body size range this clothing would fit. For free-size/stretchy items, use wider ranges. Base on visual cues: size labels, proportions, material stretch.
+                        Estimate the body size range this clothing would fit. For free-size/stretchy items, use wider ranges. Base on visual cues: size labels, proportions, material stretch. Waist range should be the user's waist circumference, not the garment's flat measurement.
                     """.trimIndent())
                 }
                 val response = generativeModel!!.generateContent(inputContent)
@@ -278,9 +283,10 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
         if (settingsManager.bodyFitEnabled) {
             if (settingsManager.isBodyRegistered) {
                 val level = calculateFitLevel(
-                    settingsManager.estimatedHeight, settingsManager.estimatedWeight,
+                    settingsManager.estimatedHeight, settingsManager.estimatedWeight, settingsManager.estimatedWaist,
                     result.fit_min_height, result.fit_max_height,
-                    result.fit_min_weight, result.fit_max_weight
+                    result.fit_min_weight, result.fit_max_weight,
+                    result.fit_min_waist, result.fit_max_waist
                 )
                 fitLevelText.postValue(level)
             } else {
@@ -387,32 +393,55 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
         const val FIT_VERY_BAD = "매우 맞지않음"
         const val FIT_NO_INFO = "정보 없음"
 
+        // Score a single body axis: 4 = inner band (매우 적합), 3 = within range,
+        // 2 = within ~5 units of range, 1 = within ~10 units, 0 = far off.
+        // Returns null if the clothing does not define this axis (treat as neutral).
+        private fun axisScore(userValue: Double, min: Double?, max: Double?, nearMargin: Double, farMargin: Double): Int? {
+            if (min == null || max == null) return null
+            val range = max - min
+            val shrink = range * 0.15
+            return when {
+                userValue in (min + shrink)..(max - shrink) -> 4
+                userValue in min..max -> 3
+                userValue in (min - nearMargin)..(max + nearMargin) -> 2
+                userValue in (min - farMargin)..(max + farMargin) -> 1
+                else -> 0
+            }
+        }
+
+        // Weighted fit level. Height and weight are primary (weight 0.4 each),
+        // waist is supplementary (0.2) and only counts when both the user has
+        // registered a waist AND the clothing defines a waist range.
+        // If only one of those holds, waist is skipped and height/weight renormalize to 0.5 each.
         fun calculateFitLevel(
-            userHeight: Float, userWeight: Float,
+            userHeight: Float, userWeight: Float, userWaist: Float,
             minH: Double?, maxH: Double?,
-            minW: Double?, maxW: Double?
+            minW: Double?, maxW: Double?,
+            minWaist: Double?, maxWaist: Double?
         ): String {
-            if (minH == null || maxH == null || minW == null || maxW == null) return FIT_NO_INFO
+            val hScore = axisScore(userHeight.toDouble(), minH, maxH, 5.0, 10.0)
+            val wScore = axisScore(userWeight.toDouble(), minW, maxW, 5.0, 10.0)
+            if (hScore == null || wScore == null) return FIT_NO_INFO
 
-            val hRange = maxH - minH
-            val wRange = maxW - minW
-            val hShrink = hRange * 0.15
-            val wShrink = wRange * 0.15
+            val waistKnown = userWaist > 0f
+            val waistScore = if (waistKnown) axisScore(userWaist.toDouble(), minWaist, maxWaist, 4.0, 8.0) else null
 
-            val heightPerfect = userHeight.toDouble() in (minH + hShrink)..(maxH - hShrink)
-            val weightPerfect = userWeight.toDouble() in (minW + wShrink)..(maxW - wShrink)
-            val heightInRange = userHeight.toDouble() in minH..maxH
-            val weightInRange = userWeight.toDouble() in minW..maxW
-            val heightClose = userHeight.toDouble() in (minH - 5)..(maxH + 5)
-            val weightClose = userWeight.toDouble() in (minW - 5)..(maxW + 5)
-            val heightFar = userHeight.toDouble() in (minH - 10)..(maxH + 10)
-            val weightFar = userWeight.toDouble() in (minW - 10)..(maxW + 10)
+            val combined = if (waistScore != null) {
+                hScore * 0.4 + wScore * 0.4 + waistScore * 0.2
+            } else {
+                hScore * 0.5 + wScore * 0.5
+            }
+
+            // Gate the top band so that both primary axes are at least within-range.
+            val primaryInRange = hScore >= 3 && wScore >= 3
+            // Waist being very wrong should pull down "매우 적합" but not dominate.
+            val waistBad = waistScore != null && waistScore <= 1
 
             return when {
-                heightPerfect && weightPerfect -> FIT_VERY_GOOD
-                heightInRange && weightInRange -> FIT_GOOD
-                heightClose && weightClose -> FIT_NORMAL
-                heightFar && weightFar -> FIT_BAD
+                combined >= 3.7 && primaryInRange && !waistBad -> FIT_VERY_GOOD
+                combined >= 3.0 && primaryInRange -> FIT_GOOD
+                combined >= 2.0 -> FIT_NORMAL
+                combined >= 1.0 -> FIT_BAD
                 else -> FIT_VERY_BAD
             }
         }

@@ -231,8 +231,16 @@ class SettingsFragment : Fragment(), OnTabReselectedListener {
                 setText("%.1f".format(settingsManager.estimatedWeight))
             }
         }
+        val editWaist = EditText(requireContext()).apply {
+            hint = "허리둘레 (cm, 선택)"
+            inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
+            if (settingsManager.estimatedWaist > 0f) {
+                setText("%.1f".format(settingsManager.estimatedWaist))
+            }
+        }
         layout.addView(editHeight)
         layout.addView(editWeight)
+        layout.addView(editWaist)
 
         AlertDialog.Builder(requireContext())
             .setTitle("체형 수동 입력")
@@ -240,9 +248,13 @@ class SettingsFragment : Fragment(), OnTabReselectedListener {
             .setPositiveButton("저장") { _, _ ->
                 val height = editHeight.text.toString().toFloatOrNull()
                 val weight = editWeight.text.toString().toFloatOrNull()
-                if (height != null && weight != null && height > 0 && weight > 0) {
+                val waistRaw = editWaist.text.toString().trim()
+                val waist = waistRaw.toFloatOrNull()
+                val waistValid = waistRaw.isEmpty() || (waist != null && waist > 0)
+                if (height != null && weight != null && height > 0 && weight > 0 && waistValid) {
                     settingsManager.estimatedHeight = height
                     settingsManager.estimatedWeight = weight
+                    settingsManager.estimatedWaist = if (waistRaw.isEmpty()) 0f else (waist ?: 0f)
                     updateBodyStatus()
                     mainViewModel.notifySettingsChanged()
                     showToast("체형이 등록되었습니다.")
@@ -321,9 +333,15 @@ class SettingsFragment : Fragment(), OnTabReselectedListener {
 
     private fun updateBodyStatus() {
         if (settingsManager.isBodyRegistered) {
-            binding.tvBodyStatus.text = "등록 완료 (%.1fcm / %.1fkg)".format(
+            val base = "등록 완료 (%.1fcm / %.1fkg".format(
                 settingsManager.estimatedHeight, settingsManager.estimatedWeight
             )
+            val suffix = if (settingsManager.isWaistRegistered) {
+                " / 허리 %.1fcm)".format(settingsManager.estimatedWaist)
+            } else {
+                ")"
+            }
+            binding.tvBodyStatus.text = base + suffix
             binding.buttonBodyRegister.text = "사진 재등록"
         } else {
             binding.tvBodyStatus.text = "미등록"

@@ -18,7 +18,15 @@ val MIGRATION_14_15 = object : Migration(14, 15) {
     }
 }
 
+val MIGRATION_15_16 = object : Migration(15, 16) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE clothing_items ADD COLUMN fitMinWaist REAL")
+        db.execSQL("ALTER TABLE clothing_items ADD COLUMN fitMaxWaist REAL")
+    }
+}
+
 val ALL_MIGRATIONS = arrayOf(
     MIGRATION_13_14,
-    MIGRATION_14_15
+    MIGRATION_14_15,
+    MIGRATION_15_16
 )
