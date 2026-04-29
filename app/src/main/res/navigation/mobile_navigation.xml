@@ -149,7 +149,115 @@
             app:exitAnim="@anim/exit_to_left"
             app:popEnterAnim="@anim/pop_enter_from_left"
             app:popExitAnim="@anim/pop_exit_to_right" />
+        <action
+            android:id="@+id/action_shoppingFragment_to_mallMainFragment"
+            app:destination="@id/mallMainFragment"
+            app:enterAnim="@anim/enter_from_right"
+            app:exitAnim="@anim/exit_to_left"
+            app:popEnterAnim="@anim/pop_enter_from_left"
+            app:popExitAnim="@anim/pop_exit_to_right" />
     </fragment>
+
+    <fragment
+        android:id="@+id/mallMainFragment"
+        android:name="com.yehyun.whatshouldiweartoday.ui.mall.MallMainFragment"
+        android:label="MallMainFragment"
+        tools:layout="@layout/fragment_mall_main">
+        <action
+            android:id="@+id/action_mallMainFragment_to_mallItemDetailFragment"
+            app:destination="@id/mallItemDetailFragment"
+            app:enterAnim="@anim/enter_from_right"
+            app:exitAnim="@anim/exit_to_left"
+            app:popEnterAnim="@anim/pop_enter_from_left"
+            app:popExitAnim="@anim/pop_exit_to_right"/>
+        <action
+            android:id="@+id/action_mallMainFragment_to_mallAdminManageFragment"
+            app:destination="@id/mallAdminManageFragment"
+            app:enterAnim="@anim/enter_from_right"
+            app:exitAnim="@anim/exit_to_left"
+            app:popEnterAnim="@anim/pop_enter_from_left"
+            app:popExitAnim="@anim/pop_exit_to_right"/>
+        <action
+            android:id="@+id/action_mallMainFragment_to_mallRecommendationFragment"
+            app:destination="@id/mallRecommendationFragment"
+            app:enterAnim="@anim/slide_up_in"
+            app:exitAnim="@anim/fade_out"
+            app:popEnterAnim="@anim/fade_in"
+            app:popExitAnim="@anim/slide_down_out"/>
+        <action
+            android:id="@+id/action_mallMainFragment_to_cartFragment"
+            app:destination="@id/cartFragment"
+            app:enterAnim="@anim/enter_from_right"
+            app:exitAnim="@anim/exit_to_left"
+            app:popEnterAnim="@anim/pop_enter_from_left"
+            app:popExitAnim="@anim/pop_exit_to_right"/>
+    </fragment>
+
+    <fragment
+        android:id="@+id/mallItemDetailFragment"
+        android:name="com.yehyun.whatshouldiweartoday.ui.mall.MallItemDetailFragment"
+        android:label="MallItemDetailFragment"
+        tools:layout="@layout/fragment_mall_item_detail">
+        <argument
+            android:name="mall_item_id"
+            app:argType="integer"/>
+        <action
+            android:id="@+id/action_mallItemDetailFragment_to_mallAdminEditFragment"
+            app:destination="@id/mallAdminEditFragment"
+            app:enterAnim="@anim/enter_from_right"
+            app:exitAnim="@anim/exit_to_left"
+            app:popEnterAnim="@anim/pop_enter_from_left"
+            app:popExitAnim="@anim/pop_exit_to_right"/>
+    </fragment>
+
+    <fragment
+        android:id="@+id/mallAdminManageFragment"
+        android:name="com.yehyun.whatshouldiweartoday.ui.mall.MallAdminManageFragment"
+        android:label="MallAdminManageFragment"
+        tools:layout="@layout/fragment_mall_admin_manage">
+        <action
+            android:id="@+id/action_mallAdminManageFragment_to_mallAddItemFragment"
+            app:destination="@id/mallAddItemFragment"
+            app:enterAnim="@anim/enter_from_right"
+            app:exitAnim="@anim/exit_to_left"
+            app:popEnterAnim="@anim/pop_enter_from_left"
+            app:popExitAnim="@anim/pop_exit_to_right"/>
+        <action
+            android:id="@+id/action_mallAdminManageFragment_to_mallAdminEditFragment"
+            app:destination="@id/mallAdminEditFragment"
+            app:enterAnim="@anim/enter_from_right"
+            app:exitAnim="@anim/exit_to_left"
+            app:popEnterAnim="@anim/pop_enter_from_left"
+            app:popExitAnim="@anim/pop_exit_to_right"/>
+    </fragment>
+
+    <fragment
+        android:id="@+id/mallAddItemFragment"
+        android:name="com.yehyun.whatshouldiweartoday.ui.mall.MallAddItemFragment"
+        android:label="MallAddItemFragment"
+        tools:layout="@layout/fragment_mall_add_item"/>
+
+    <fragment
+        android:id="@+id/mallAdminEditFragment"
+        android:name="com.yehyun.whatshouldiweartoday.ui.mall.MallAdminEditFragment"
+        android:label="MallAdminEditFragment"
+        tools:layout="@layout/fragment_mall_admin_edit">
+        <argument
+            android:name="mall_item_id"
+            app:argType="integer"/>
+    </fragment>
+
+    <fragment
+        android:id="@+id/mallRecommendationFragment"
+        android:name="com.yehyun.whatshouldiweartoday.ui.mall.MallRecommendationFragment"
+        android:label="MallRecommendationFragment"
+        tools:layout="@layout/fragment_mall_recommendation"/>
+
+    <fragment
+        android:id="@+id/cartFragment"
+        android:name="com.yehyun.whatshouldiweartoday.ui.mall.CartFragment"
+        android:label="CartFragment"
+        tools:layout="@layout/fragment_cart"/>
 
     <fragment
         android:id="@+id/shoppingWebViewFragment"
@@ -170,6 +278,14 @@
     <action
         android:id="@+id/action_global_saveStyleFragment"
         app:destination="@id/saveStyleFragment"
+        app:enterAnim="@anim/slide_up_in"
+        app:exitAnim="@anim/fade_out"
+        app:popEnterAnim="@anim/fade_in"
+        app:popExitAnim="@anim/slide_down_out" />
+
+    <action
+        android:id="@+id/action_global_settingsFragment"
+        app:destination="@id/settingsFragment"
         app:enterAnim="@anim/slide_up_in"
         app:exitAnim="@anim/fade_out"
         app:popEnterAnim="@anim/fade_in"

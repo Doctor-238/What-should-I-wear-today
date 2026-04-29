@@ -53,6 +53,7 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
         const val KEY_IMAGE_PATHS = "image_paths"
         const val KEY_PATHS_FILE = "paths_file"
         const val KEY_API = "api_key"
+        const val KEY_PURCHASE_SOURCE = "purchase_source"
         const val PROGRESS_CURRENT = "current"
         const val PROGRESS_TOTAL = "total"
         const val OUTPUT_SUCCESS_COUNT = "success_count"
@@ -73,6 +74,7 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
     override suspend fun doWork(): Result {
         val batchId = inputData.getString(KEY_BATCH_ID) ?: return Result.failure()
         val apiKey = inputData.getString(KEY_API) ?: return Result.failure()
+        val purchaseSource = inputData.getString(KEY_PURCHASE_SOURCE)
 
         // Support both direct paths (small batches) and file-based paths (large batches)
         val imagePaths = inputData.getStringArray(KEY_IMAGE_PATHS)
@@ -107,7 +109,7 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
                 try {
                     val bitmap = getCorrectlyOrientedBitmap(path)
                     if (bitmap != null) {
-                        val saved = analyzeAndSave(bitmap, generativeModel)
+                        val saved = analyzeAndSave(bitmap, generativeModel, purchaseSource)
                         if (saved) {
                             successCount++
                             completedPaths.add(path)
@@ -208,7 +210,7 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
         notificationManager.notify(COMPLETE_NOTIFICATION_ID, notification)
     }
 
-    private suspend fun analyzeAndSave(bitmap: Bitmap, model: GenerativeModel): Boolean {
+    private suspend fun analyzeAndSave(bitmap: Bitmap, model: GenerativeModel, purchaseSource: String? = null): Boolean {
         var saved = false
         coroutineScope {
             if (isStopped) return@coroutineScope
@@ -263,7 +265,8 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
                         fitMaxWeight = analysisResult.fit_max_weight,
                         fitMinWaist = analysisResult.fit_min_waist,
                         fitMaxWaist = analysisResult.fit_max_waist,
-                        purpose = purposeStr
+                        purpose = purposeStr,
+                        purchaseSource = purchaseSource
                     )
                     clothingDao.insert(newItem)
                     saved = true

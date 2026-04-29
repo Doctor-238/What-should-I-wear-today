@@ -21,6 +21,7 @@ import com.yehyun.whatshouldiweartoday.data.preference.SettingsManager
 import com.yehyun.whatshouldiweartoday.data.repository.ClothingRepository
 import com.yehyun.whatshouldiweartoday.data.repository.WeatherRepository
 import com.yehyun.whatshouldiweartoday.ui.closet.AddClothingViewModel
+import com.yehyun.whatshouldiweartoday.util.isNetworkAvailable
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
@@ -92,6 +93,9 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     private val _todayRecommendedClothingIds = MutableLiveData<Set<Int>>(emptySet())
     val todayRecommendedClothingIds: LiveData<Set<Int>> = _todayRecommendedClothingIds
 
+    private val _allDailySummaries = MutableLiveData<Map<Int, DailyWeatherSummary>>(emptyMap())
+    val allDailySummaries: LiveData<Map<Int, DailyWeatherSummary>> = _allDailySummaries
+
     var permissionRequestedThisSession = false
 
     companion object {
@@ -123,6 +127,10 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         fetchJob = viewModelScope.launch {
             startLoading()
             try {
+                if (!isNetworkAvailable(getApplication())) {
+                    _error.postValue("인터넷에 연결되어 있지 않습니다. 와이파이 또는 모바일 데이터를 확인해주세요.")
+                    return@launch
+                }
                 if (ActivityCompat.checkSelfPermission(getApplication(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
                     && ActivityCompat.checkSelfPermission(getApplication(), Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
                     throw SecurityException("위치 권한이 없습니다.")
@@ -216,6 +224,15 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
         _availableExtendedDays.postValue(available)
+
+        // 말 추천용: 내일~4일뒤 일별 요약 노출
+        val summaryMap = mutableMapOf<Int, DailyWeatherSummary>()
+        for (offset in 1..4) {
+            val date = today.plusDays(offset.toLong())
+            val forecasts = forecastsByDate[date] ?: emptyList()
+            if (forecasts.isNotEmpty()) summaryMap[offset] = createDailySummary(forecasts)
+        }
+        _allDailySummaries.postValue(summaryMap)
 
         // 현재 선택된 날짜가 사용 불가능하면 가장 가까운 가능한 날짜로 조정
         val currentSelected = _selectedExtendedDay.value ?: MIN_EXTENDED_DAY

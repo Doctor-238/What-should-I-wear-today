@@ -9,7 +9,7 @@ import kotlinx.coroutines.withContext
 import java.io.File
 
 
-@Database(entities = [ClothingItem::class, SavedStyle::class, StyleItemCrossRef::class], version = 16, exportSchema = false)
+@Database(entities = [ClothingItem::class, SavedStyle::class, StyleItemCrossRef::class], version = 17, exportSchema = false)
 
 abstract class AppDatabase : RoomDatabase() {
 

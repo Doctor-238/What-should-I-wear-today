@@ -41,6 +41,9 @@ class ShoppingFragment : Fragment(), OnTabReselectedListener {
         binding.btnAbly.setOnClickListener { navigateToWebView(ShoppingPlatform.ABLY) }
         binding.btn29cm.setOnClickListener { navigateToWebView(ShoppingPlatform.CM29) }
         binding.btnGoogle.setOnClickListener { navigateToWebView(ShoppingPlatform.GOOGLE) }
+        binding.btnOurMall.setOnClickListener {
+            findNavController().navigate(R.id.action_shoppingFragment_to_mallMainFragment)
+        }
     }
 
     private fun navigateToWebView(platform: ShoppingPlatform) {

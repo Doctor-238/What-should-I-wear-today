@@ -221,6 +221,7 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
         updateImagePreview(item)
         updateFitLevelDisplay(item)
         updatePurposeDisplay(item)
+        updatePurchaseSourceDisplay(item)
 
         val isRecommended = homeViewModel.todayRecommendedClothingIds.value?.contains(item.id) ?: false
         val isPackable = homeViewModel.todayRecommendation.value?.packableOuters?.any { it.id == item.id } ?: false
@@ -292,6 +293,43 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
             layoutEditPurpose.isVisible = true
             dividerEditPurpose.isVisible = true
             tvEditPurpose.text = purposes.joinToString(", ")
+        }
+    }
+
+    private fun updatePurchaseSourceDisplay(item: ClothingItem) {
+        val source = item.purchaseSource
+        val layoutPurchaseSource = view?.findViewById<View>(R.id.layout_purchase_source)
+        val dividerPurchaseSource = view?.findViewById<View>(R.id.divider_purchase_source)
+        val tvPurchaseSource = view?.findViewById<TextView>(R.id.tv_purchase_source)
+        val ivPurchaseSourceIcon = view?.findViewById<ImageView>(R.id.iv_purchase_source_icon)
+
+        if (source.isNullOrBlank()) {
+            layoutPurchaseSource?.isVisible = false
+            dividerPurchaseSource?.isVisible = false
+            return
+        }
+
+        layoutPurchaseSource?.isVisible = true
+        dividerPurchaseSource?.isVisible = true
+
+        val (text, iconRes) = when (source) {
+            "COUPANG" -> "쿠팡에서 구매" to R.drawable.shopping_coupang
+            "MUSINSA" -> "무신사에서 구매" to R.drawable.shopping_musinsa
+            "HIVER" -> "하이버에서 구매" to R.drawable.shopping_hiver
+            "NAVER" -> "네이버스토어에서 구매" to R.drawable.shopping_naver
+            "ABLY" -> "에이블리에서 구매" to R.drawable.shopping_ably
+            "CM29" -> "29CM에서 구매" to R.drawable.shopping_29cm
+            "GOOGLE" -> "구글에서 이미지 추가" to R.drawable.shopping_google
+            "오늘 뭐 살래?" -> "오늘 뭐 살래?에서 구매" to R.drawable.ic_mall_logo
+            else -> source to null
+        }
+
+        tvPurchaseSource?.text = text
+        if (iconRes != null) {
+            ivPurchaseSourceIcon?.setImageResource(iconRes)
+            ivPurchaseSourceIcon?.isVisible = true
+        } else {
+            ivPurchaseSourceIcon?.isVisible = false
         }
     }
 

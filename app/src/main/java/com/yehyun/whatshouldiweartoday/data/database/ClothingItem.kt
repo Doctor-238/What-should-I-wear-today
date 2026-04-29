@@ -22,5 +22,6 @@ data class ClothingItem(
     val fitMaxWeight: Double? = null,
     val fitMinWaist: Double? = null,
     val fitMaxWaist: Double? = null,
-    val purpose: String = ""
+    val purpose: String = "",
+    val purchaseSource: String? = null
 )

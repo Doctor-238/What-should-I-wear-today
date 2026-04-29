@@ -32,6 +32,7 @@ import com.yehyun.whatshouldiweartoday.data.repository.ClothingRepository
 import com.yehyun.whatshouldiweartoday.data.repository.WeatherRepository
 import com.yehyun.whatshouldiweartoday.ui.home.DailyWeatherSummary
 import com.yehyun.whatshouldiweartoday.ui.home.RecommendationResult
+import com.yehyun.whatshouldiweartoday.util.isNetworkAvailable
 import kotlinx.coroutines.tasks.await
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -119,7 +120,9 @@ class WidgetUpdateWorker(private val appContext: Context, workerParams: WorkerPa
         try {
             showLoadingState(appWidgetId, remoteViews, isToday)
 
-            if (ActivityCompat.checkSelfPermission(appContext, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
+            if (!isNetworkAvailable(appContext)) {
+                errorMessage = "인터넷 연결 없음"
+            } else if (ActivityCompat.checkSelfPermission(appContext, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
                 && ActivityCompat.checkSelfPermission(appContext, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
                 errorMessage = "위치 권한을 허용해주세요!"
             } else {
