@@ -10,6 +10,7 @@ import androidx.lifecycle.viewModelScope
 import com.yehyun.whatshouldiweartoday.ai.AiModelProvider
 import com.yehyun.whatshouldiweartoday.data.preference.SettingsManager
 import com.yehyun.whatshouldiweartoday.util.Event
+import com.yehyun.whatshouldiweartoday.util.isNetworkAvailable
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
@@ -63,6 +64,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _isBodyAnalyzing.value = true
         viewModelScope.launch(Dispatchers.IO) {
             try {
+                if (!isNetworkAvailable(getApplication())) {
+                    _bodyAnalysisResult.postValue(Event(BodyAnalysisState.Error("인터넷에 연결되어 있지 않습니다. 와이파이 또는 모바일 데이터를 확인해주세요.")))
+                    _isBodyAnalyzing.postValue(false)
+                    return@launch
+                }
                 val model = AiModelProvider.getModel(getApplication(), apiKey)
                 val resizedBitmap = resizeBitmap(bitmap)
                 val inputContent = com.google.ai.client.generativeai.type.content {

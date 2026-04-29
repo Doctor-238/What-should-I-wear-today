@@ -84,11 +84,13 @@ class MainActivity : AppCompatActivity() {
             navView.menu.findItem(destination.id)?.isChecked = true
         }
 
-        navView.setOnItemReselectedListener {
+        navView.setOnItemReselectedListener { item ->
             val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_host_fragment_activity_main) as NavHostFragment
             val currentFragment = navHostFragment.childFragmentManager.fragments.firstOrNull()
             if (currentFragment is OnTabReselectedListener) {
                 currentFragment.onTabReselected()
+            } else {
+                navController.popBackStack(item.itemId, false)
             }
         }
     }

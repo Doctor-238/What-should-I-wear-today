@@ -18,6 +18,7 @@ import com.yehyun.whatshouldiweartoday.ai.AiModelProvider
 import com.yehyun.whatshouldiweartoday.data.database.AppDatabase
 import com.yehyun.whatshouldiweartoday.data.database.ClothingItem
 import com.yehyun.whatshouldiweartoday.data.preference.SettingsManager
+import com.yehyun.whatshouldiweartoday.util.isNetworkAvailable
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -103,6 +104,10 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
 
 
     fun onImageSelected(bitmap: Bitmap, apiKey: String) {
+        if (!isNetworkAvailable(getApplication())) {
+            _errorMessage.value = "인터넷에 연결되어 있지 않습니다. 와이파이 또는 모바일 데이터를 확인해주세요."
+            return
+        }
         resetAllState()
         _originalBitmap.value = bitmap
         generativeModel = AiModelProvider.getModel(getApplication(), apiKey)
