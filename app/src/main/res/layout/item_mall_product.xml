@@ -3,12 +3,11 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_margin="6dp"
-    app:cardCornerRadius="16dp"
-    app:cardElevation="3dp"
-    app:cardBackgroundColor="@color/surface"
-    app:strokeWidth="1dp"
-    app:strokeColor="@color/card_border">
+    android:layout_margin="4dp"
+    app:cardCornerRadius="0dp"
+    app:cardElevation="0dp"
+    app:cardBackgroundColor="@android:color/transparent"
+    app:strokeWidth="0dp">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -16,53 +15,74 @@
         android:orientation="vertical">
 
         <!-- Product image area -->
-        <FrameLayout
+        <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
-            android:layout_height="wrap_content">
+            android:layout_height="wrap_content"
+            app:cardCornerRadius="6dp"
+            app:cardElevation="0dp">
 
-            <ImageView
-                android:id="@+id/iv_product_image"
+            <FrameLayout
                 android:layout_width="match_parent"
-                android:layout_height="150dp"
-                android:scaleType="centerCrop"/>
+                android:layout_height="wrap_content">
 
-            <!-- Color fallback view -->
-            <View
-                android:id="@+id/view_color_bg"
-                android:layout_width="match_parent"
-                android:layout_height="150dp"
-                android:visibility="gone"/>
+                <androidx.constraintlayout.widget.ConstraintLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
 
-            <!-- Category chip -->
-            <TextView
-                android:id="@+id/tv_category_chip"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="top|start"
-                android:layout_margin="8dp"
-                android:paddingHorizontal="10dp"
-                android:paddingVertical="4dp"
-                android:textSize="11sp"
-                android:textColor="#FFFFFF"
-                android:textStyle="bold"
-                android:background="@drawable/bg_mall_tab_selected"/>
-        </FrameLayout>
+                    <ImageView
+                        android:id="@+id/iv_product_image"
+                        android:layout_width="0dp"
+                        android:layout_height="0dp"
+                        app:layout_constraintDimensionRatio="4:5"
+                        app:layout_constraintTop_toTopOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        android:scaleType="centerCrop"
+                        android:background="#F0F0F0"/>
+
+                    <View
+                        android:id="@+id/view_color_bg"
+                        android:layout_width="0dp"
+                        android:layout_height="0dp"
+                        app:layout_constraintTop_toTopOf="parent"
+                        app:layout_constraintBottom_toBottomOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        android:visibility="gone"/>
+                </androidx.constraintlayout.widget.ConstraintLayout>
+
+                <!-- Category chip -->
+                <TextView
+                    android:id="@+id/tv_category_chip"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="bottom|end"
+                    android:layout_margin="6dp"
+                    android:paddingHorizontal="6dp"
+                    android:paddingVertical="2dp"
+                    android:textSize="10sp"
+                    android:textColor="#FFFFFF"
+                    android:textStyle="bold"
+                    android:background="#66000000"/>
+            </FrameLayout>
+        </androidx.cardview.widget.CardView>
 
         <!-- Info area -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:paddingHorizontal="12dp"
-            android:paddingTop="10dp"
-            android:paddingBottom="12dp">
+            android:paddingHorizontal="4dp"
+            android:paddingTop="12dp"
+            android:paddingBottom="16dp">
 
             <TextView
                 android:id="@+id/tv_brand"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:textSize="11sp"
-                android:textColor="@color/text_tertiary"/>
+                android:textStyle="bold"
+                android:textColor="@color/text_secondary"/>
 
             <TextView
                 android:id="@+id/tv_name"
@@ -70,19 +90,19 @@
                 android:layout_height="wrap_content"
                 android:textSize="13sp"
                 android:textColor="@color/text_primary"
-                android:textStyle="bold"
                 android:maxLines="2"
                 android:ellipsize="end"
-                android:layout_marginTop="2dp"/>
+                android:layout_marginTop="4dp"
+                android:lineSpacingExtra="2dp"/>
 
             <TextView
                 android:id="@+id/tv_price"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:textSize="14sp"
-                android:textColor="#FF6B6B"
+                android:textSize="15sp"
+                android:textColor="@color/text_primary"
                 android:textStyle="bold"
-                android:layout_marginTop="4dp"/>
+                android:layout_marginTop="6dp"/>
 
             <!-- Tags -->
             <HorizontalScrollView
