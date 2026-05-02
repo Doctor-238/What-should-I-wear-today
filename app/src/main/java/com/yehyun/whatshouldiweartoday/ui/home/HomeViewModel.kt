@@ -47,7 +47,8 @@ data class DailyWeatherSummary(
     val maxFeelsLike: Double,
     val minFeelsLike: Double,
     val weatherCondition: String,
-    val precipitationProbability: Int
+    val precipitationProbability: Int,
+    val weatherIcon: String = "01d"
 )
 
 @SuppressLint("MissingPermission")
@@ -276,7 +277,17 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             forecasts.any { it.weather.any { w -> w.main.equals("Snow", true) } } -> "눈"
             else -> forecasts.first().weather.first().description
         }
-        return DailyWeatherSummary("", maxTemp, minTemp, maxFeelsLike, minFeelsLike, weatherCondition, pop)
+        val weatherIcon = getRepresentativeIcon(forecasts)
+        return DailyWeatherSummary("", maxTemp, minTemp, maxFeelsLike, minFeelsLike, weatherCondition, pop, weatherIcon)
+    }
+
+    private fun getRepresentativeIcon(forecasts: List<Forecast>): String {
+        val priority = listOf("11", "13", "10", "09", "50", "04", "03", "02", "01")
+        for (prefix in priority) {
+            val found = forecasts.firstOrNull { f -> f.weather.any { w -> w.icon.startsWith(prefix) } }
+            if (found != null) return found.weather.first { it.icon.startsWith(prefix) }.icon
+        }
+        return forecasts.firstOrNull()?.weather?.firstOrNull()?.icon ?: "01d"
     }
 
     fun generateRecommendation(summary: DailyWeatherSummary, allClothes: List<ClothingItem>, isToday: Boolean = true): RecommendationResult {
