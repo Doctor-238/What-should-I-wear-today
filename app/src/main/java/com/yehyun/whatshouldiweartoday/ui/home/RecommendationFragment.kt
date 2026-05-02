@@ -111,6 +111,8 @@ class RecommendationFragment : Fragment(R.layout.fragment_recommendation) {
 
         view.findViewById<TextView>(R.id.tv_max_feels_like).text = String.format(Locale.KOREAN, "체감 %.1f°", summary.maxFeelsLike)
         view.findViewById<TextView>(R.id.tv_min_feels_like).text = String.format(Locale.KOREAN, "체감 %.1f°", summary.minFeelsLike)
+
+        view.findViewById<WeatherAnimView>(R.id.wav_weather)?.setWeatherFromIcon(summary.weatherIcon)
     }
 
     private fun setRecommendationVisibility(view: View, show: Boolean) {
