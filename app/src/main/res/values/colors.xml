@@ -125,4 +125,15 @@
     <color name="info_card_amber_end">#FFF5E6</color>
     <color name="info_card_coral_start">#FFF5F3</color>
     <color name="info_card_coral_end">#FFECE8</color>
+
+    <!-- Mall redesign colors -->
+    <color name="mall_accent">#FF4E6A</color>
+    <color name="mall_accent_light">#FFF0F3</color>
+    <color name="mall_header_start">#1A1A2E</color>
+    <color name="mall_header_end">#252545</color>
+    <color name="mall_star_gold">#FFB800</color>
+    <color name="mall_free_ship_text">#00A86B</color>
+    <color name="mall_bg">#F5F5F7</color>
+    <color name="mall_new_badge">#7B61FF</color>
+    <color name="mall_original_price">#AAAAAA</color>
 </resources>

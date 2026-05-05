@@ -32,10 +32,10 @@ class WeatherAnimView @JvmOverloads constructor(
     private var precipStartMs = 0L
     private var precipPeriodMs = 750f
 
-    private val sunRotAnim    = anim(18000L, 0f, 360f, LinearInterpolator()) { sunRot = it }
+    private val sunRotAnim    = anim(36000L, 0f, 360f, LinearInterpolator()) { sunRot = it }
     private val sunPulseAnim  = anim(2200L, 1f, 1.08f, AccelerateDecelerateInterpolator(), reverse = true) { sunScale = it }
-    private val cloudAnim     = anim(4500L, 0f, (2.0 * PI).toFloat(), LinearInterpolator()) { cloudSin = sin(it.toDouble()).toFloat() }
-    private val decorAnim     = anim(7000L, 0f, (2.0 * PI).toFloat(), LinearInterpolator()) { decorAngle = it }
+    private val cloudAnim     = anim(9000L, 0f, (2.0 * PI).toFloat(), LinearInterpolator()) { cloudSin = sin(it.toDouble()).toFloat() }
+    private val decorAnim     = anim(14000L, 0f, (2.0 * PI).toFloat(), LinearInterpolator()) { decorAngle = it }
     private val rainAnim      = anim(16L, 0f, 1f, LinearInterpolator()) { }   // invalidate trigger only
     private val snowAnim      = anim(16L, 0f, 1f, LinearInterpolator()) { }   // invalidate trigger only
     private val lightningAnim = anim(4500L, 0f, 1f, LinearInterpolator()) { lightningPhase = it }
@@ -164,8 +164,8 @@ class WeatherAnimView @JvmOverloads constructor(
     private fun drawDecorativeClouds(canvas: Canvas) {
         val r = 20f * dp
         // Top and bottom clouds use different phase offsets → out-of-sync movement
-        val swayTop = sin(decorAngle.toDouble()).toFloat() * dp * 22f
-        val swayBot = sin(decorAngle.toDouble() + PI * 0.6).toFloat() * dp * 22f
+        val swayTop = sin(decorAngle.toDouble()).toFloat() * dp * 33f
+        val swayBot = sin(decorAngle.toDouble() + PI * 0.6).toFloat() * dp * 33f
         cloud(canvas, w * 0.73f + swayTop, r * 1.05f, r, Color.WHITE, 150)
         val rb = r * 0.76f
         cloud(canvas, w * 0.27f - swayBot, h - rb * 1.10f, rb, Color.WHITE, 80)
