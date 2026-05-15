@@ -17,7 +17,6 @@
         android:layout_height="wrap_content"
         android:background="?android:attr/selectableItemBackground"
         android:clipToPadding="false"
-        android:clipChildren="false"
         android:paddingHorizontal="16dp"
         android:paddingTop="14dp"
         android:paddingBottom="14dp">
@@ -42,7 +41,6 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
             android:clipToPadding="false"
-            android:clipChildren="false"
             android:paddingVertical="8dp"
             android:orientation="horizontal"
             app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"

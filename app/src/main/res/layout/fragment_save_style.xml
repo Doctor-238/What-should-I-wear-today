@@ -46,7 +46,6 @@
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:clipToPadding="false"
-            android:clipChildren="false"
             android:paddingBottom="16dp">
 
             <com.google.android.material.textfield.TextInputLayout
@@ -190,7 +189,6 @@
                 android:paddingTop="8dp"
                 android:paddingBottom="4dp"
                 android:clipToPadding="false"
-                android:clipChildren="false"
                 app:layoutManager="androidx.recyclerview.widget.GridLayoutManager"
                 app:spanCount="4"
                 tools:listitem="@layout/item_clothing_selectable"/>
