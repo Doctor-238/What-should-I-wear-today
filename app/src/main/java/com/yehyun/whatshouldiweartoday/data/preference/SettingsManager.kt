@@ -174,7 +174,7 @@ class SettingsManager(context: Context) {
     }
 
     fun getAiModelName(): String {
-        return if (aiModel == AI_MODEL_FAST) "gemini-2.5-flash-lite" else "gemini-2.5-flash"
+        return if (aiModel == AI_MODEL_FAST) "gemini-3.5-flash" else "gemini-2.5-flash"
     }
 
     fun resetToDefaults() {
