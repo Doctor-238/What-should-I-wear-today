@@ -172,7 +172,7 @@ class SettingsFragment : Fragment(), OnTabReselectedListener {
                 when (result) {
                     is BodyAnalysisState.Success -> {
                         updateBodyStatus()
-                        showToast("체형이 등록되었습니다.")
+                        showToast("사이즈가 등록되었습니다.")
                     }
                     is BodyAnalysisState.Error -> {
                         showToast(result.message, Toast.LENGTH_LONG)
@@ -194,7 +194,7 @@ class SettingsFragment : Fragment(), OnTabReselectedListener {
 
     private fun showBodyPhotoSourceDialog() {
         AlertDialog.Builder(requireContext())
-            .setTitle("체형 사진 선택")
+            .setTitle("사이즈 사진 선택")
             .setItems(arrayOf("카메라", "갤러리")) { _, which ->
                 when (which) {
                     0 -> {
@@ -243,7 +243,7 @@ class SettingsFragment : Fragment(), OnTabReselectedListener {
         layout.addView(editWaist)
 
         AlertDialog.Builder(requireContext())
-            .setTitle("체형 수동 입력")
+            .setTitle("사이즈 수동 입력")
             .setView(layout)
             .setPositiveButton("저장") { _, _ ->
                 val height = editHeight.text.toString().toFloatOrNull()
@@ -257,7 +257,7 @@ class SettingsFragment : Fragment(), OnTabReselectedListener {
                     settingsManager.estimatedWaist = if (waistRaw.isEmpty()) 0f else (waist ?: 0f)
                     updateBodyStatus()
                     mainViewModel.notifySettingsChanged()
-                    showToast("체형이 등록되었습니다.")
+                    showToast("사이즈가 등록되었습니다.")
                 } else {
                     showToast("올바른 값을 입력해주세요.")
                 }

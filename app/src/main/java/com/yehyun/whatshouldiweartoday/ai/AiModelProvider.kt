@@ -12,6 +12,11 @@ object AiModelProvider {
     private var instance: GenerativeModel? = null
     private var currentModelName: String? = null
 
+    @Volatile
+    private var bodyAnalysisInstance: GenerativeModel? = null
+    private var bodyAnalysisApiKey: String? = null
+    private var bodyAnalysisModelName: String? = null
+
     @Synchronized
     fun getModel(context: Context, apiKey: String): GenerativeModel {
         val settingsManager = SettingsManager(context)
@@ -29,5 +34,21 @@ object AiModelProvider {
             )
         }
         return instance!!
+    }
+
+    @Synchronized
+    fun getBodyAnalysisModel(apiKey: String): GenerativeModel {
+        if (bodyAnalysisInstance == null || bodyAnalysisApiKey != apiKey) {
+            bodyAnalysisApiKey = apiKey
+            val config = GenerationConfig.Builder().apply {
+                responseMimeType = "application/json"
+            }.build()
+            bodyAnalysisInstance = GenerativeModel(
+                modelName = "gemini-3.1-flash-lite",
+                apiKey = apiKey,
+                generationConfig = config
+            )
+        }
+        return bodyAnalysisInstance!!
     }
 }

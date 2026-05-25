@@ -26,7 +26,9 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import java.io.IOException
+import java.time.Duration
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import kotlin.math.abs
 
@@ -272,10 +274,19 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         val maxFeelsLike = forecasts.maxOf { it.main.feels_like }
         val minFeelsLike = forecasts.minOf { it.main.feels_like }
         val pop = (forecasts.maxOf { it.pop } * 100).toInt()
+        val now = LocalDateTime.now()
+        val dtFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+        val representativeForecast = forecasts.minByOrNull { forecast ->
+            abs(Duration.between(now, LocalDateTime.parse(forecast.dt_txt, dtFormatter)).toMinutes())
+        } ?: forecasts.first()
+        val representativeTime = LocalDateTime.parse(representativeForecast.dt_txt, dtFormatter)
+        val futureForecasts = forecasts.filter {
+            !LocalDateTime.parse(it.dt_txt, dtFormatter).isBefore(representativeTime)
+        }
         val weatherCondition = when {
-            forecasts.any { it.weather.any { w -> w.main.equals("Rain", true) } } -> "비"
-            forecasts.any { it.weather.any { w -> w.main.equals("Snow", true) } } -> "눈"
-            else -> forecasts.first().weather.first().description
+            futureForecasts.any { it.weather.any { w -> w.main.equals("Rain", true) } } -> "비"
+            futureForecasts.any { it.weather.any { w -> w.main.equals("Snow", true) } } -> "눈"
+            else -> representativeForecast.weather.first().description
         }
         val weatherIcon = getRepresentativeIcon(forecasts)
         return DailyWeatherSummary("", maxTemp, minTemp, maxFeelsLike, minFeelsLike, weatherCondition, pop, weatherIcon)
