@@ -123,9 +123,14 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
             val result = analysisJob.await()
             _isAiAnalyzing.postValue(false)
 
-            if (result == null || !result.is_wearable) {
+            if (result == null) {
                 withContext(Dispatchers.Main) {
-                    _errorMessage.value = "올바른 사진을 입력해주세요."
+                    _errorMessage.value = "분석 중 오류가 발생했습니다. 다시 시도해주세요."
+                    resetAllState()
+                }
+            } else if (!result.is_wearable) {
+                withContext(Dispatchers.Main) {
+                    _errorMessage.value = "의류가 감지되지 않았습니다. 의류 사진을 사용해주세요."
                     resetAllState()
                 }
             } else {
@@ -295,7 +300,7 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
                 )
                 fitLevelText.postValue(level)
             } else {
-                fitLevelText.postValue("설정에서 체형을 등록해주세요")
+                fitLevelText.postValue("설정에서 사이즈를 등록해주세요")
             }
         } else {
             fitLevelText.postValue("")
