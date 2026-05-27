@@ -191,6 +191,13 @@
             app:exitAnim="@anim/exit_to_left"
             app:popEnterAnim="@anim/pop_enter_from_left"
             app:popExitAnim="@anim/pop_exit_to_right"/>
+        <action
+            android:id="@+id/action_mallMainFragment_to_wishlistFragment"
+            app:destination="@id/wishlistFragment"
+            app:enterAnim="@anim/enter_from_right"
+            app:exitAnim="@anim/exit_to_left"
+            app:popEnterAnim="@anim/pop_enter_from_left"
+            app:popExitAnim="@anim/pop_exit_to_right"/>
     </fragment>
 
     <fragment
@@ -251,13 +258,35 @@
         android:id="@+id/mallRecommendationFragment"
         android:name="com.yehyun.whatshouldiweartoday.ui.mall.MallRecommendationFragment"
         android:label="MallRecommendationFragment"
-        tools:layout="@layout/fragment_mall_recommendation"/>
+        tools:layout="@layout/fragment_mall_recommendation">
+        <action
+            android:id="@+id/action_mallRecommendationFragment_to_mallItemDetailFragment"
+            app:destination="@id/mallItemDetailFragment"
+            app:enterAnim="@anim/enter_from_right"
+            app:exitAnim="@anim/exit_to_left"
+            app:popEnterAnim="@anim/pop_enter_from_left"
+            app:popExitAnim="@anim/pop_exit_to_right"/>
+    </fragment>
 
     <fragment
         android:id="@+id/cartFragment"
         android:name="com.yehyun.whatshouldiweartoday.ui.mall.CartFragment"
         android:label="CartFragment"
         tools:layout="@layout/fragment_cart"/>
+
+    <fragment
+        android:id="@+id/wishlistFragment"
+        android:name="com.yehyun.whatshouldiweartoday.ui.mall.WishlistFragment"
+        android:label="WishlistFragment"
+        tools:layout="@layout/fragment_wishlist">
+        <action
+            android:id="@+id/action_wishlistFragment_to_mallItemDetailFragment"
+            app:destination="@id/mallItemDetailFragment"
+            app:enterAnim="@anim/enter_from_right"
+            app:exitAnim="@anim/exit_to_left"
+            app:popEnterAnim="@anim/pop_enter_from_left"
+            app:popExitAnim="@anim/pop_exit_to_right"/>
+    </fragment>
 
     <fragment
         android:id="@+id/shoppingWebViewFragment"

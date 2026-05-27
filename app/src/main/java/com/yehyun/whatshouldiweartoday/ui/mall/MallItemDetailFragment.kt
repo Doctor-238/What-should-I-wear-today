@@ -22,6 +22,7 @@ import com.yehyun.whatshouldiweartoday.data.database.AppDatabase
 import com.yehyun.whatshouldiweartoday.data.database.ClothingItem
 import com.yehyun.whatshouldiweartoday.data.database.mall.MallDatabase
 import com.yehyun.whatshouldiweartoday.data.database.mall.MallItem
+import com.yehyun.whatshouldiweartoday.data.preference.SettingsManager
 import com.yehyun.whatshouldiweartoday.databinding.FragmentMallItemDetailBinding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -40,7 +41,6 @@ class MallItemDetailFragment : Fragment() {
     private val cartViewModel: CartViewModel by activityViewModels()
     private var mallItem: MallItem? = null
     private var selectedSize: String? = null
-    private var isWishlisted = false
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentMallItemDetailBinding.inflate(inflater, container, false)
@@ -162,20 +162,7 @@ class MallItemDetailFragment : Fragment() {
             binding.viewColorChip.setBackgroundColor(Color.LTGRAY)
         }
 
-        // Fit info
-        val fitParts = mutableListOf<String>()
-        if (item.fitMinHeight != null && item.fitMaxHeight != null)
-            fitParts.add("신장 %.0f~%.0fcm".format(item.fitMinHeight, item.fitMaxHeight))
-        if (item.fitMinWeight != null && item.fitMaxWeight != null)
-            fitParts.add("체중 %.0f~%.0fkg".format(item.fitMinWeight, item.fitMaxWeight))
-        if (item.fitMinWaist != null && item.fitMaxWaist != null)
-            fitParts.add("허리 %.0f~%.0f인치".format(item.fitMinWaist, item.fitMaxWaist))
-        if (fitParts.isNotEmpty()) {
-            binding.layoutFit.visibility = View.VISIBLE
-            binding.tvFitInfo.text = fitParts.joinToString(" · ")
-        } else {
-            binding.layoutFit.visibility = View.GONE
-        }
+        binding.layoutFit.visibility = View.GONE
 
         // Purpose
         val purposes = item.purposes.split(",").filter { it.isNotBlank() }
@@ -209,12 +196,16 @@ class MallItemDetailFragment : Fragment() {
         }
 
         // Wishlist button
+        val settings = SettingsManager(requireContext())
+        binding.ivWishlistBtn.setImageResource(
+            if (settings.isWishlisted(item.id)) R.drawable.ic_heart_filled else R.drawable.ic_heart_outline
+        )
         binding.btnWishlist.setOnClickListener {
-            isWishlisted = !isWishlisted
+            val added = settings.toggleWishlist(item.id)
             binding.ivWishlistBtn.setImageResource(
-                if (isWishlisted) R.drawable.ic_heart_filled else R.drawable.ic_heart_outline
+                if (added) R.drawable.ic_heart_filled else R.drawable.ic_heart_outline
             )
-            val msg = if (isWishlisted) "위시리스트에 추가했습니다" else "위시리스트에서 제거했습니다"
+            val msg = if (added) "위시리스트에 추가했습니다" else "위시리스트에서 제거했습니다"
             Toast.makeText(requireContext(), msg, Toast.LENGTH_SHORT).show()
         }
 

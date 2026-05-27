@@ -164,6 +164,8 @@ class ClothingAdapter(
             if (!settingsManager.bodyFitEnabled || !settingsManager.bodyFitBorderEnabled || !settingsManager.isBodyRegistered) {
                 return defaultColor
             }
+            // 상의/하의/아우터 외 카테고리는 테두리 표시 안 함
+            if (item.category !in AddClothingViewModel.SIZE_CATEGORIES) return defaultColor
             val level = AddClothingViewModel.calculateFitLevel(
                 settingsManager.estimatedHeight, settingsManager.estimatedWeight, settingsManager.estimatedWaist,
                 item.fitMinHeight, item.fitMaxHeight,

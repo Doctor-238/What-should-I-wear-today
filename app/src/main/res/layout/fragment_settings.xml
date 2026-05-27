@@ -604,6 +604,61 @@
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintTop_toBottomOf="@id/divider_body_1"/>
 
+                <!-- 사이즈 표기 방식 -->
+                <View
+                    android:id="@+id/divider_body_notation"
+                    android:layout_width="0dp"
+                    android:layout_height="1dp"
+                    android:layout_marginTop="14dp"
+                    android:background="@color/divider_color"
+                    android:visibility="gone"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/switch_body_border"/>
+
+                <TextView
+                    android:id="@+id/tv_size_notation_label"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:text="사이즈 표기"
+                    android:textColor="@color/text_primary"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:visibility="gone"
+                    app:layout_constraintBottom_toBottomOf="@id/spinner_size_notation_container"
+                    app:layout_constraintEnd_toStartOf="@id/spinner_size_notation_container"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="@id/spinner_size_notation_container"/>
+
+                <FrameLayout
+                    android:id="@+id/spinner_size_notation_container"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:background="@drawable/bg_settings_spinner"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:elevation="3dp"
+                    android:visibility="gone"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/divider_body_notation">
+
+                    <Spinner
+                        android:id="@+id/spinner_size_notation"
+                        android:layout_width="160dp"
+                        android:layout_height="42dp"
+                        android:background="@android:color/transparent"
+                        android:gravity="center"
+                        android:spinnerMode="dropdown"/>
+
+                    <ImageView
+                        android:layout_width="16dp"
+                        android:layout_height="16dp"
+                        android:layout_gravity="end|center_vertical"
+                        android:layout_marginEnd="14dp"
+                        android:src="@drawable/ic_dropdown_arrow"/>
+                </FrameLayout>
+
                 <!-- 체형 등록 섹션 (사진 + 수동 입력 통합) -->
                 <View
                     android:id="@+id/divider_body_2"
@@ -614,7 +669,7 @@
                     android:visibility="gone"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@id/switch_body_border"/>
+                    app:layout_constraintTop_toBottomOf="@id/spinner_size_notation_container"/>
 
                 <TextView
                     android:id="@+id/tv_body_label"

@@ -466,6 +466,65 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
                 else -> 5
             }
         }
+
+        // 상의/아우터: (height-155)/5 + (weight-45)/8 로 사이즈 스코어 계산
+        private fun topSizeScore(height: Double, weight: Double) =
+            (height - 155.0) / 5.0 + (weight - 45.0) / 8.0
+
+        private fun topLetterSize(height: Double, weight: Double): String {
+            val s = topSizeScore(height, weight)
+            return when { s < 1.0 -> "XS"; s < 2.5 -> "S"; s < 4.0 -> "M"; s < 5.5 -> "L"; s < 7.0 -> "XL"; else -> "XXL" }
+        }
+
+        private fun topNumericSize(height: Double, weight: Double): String {
+            val s = topSizeScore(height, weight)
+            return when { s < 1.0 -> "85"; s < 2.5 -> "90"; s < 4.0 -> "95"; s < 5.5 -> "100"; s < 7.0 -> "105"; else -> "110" }
+        }
+
+        // 하의: 허리 우선, 없으면 체중으로 추정
+        private fun bottomWaistEstimate(weight: Double) = weight * 1.0 + 12.0
+
+        private fun bottomLetterSize(weight: Double, waist: Double?): String {
+            val w = waist ?: bottomWaistEstimate(weight)
+            return when { w < 65.0 -> "XS"; w < 70.0 -> "S"; w < 77.0 -> "M"; w < 84.0 -> "L"; w < 91.0 -> "XL"; else -> "XXL" }
+        }
+
+        private fun bottomNumericSize(weight: Double, waist: Double?): String {
+            val w = waist ?: bottomWaistEstimate(weight)
+            return when {
+                w < 67.0 -> "26"; w < 70.0 -> "27"; w < 73.0 -> "28"; w < 76.0 -> "29"
+                w < 79.0 -> "30"; w < 82.0 -> "31"; w < 85.0 -> "32"; w < 88.0 -> "33"; else -> "34"
+            }
+        }
+
+        /**
+         * 카테고리·신체 치수·표기 방식으로 사이즈 레이블 반환.
+         * 상의/아우터 → letter(XS~XXL) 또는 numeric(85~110)
+         * 하의 → letter(XS~XXL) 또는 numeric(26~34)
+         * 그 외 → null (표시하지 않음)
+         */
+        fun calculateSizeLabel(
+            category: String,
+            userHeight: Float,
+            userWeight: Float,
+            userWaist: Float,
+            notationType: String
+        ): String? {
+            val h = userHeight.toDouble()
+            val w = userWeight.toDouble()
+            val waist = if (userWaist > 0f) userWaist.toDouble() else null
+            return when {
+                category in listOf("상의", "아우터") ->
+                    if (notationType == com.yehyun.whatshouldiweartoday.data.preference.SettingsManager.SIZE_NOTATION_NUMERIC)
+                        topNumericSize(h, w) else topLetterSize(h, w)
+                category == "하의" ->
+                    if (notationType == com.yehyun.whatshouldiweartoday.data.preference.SettingsManager.SIZE_NOTATION_NUMERIC)
+                        bottomNumericSize(w, waist) else bottomLetterSize(w, waist)
+                else -> null
+            }
+        }
+
+        val SIZE_CATEGORIES = setOf("상의", "하의", "아우터")
     }
 
     fun refreshDisplayWithNewSettings() {

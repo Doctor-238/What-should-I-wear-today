@@ -98,6 +98,12 @@ class SettingsManager(context: Context) {
             prefs.edit().putBoolean(KEY_BODY_FIT_BORDER_ENABLED, value).commit()
         }
 
+    var sizeNotationType: String
+        get() = prefs.getString(KEY_SIZE_NOTATION, SIZE_NOTATION_LETTER) ?: SIZE_NOTATION_LETTER
+        set(value) {
+            prefs.edit().putString(KEY_SIZE_NOTATION, value).commit()
+        }
+
     var extendedForecastEnabled: Boolean
         get() = prefs.getBoolean(KEY_EXTENDED_FORECAST_ENABLED, false)
         set(value) {
@@ -177,6 +183,22 @@ class SettingsManager(context: Context) {
         return if (aiModel == AI_MODEL_FAST) "gemini-2.5-flash-lite" else "gemini-2.5-flash"
     }
 
+    var wishlistedItemIds: Set<String>
+        get() = prefs.getStringSet(KEY_WISHLISTED_ITEMS, emptySet()) ?: emptySet()
+        set(value) { prefs.edit().putStringSet(KEY_WISHLISTED_ITEMS, value).commit() }
+
+    fun isWishlisted(itemId: Int) = wishlistedItemIds.contains(itemId.toString())
+
+    /** 찜 토글. 추가됐으면 true, 제거됐으면 false 반환 */
+    fun toggleWishlist(itemId: Int): Boolean {
+        val ids = wishlistedItemIds.toMutableSet()
+        return if (ids.contains(itemId.toString())) {
+            ids.remove(itemId.toString()); wishlistedItemIds = ids; false
+        } else {
+            ids.add(itemId.toString()); wishlistedItemIds = ids; true
+        }
+    }
+
     fun resetToDefaults() {
         prefs.edit().clear().commit()
     }
@@ -197,10 +219,12 @@ class SettingsManager(context: Context) {
         private const val KEY_ESTIMATED_WAIST = "estimated_waist"
         private const val KEY_BODY_FIT_ENABLED = "body_fit_enabled"
         private const val KEY_BODY_FIT_BORDER_ENABLED = "body_fit_border_enabled"
+        private const val KEY_SIZE_NOTATION = "size_notation_type"
         private const val KEY_EXTENDED_FORECAST_ENABLED = "extended_forecast_enabled"
         private const val KEY_CLOTHING_PURPOSE_ENABLED = "clothing_purpose_enabled"
         private const val KEY_SELECTED_PURPOSE = "selected_purpose"
         private const val KEY_CUSTOM_PURPOSES = "custom_purposes"
+        private const val KEY_WISHLISTED_ITEMS = "wishlisted_item_ids"
 
         val DEFAULT_PURPOSES = listOf("격식있는 자리용", "일상용", "활동용", "데이트용", "집앞용")
 
@@ -211,5 +235,7 @@ class SettingsManager(context: Context) {
         const val AI_MODEL_ACCURATE = "accurate"
         const val SHOPPING_DETECTION_SENSITIVE = "sensitive"
         const val SHOPPING_DETECTION_NORMAL = "normal"
+        const val SIZE_NOTATION_LETTER = "letter"   // XS / S / M / L / XL / XXL
+        const val SIZE_NOTATION_NUMERIC = "numeric" // 상의:85~110, 하의:26~34
     }
 }
