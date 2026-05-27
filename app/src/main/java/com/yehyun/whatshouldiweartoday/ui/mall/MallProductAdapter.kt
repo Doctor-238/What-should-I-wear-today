@@ -15,16 +15,17 @@ import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.yehyun.whatshouldiweartoday.R
 import com.yehyun.whatshouldiweartoday.data.database.mall.MallItem
+import com.yehyun.whatshouldiweartoday.data.preference.SettingsManager
 import java.io.File
 import java.text.NumberFormat
 import java.util.Locale
 import kotlin.math.abs
 
 class MallProductAdapter(
-    private val onItemClick: (MallItem) -> Unit
+    private val settingsManager: SettingsManager,
+    private val onItemClick: (MallItem) -> Unit,
+    private val onWishlistToggled: ((MallItem, Boolean) -> Unit)? = null
 ) : ListAdapter<MallItem, MallProductAdapter.ViewHolder>(DIFF) {
-
-    private val wishlistSet = HashSet<Int>()
 
     companion object {
         private val DIFF = object : DiffUtil.ItemCallback<MallItem>() {
@@ -113,20 +114,17 @@ class MallProductAdapter(
             holder.viewColorBg.background = GradientDrawable().apply { setColor(color) }
         }
 
-        val isWishlisted = item.id in wishlistSet
+        val isWishlisted = settingsManager.isWishlisted(item.id)
         holder.ivWishlist.setImageResource(
             if (isWishlisted) R.drawable.ic_heart_filled else R.drawable.ic_heart_outline
         )
 
         holder.btnWishlist.setOnClickListener {
-            val nowWished = if (item.id in wishlistSet) {
-                wishlistSet.remove(item.id); false
-            } else {
-                wishlistSet.add(item.id); true
-            }
+            val nowWished = settingsManager.toggleWishlist(item.id)
             holder.ivWishlist.setImageResource(
                 if (nowWished) R.drawable.ic_heart_filled else R.drawable.ic_heart_outline
             )
+            onWishlistToggled?.invoke(item, nowWished)
         }
 
         holder.root.setOnClickListener { onItemClick(item) }

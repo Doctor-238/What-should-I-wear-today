@@ -66,6 +66,8 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
     private lateinit var buttonTempDecrease: ImageButton
     private lateinit var iconSpecialEdit: ImageView
     private lateinit var tvEditFitLevel: TextView
+    private lateinit var tvEditSizeLabel: TextView
+    private lateinit var dividerEditSizeFit: View
     private lateinit var layoutEditFitLevel: View
     private lateinit var dividerEditFitLevel: View
     private lateinit var tvEditTempHint: TextView
@@ -120,6 +122,8 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
         buttonTempDecrease = view.findViewById(R.id.button_edit_temp_decrease)
         iconSpecialEdit = view.findViewById(R.id.icon_special_edit)
         tvEditFitLevel = view.findViewById(R.id.tv_edit_fit_level)
+        tvEditSizeLabel = view.findViewById(R.id.tv_edit_size_label)
+        dividerEditSizeFit = view.findViewById(R.id.divider_edit_size_fit)
         layoutEditFitLevel = view.findViewById(R.id.layout_edit_fit_level)
         dividerEditFitLevel = view.findViewById(R.id.divider_edit_fit_level)
         tvEditTempHint = view.findViewById(R.id.tv_edit_temp_hint)
@@ -145,7 +149,7 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
 
             val title = saveMenuItem.title.toString()
             val spannable = SpannableString(title)
-            val color = if (canBeSaved) Color.parseColor("#88bfec") else Color.GRAY
+            val color = if (canBeSaved) Color.parseColor("#0EB4FC") else Color.GRAY
             spannable.setSpan(ForegroundColorSpan(color), 0, spannable.length, 0)
             spannable.setSpan(StyleSpan(Typeface.BOLD), 0, spannable.length, 0)
             saveMenuItem.title = spannable
@@ -262,6 +266,12 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
     }
 
     private fun updateFitLevelDisplay(item: ClothingItem) {
+        // 상의/하의/아우터 외 카테고리는 사이즈 행 자체를 숨긴다
+        if (item.category !in AddClothingViewModel.SIZE_CATEGORIES) {
+            layoutEditFitLevel.isVisible = false
+            dividerEditFitLevel.isVisible = false
+            return
+        }
         if (!settingsManager.bodyFitEnabled) {
             layoutEditFitLevel.isVisible = false
             dividerEditFitLevel.isVisible = false
@@ -276,11 +286,29 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
                 item.fitMinWeight, item.fitMaxWeight,
                 item.fitMinWaist, item.fitMaxWaist
             )
+            val sizeLabel = AddClothingViewModel.calculateSizeLabel(
+                item.category,
+                settingsManager.estimatedHeight, settingsManager.estimatedWeight, settingsManager.estimatedWaist,
+                settingsManager.sizeNotationType
+            )
+            // 적합여부(왼쪽, 컬러) │ 사이즈(오른쪽, 기본색)
+            val levelColorRes = if (level == AddClothingViewModel.FIT_NO_INFO)
+                R.color.text_tertiary else AddClothingFragment.fitLevelColorRes(level)
             tvEditFitLevel.text = level
-            tvEditFitLevel.setTextColor(ContextCompat.getColor(requireContext(), AddClothingFragment.fitLevelColorRes(level)))
+            tvEditFitLevel.setTextColor(ContextCompat.getColor(requireContext(), levelColorRes))
+            if (sizeLabel != null) {
+                dividerEditSizeFit.isVisible = true
+                tvEditSizeLabel.isVisible = true
+                tvEditSizeLabel.text = sizeLabel
+            } else {
+                dividerEditSizeFit.isVisible = false
+                tvEditSizeLabel.isVisible = false
+            }
         } else {
-            tvEditFitLevel.text = "설정에서 체형을 등록해주세요"
+            tvEditFitLevel.text = "설정에서 사이즈를 등록해주세요"
             tvEditFitLevel.setTextColor(ContextCompat.getColor(requireContext(), R.color.text_tertiary))
+            dividerEditSizeFit.isVisible = false
+            tvEditSizeLabel.isVisible = false
         }
     }
 

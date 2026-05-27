@@ -302,6 +302,15 @@ class SettingsFragment : Fragment(), OnTabReselectedListener {
         binding.spinnerShoppingDetection.setSelection(
             if (settingsManager.shoppingDetectionSensitivity == SettingsManager.SHOPPING_DETECTION_SENSITIVE) 0 else 1
         )
+
+        val sizeNotationOptions = listOf("글자 (XS ~ XXL)", "숫자 (85~110)")
+        val sizeNotationAdapter = ArrayAdapter(requireContext(), R.layout.spinner_item_centered, sizeNotationOptions).apply {
+            setDropDownViewResource(R.layout.spinner_dropdown_item)
+        }
+        binding.spinnerSizeNotation.adapter = sizeNotationAdapter
+        binding.spinnerSizeNotation.setSelection(
+            if (settingsManager.sizeNotationType == SettingsManager.SIZE_NOTATION_LETTER) 0 else 1
+        )
     }
 
     private fun setupSliders() {
@@ -355,6 +364,9 @@ class SettingsFragment : Fragment(), OnTabReselectedListener {
         binding.dividerBody1.isVisible = enabled
         binding.tvBodyBorderLabel.isVisible = enabled
         binding.switchBodyBorder.isVisible = enabled
+        binding.dividerBodyNotation.isVisible = enabled
+        binding.tvSizeNotationLabel.isVisible = enabled
+        binding.spinnerSizeNotationContainer.isVisible = enabled
         binding.dividerBody2.isVisible = enabled
         binding.tvBodyLabel.isVisible = enabled
         binding.tvBodyStatus.isVisible = enabled
@@ -500,6 +512,15 @@ class SettingsFragment : Fragment(), OnTabReselectedListener {
             override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
                 settingsManager.shoppingDetectionSensitivity = if (position == 0) SettingsManager.SHOPPING_DETECTION_SENSITIVE else SettingsManager.SHOPPING_DETECTION_NORMAL
                 updateShoppingDetectionLabel(settingsManager.shoppingDetectionSensitivity)
+            }
+            override fun onNothingSelected(p0: AdapterView<*>?) {}
+        }
+
+        binding.spinnerSizeNotationContainer.setOnClickListener { binding.spinnerSizeNotation.performClick() }
+        binding.spinnerSizeNotation.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                settingsManager.sizeNotationType = if (position == 0) SettingsManager.SIZE_NOTATION_LETTER else SettingsManager.SIZE_NOTATION_NUMERIC
+                mainViewModel.notifySettingsChanged()
             }
             override fun onNothingSelected(p0: AdapterView<*>?) {}
         }

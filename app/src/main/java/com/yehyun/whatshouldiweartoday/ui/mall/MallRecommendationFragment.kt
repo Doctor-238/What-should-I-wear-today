@@ -156,21 +156,26 @@ class MallRecommendationFragment : Fragment() {
             if (result == null) return@observe
             binding.layoutResults.visibility = View.VISIBLE
 
+            val onItemClick: (MallItem) -> Unit = { item ->
+                val bundle = android.os.Bundle().apply { putInt("mall_item_id", item.id) }
+                findNavController().navigate(R.id.action_mallRecommendationFragment_to_mallItemDetailFragment, bundle)
+            }
+
             if (result.tops.isNotEmpty()) {
                 binding.sectionTops.visibility = View.VISIBLE
-                topsAdapter = MallRecommendationResultAdapter(result.tops) {}
+                topsAdapter = MallRecommendationResultAdapter(result.tops, onItemClick) {}
                 binding.rvTops.adapter = topsAdapter
             } else binding.sectionTops.visibility = View.GONE
 
             if (result.bottoms.isNotEmpty()) {
                 binding.sectionBottoms.visibility = View.VISIBLE
-                bottomsAdapter = MallRecommendationResultAdapter(result.bottoms) {}
+                bottomsAdapter = MallRecommendationResultAdapter(result.bottoms, onItemClick) {}
                 binding.rvBottoms.adapter = bottomsAdapter
             } else binding.sectionBottoms.visibility = View.GONE
 
             if (result.outers.isNotEmpty()) {
                 binding.sectionOuters.visibility = View.VISIBLE
-                outersAdapter = MallRecommendationResultAdapter(result.outers) {}
+                outersAdapter = MallRecommendationResultAdapter(result.outers, onItemClick) {}
                 binding.rvOuters.adapter = outersAdapter
             } else binding.sectionOuters.visibility = View.GONE
 

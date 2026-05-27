@@ -17,6 +17,7 @@ import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.GridLayoutManager
 import com.yehyun.whatshouldiweartoday.R
+import com.yehyun.whatshouldiweartoday.data.preference.SettingsManager
 import com.yehyun.whatshouldiweartoday.databinding.FragmentMallMainBinding
 import com.yehyun.whatshouldiweartoday.ui.OnTabReselectedListener
 
@@ -49,10 +50,13 @@ class MallMainFragment : Fragment(), OnTabReselectedListener {
     }
 
     private fun setupRecyclerView() {
-        adapter = MallProductAdapter { item ->
-            val bundle = Bundle().apply { putInt("mall_item_id", item.id) }
-            findNavController().navigate(R.id.action_mallMainFragment_to_mallItemDetailFragment, bundle)
-        }
+        adapter = MallProductAdapter(
+            settingsManager = SettingsManager(requireContext()),
+            onItemClick = { item ->
+                val bundle = Bundle().apply { putInt("mall_item_id", item.id) }
+                findNavController().navigate(R.id.action_mallMainFragment_to_mallItemDetailFragment, bundle)
+            }
+        )
         binding.rvProducts.layoutManager = GridLayoutManager(requireContext(), 2)
         binding.rvProducts.adapter = adapter
     }
@@ -106,6 +110,10 @@ class MallMainFragment : Fragment(), OnTabReselectedListener {
 
     private fun setupClickListeners() {
         binding.ivBack.setOnClickListener { findNavController().popBackStack() }
+
+        binding.btnWishlist.setOnClickListener {
+            findNavController().navigate(R.id.action_mallMainFragment_to_wishlistFragment)
+        }
 
         binding.btnCart.setOnClickListener {
             findNavController().navigate(R.id.action_mallMainFragment_to_cartFragment)
@@ -192,6 +200,7 @@ class MallMainFragment : Fragment(), OnTabReselectedListener {
     override fun onResume() {
         super.onResume()
         binding.layoutAdminBanner.visibility = if (MallAdminManager.isLoggedIn) View.VISIBLE else View.GONE
+        adapter.notifyDataSetChanged()
     }
 
     override fun onTabReselected() {

@@ -57,15 +57,15 @@ class MallRecommendationViewModel(application: Application) : AndroidViewModel(a
 
             fun matchTemp(item: MallItem) = avgTemp in item.suitableMinTemp..item.suitableMaxTemp
 
-            fun fitScore(item: MallItem): Int {
-                if (!fitEnabled) return 0
+            fun sizeFilter(item: MallItem): Boolean {
+                if (!fitEnabled) return true
                 val level = AddClothingViewModel.calculateFitLevel(
                     userHeight.toFloat(), userWeight.toFloat(), userWaist.toFloat(),
                     item.fitMinHeight, item.fitMaxHeight,
                     item.fitMinWeight, item.fitMaxWeight,
                     item.fitMinWaist, item.fitMaxWaist
                 )
-                return AddClothingViewModel.fitLevelToOrder(level)
+                return level != AddClothingViewModel.FIT_BAD && level != AddClothingViewModel.FIT_VERY_BAD
             }
 
             fun purposeScore(item: MallItem): Int {
@@ -77,10 +77,10 @@ class MallRecommendationViewModel(application: Application) : AndroidViewModel(a
             val max = maxItemsPerCategory
 
             fun filterAndSort(category: String): List<MallItem> {
-                return allItems
-                    .filter { it.category == category && matchTemp(it) }
-                    .sortedWith(compareBy({ purposeScore(it) }, { fitScore(it) }))
-                    .take(max)
+                val tempMatched = allItems.filter { it.category == category && matchTemp(it) }
+                val sizeFiltered = tempMatched.filter { sizeFilter(it) }
+                val base = if (sizeFiltered.isNotEmpty()) sizeFiltered else tempMatched
+                return base.sortedBy { purposeScore(it) }.take(max)
             }
 
             val tops = if (recommendTops) filterAndSort("상의") else emptyList()
