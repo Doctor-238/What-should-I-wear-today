@@ -104,7 +104,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     companion object {
         private const val SIGNIFICANT_TEMP_DIFFERENCE = 12.0
         // OpenWeatherMap 5일/3시간 forecast 기준: 오늘(0) ~ 4일뒤(4) 까지 데이터 제공
-        const val MIN_EXTENDED_DAY = 3
+        const val MIN_EXTENDED_DAY = 2
         const val MAX_EXTENDED_DAY = 4
     }
 
@@ -215,7 +215,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             _tomorrowRecommendation.postValue(null)
         }
 
-        // 3일뒤 이후 데이터 수집 (OpenWeatherMap 5일/3시간: 최대 day+4)
+        // 2일뒤 이후 데이터 수집 (OpenWeatherMap 5일/3시간: 최대 day+4)
         extendedForecastsByOffset.clear()
         val available = mutableListOf<Int>()
         for (offset in MIN_EXTENDED_DAY..MAX_EXTENDED_DAY) {
