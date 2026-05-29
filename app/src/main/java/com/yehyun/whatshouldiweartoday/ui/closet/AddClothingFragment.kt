@@ -11,12 +11,14 @@ import android.net.Uri
 import android.os.Bundle
 import android.view.View
 import android.view.inputmethod.InputMethodManager
+import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.ProgressBar
 import android.widget.ScrollView
+import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
@@ -36,6 +38,7 @@ import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.switchmaterial.SwitchMaterial
 import com.google.android.material.textfield.TextInputEditText
 import com.yehyun.whatshouldiweartoday.R
+import com.yehyun.whatshouldiweartoday.data.preference.SettingsManager
 import com.yehyun.whatshouldiweartoday.ui.OnTabReselectedListener
 import kotlinx.serialization.Serializable
 import java.io.InputStream
@@ -84,7 +87,8 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabResel
     private lateinit var tvInfoPurpose: TextView
     private lateinit var layoutPurpose: View
     private lateinit var dividerPurpose: View
-
+    private lateinit var spinnerAddSize: Spinner
+    private lateinit var dividerAddSizeFit: View
 
     private lateinit var onBackPressedCallback: OnBackPressedCallback
 
@@ -183,6 +187,8 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabResel
         tvInfoPurpose = view.findViewById(R.id.tv_info_purpose)
         layoutPurpose = view.findViewById(R.id.layout_purpose)
         dividerPurpose = view.findViewById(R.id.divider_purpose)
+        spinnerAddSize = view.findViewById(R.id.spinner_add_size)
+        dividerAddSizeFit = view.findViewById(R.id.divider_add_size_fit)
     }
 
     private fun observeViewModel() {
@@ -239,6 +245,24 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabResel
         viewModel.categoryText.observe(viewLifecycleOwner) { text ->
             tvInfoCategory.text = text
             cardAiInfo.isVisible = text.isNotEmpty()
+            val isSizeCategory = text in AddClothingViewModel.SIZE_CATEGORIES
+            if (!isSizeCategory) {
+                layoutFitLevel.isVisible = false
+                dividerFitLevel.isVisible = false
+            } else if (cardAiInfo.isVisible) {
+                layoutFitLevel.isVisible = true
+                dividerFitLevel.isVisible = true
+                updateSizeSpinnerOptions(text)
+            }
+        }
+
+        viewModel.sizeLabelText.observe(viewLifecycleOwner) { sizeLabel ->
+            if (!sizeLabel.isNullOrEmpty()) {
+                val category = viewModel.categoryText.value ?: return@observe
+                val options = getSizeOptions(category)
+                val idx = options.indexOf(sizeLabel)
+                if (idx >= 0) spinnerAddSize.setSelection(idx)
+            }
         }
 
         viewModel.viewColor.observe(viewLifecycleOwner) { color ->
@@ -257,11 +281,11 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabResel
 
         viewModel.fitLevelText.observe(viewLifecycleOwner) { text ->
             if (text.isNullOrEmpty()) {
-                layoutFitLevel.isVisible = false
-                dividerFitLevel.isVisible = false
+                tvInfoFitLevel.isVisible = false
+                dividerAddSizeFit.isVisible = false
             } else {
-                layoutFitLevel.isVisible = true
-                dividerFitLevel.isVisible = true
+                tvInfoFitLevel.isVisible = true
+                dividerAddSizeFit.isVisible = true
                 tvInfoFitLevel.text = text
                 tvInfoFitLevel.setTextColor(ContextCompat.getColor(requireContext(), fitLevelColorRes(text)))
             }
@@ -337,7 +361,8 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabResel
         }
         val imm = context?.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
         imm?.hideSoftInputFromWindow(view?.windowToken, 0)
-        viewModel.saveClothingItem(name)
+        val selectedSize = if (layoutFitLevel.isVisible) spinnerAddSize.selectedItem as? String else null
+        viewModel.saveClothingItem(name, selectedSize)
     }
 
     private fun setupBackButtonHandler() {
@@ -376,6 +401,23 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabResel
     }
 
     override fun onTabReselected() { handleBackButton() }
+
+    private fun getSizeOptions(category: String): List<String> {
+        return AddClothingViewModel.getSizeList(category, SettingsManager(requireContext()).sizeNotationType)
+    }
+
+    private fun updateSizeSpinnerOptions(category: String) {
+        val options = getSizeOptions(category)
+        if (options.isEmpty()) return
+        val adapter = ArrayAdapter(requireContext(), R.layout.spinner_item_centered, options)
+        adapter.setDropDownViewResource(R.layout.spinner_dropdown_item)
+        spinnerAddSize.adapter = adapter
+        val calculatedSize = viewModel.sizeLabelText.value
+        if (!calculatedSize.isNullOrEmpty()) {
+            val idx = options.indexOf(calculatedSize)
+            if (idx >= 0) spinnerAddSize.setSelection(idx)
+        }
+    }
 
     companion object {
         fun fitLevelColorRes(level: String): Int {
