@@ -627,6 +627,7 @@ internal fun mallItemToClothingItem(item: MallItem): ClothingItem {
         fitMinWaist = item.fitMinWaist,
         fitMaxWaist = item.fitMaxWaist,
         purpose = purpose,
-        purchaseSource = "오늘 뭐 살래?"
+        purchaseSource = "오늘 뭐 살래?",
+        aiCategory = item.category
     )
 }

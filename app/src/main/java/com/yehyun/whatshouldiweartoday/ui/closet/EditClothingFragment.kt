@@ -13,11 +13,14 @@ import android.text.style.ForegroundColorSpan
 import android.text.style.StyleSpan
 import android.util.TypedValue
 import android.view.View
+import android.widget.AdapterView
+import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.RelativeLayout
 import android.widget.ScrollView
+import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
@@ -58,6 +61,7 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
     private lateinit var editTextName: TextInputEditText
     private lateinit var chipGroupCategory: ChipGroup
     private lateinit var buttonDelete: Button
+    private lateinit var buttonReset: Button
     private lateinit var toolbar: MaterialToolbar
     private lateinit var viewColorSwatch: View
     private lateinit var layoutBackgroundRemoval: RelativeLayout
@@ -66,10 +70,12 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
     private lateinit var buttonTempDecrease: ImageButton
     private lateinit var iconSpecialEdit: ImageView
     private lateinit var tvEditFitLevel: TextView
-    private lateinit var tvEditSizeLabel: TextView
+    private lateinit var spinnerEditSize: Spinner
     private lateinit var dividerEditSizeFit: View
     private lateinit var layoutEditFitLevel: View
     private lateinit var dividerEditFitLevel: View
+    private var isBindingSpinner = false
+    private var spinnerBindingGeneration = 0
     private lateinit var tvEditTempHint: TextView
     private lateinit var tvEditPurpose: TextView
     private lateinit var layoutEditPurpose: View
@@ -79,7 +85,10 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
 
     override fun onResume() {
         super.onResume()
-        viewModel.currentClothingItem.value?.let { updateTemperatureDisplay(it) }
+        viewModel.currentClothingItem.value?.let {
+            updateTemperatureDisplay(it)
+            updateFitLevelDisplay(it)
+        }
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -115,6 +124,7 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
         editTextName = view.findViewById(R.id.editText_edit_name)
         chipGroupCategory = view.findViewById(R.id.chipGroup_edit_category)
         buttonDelete = view.findViewById(R.id.button_delete)
+        buttonReset = view.findViewById(R.id.button_reset)
         toolbar = view.findViewById(R.id.toolbar_edit)
         viewColorSwatch = view.findViewById(R.id.view_color_swatch_edit)
         layoutBackgroundRemoval = view.findViewById(R.id.layout_background_removal)
@@ -122,7 +132,7 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
         buttonTempDecrease = view.findViewById(R.id.button_edit_temp_decrease)
         iconSpecialEdit = view.findViewById(R.id.icon_special_edit)
         tvEditFitLevel = view.findViewById(R.id.tv_edit_fit_level)
-        tvEditSizeLabel = view.findViewById(R.id.tv_edit_size_label)
+        spinnerEditSize = view.findViewById(R.id.spinner_edit_size)
         dividerEditSizeFit = view.findViewById(R.id.divider_edit_size_fit)
         layoutEditFitLevel = view.findViewById(R.id.layout_edit_fit_level)
         dividerEditFitLevel = view.findViewById(R.id.divider_edit_fit_level)
@@ -163,6 +173,8 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
             val isSavable = !isProcessing && (viewModel.canBeSaved.value == true)
             toolbar.menu.findItem(R.id.menu_save)?.isEnabled = isSavable
             buttonDelete.isEnabled = !isProcessing
+            viewModel.currentClothingItem.value?.let { updateResetButtonState(it) }
+                ?: run { buttonReset.isEnabled = false }
 
             if (isProcessing) {
                 toolbar.navigationIcon = null
@@ -213,7 +225,7 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
 
         for (i in 0 until chipGroupCategory.childCount) {
             val chip = chipGroupCategory.getChildAt(i) as Chip
-            if (chip.text == item.category) {
+            if (chip.text.toString() == item.category) {
                 chip.isChecked = true
                 break
             }
@@ -226,6 +238,7 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
         updateFitLevelDisplay(item)
         updatePurposeDisplay(item)
         updatePurchaseSourceDisplay(item)
+        updateResetButtonState(item)
 
         val isRecommended = homeViewModel.todayRecommendedClothingIds.value?.contains(item.id) ?: false
         val isPackable = homeViewModel.todayRecommendation.value?.packableOuters?.any { it.id == item.id } ?: false
@@ -266,49 +279,76 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
     }
 
     private fun updateFitLevelDisplay(item: ClothingItem) {
-        // 상의/하의/아우터 외 카테고리는 사이즈 행 자체를 숨긴다
         if (item.category !in AddClothingViewModel.SIZE_CATEGORIES) {
-            layoutEditFitLevel.isVisible = false
-            dividerEditFitLevel.isVisible = false
-            return
-        }
-        if (!settingsManager.bodyFitEnabled) {
             layoutEditFitLevel.isVisible = false
             dividerEditFitLevel.isVisible = false
             return
         }
         layoutEditFitLevel.isVisible = true
         dividerEditFitLevel.isVisible = true
-        if (settingsManager.isBodyRegistered) {
-            val level = AddClothingViewModel.calculateFitLevel(
-                settingsManager.estimatedHeight, settingsManager.estimatedWeight, settingsManager.estimatedWaist,
+
+        // populate size spinner
+        val notationType = settingsManager.sizeNotationType
+        val sizeOptions = when {
+            item.category in listOf("상의", "아우터") ->
+                if (notationType == SettingsManager.SIZE_NOTATION_NUMERIC)
+                    listOf("85", "90", "95", "100", "105", "110")
+                else listOf("XS", "S", "M", "L", "XL", "XXL")
+            item.category == "하의" ->
+                if (notationType == SettingsManager.SIZE_NOTATION_NUMERIC)
+                    listOf("26", "27", "28", "29", "30", "31", "32", "33", "34")
+                else listOf("XS", "S", "M", "L", "XL", "XXL")
+            else -> emptyList<String>()
+        }
+        val displayedSize = item.size
+            ?: AddClothingViewModel.calculateItemSizeLabel(
+                item.category,
                 item.fitMinHeight, item.fitMaxHeight,
                 item.fitMinWeight, item.fitMaxWeight,
-                item.fitMinWaist, item.fitMaxWaist
+                item.fitMinWaist, item.fitMaxWaist,
+                notationType
             )
-            val sizeLabel = AddClothingViewModel.calculateSizeLabel(
-                item.category,
-                settingsManager.estimatedHeight, settingsManager.estimatedWeight, settingsManager.estimatedWaist,
-                settingsManager.sizeNotationType
-            )
-            // 적합여부(왼쪽, 컬러) │ 사이즈(오른쪽, 기본색)
-            val levelColorRes = if (level == AddClothingViewModel.FIT_NO_INFO)
-                R.color.text_tertiary else AddClothingFragment.fitLevelColorRes(level)
-            tvEditFitLevel.text = level
-            tvEditFitLevel.setTextColor(ContextCompat.getColor(requireContext(), levelColorRes))
-            if (sizeLabel != null) {
-                dividerEditSizeFit.isVisible = true
-                tvEditSizeLabel.isVisible = true
-                tvEditSizeLabel.text = sizeLabel
-            } else {
-                dividerEditSizeFit.isVisible = false
-                tvEditSizeLabel.isVisible = false
+        spinnerBindingGeneration += 1
+        val bindingGeneration = spinnerBindingGeneration
+        isBindingSpinner = true
+        val adapter = ArrayAdapter(requireContext(), R.layout.spinner_item_centered, sizeOptions)
+        adapter.setDropDownViewResource(R.layout.spinner_dropdown_item)
+        spinnerEditSize.adapter = adapter
+        val idx = if (displayedSize != null) sizeOptions.indexOf(displayedSize) else -1
+        spinnerEditSize.setSelection(if (idx >= 0) idx else 0, false)
+        spinnerEditSize.post {
+            if (spinnerBindingGeneration == bindingGeneration) {
+                isBindingSpinner = false
             }
-        } else {
+        }
+
+        // fit level text (only when bodyFitEnabled)
+        if (settingsManager.bodyFitEnabled && settingsManager.isBodyRegistered) {
+            // 저장된 사이즈가 있으면 사이즈 비교 기반 적합도, 없으면 range 기반
+            if (displayedSize != null) {
+                syncFitLevelToSize(item.category, displayedSize)
+            } else {
+                val level = AddClothingViewModel.calculateFitLevel(
+                    settingsManager.estimatedHeight, settingsManager.estimatedWeight, settingsManager.estimatedWaist,
+                    item.fitMinHeight, item.fitMaxHeight,
+                    item.fitMinWeight, item.fitMaxWeight,
+                    item.fitMinWaist, item.fitMaxWaist
+                )
+                val levelColorRes = if (level == AddClothingViewModel.FIT_NO_INFO)
+                    R.color.text_tertiary else AddClothingFragment.fitLevelColorRes(level)
+                tvEditFitLevel.text = level
+                tvEditFitLevel.setTextColor(ContextCompat.getColor(requireContext(), levelColorRes))
+                tvEditFitLevel.isVisible = true
+                dividerEditSizeFit.isVisible = true
+            }
+        } else if (settingsManager.bodyFitEnabled && !settingsManager.isBodyRegistered) {
             tvEditFitLevel.text = "설정에서 사이즈를 등록해주세요"
             tvEditFitLevel.setTextColor(ContextCompat.getColor(requireContext(), R.color.text_tertiary))
+            tvEditFitLevel.isVisible = true
+            dividerEditSizeFit.isVisible = true
+        } else {
+            tvEditFitLevel.isVisible = false
             dividerEditSizeFit.isVisible = false
-            tvEditSizeLabel.isVisible = false
         }
     }
 
@@ -386,6 +426,7 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
         }
 
         buttonDelete.setOnClickListener { showDeleteConfirmDialog() }
+        buttonReset.setOnClickListener { showResetConfirmDialog() }
 
         editTextName.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
@@ -395,9 +436,10 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
             }
         })
 
-        chipGroupCategory.setOnCheckedChangeListener { _, checkedId ->
-            view?.findViewById<Chip>(checkedId)?.let {
-                viewModel.updateCategory(it.text.toString())
+        for (i in 0 until chipGroupCategory.childCount) {
+            val chip = chipGroupCategory.getChildAt(i) as? Chip ?: continue
+            chip.setOnClickListener {
+                if (chip.isChecked) viewModel.updateCategory(chip.text.toString())
             }
         }
 
@@ -407,6 +449,19 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
 
         buttonTempIncrease.setOnClickListener { viewModel.increaseTemp() }
         buttonTempDecrease.setOnClickListener { viewModel.decreaseTemp() }
+
+        spinnerEditSize.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>, view: View?, position: Int, id: Long) {
+                if (isBindingSpinner) return
+                val selectedSize = parent.getItemAtPosition(position) as? String
+                viewModel.updateSize(selectedSize)
+                val category = viewModel.currentClothingItem.value?.category ?: return
+                if (selectedSize != null && settingsManager.bodyFitEnabled && settingsManager.isBodyRegistered) {
+                    syncFitLevelToSize(category, selectedSize)
+                }
+            }
+            override fun onNothingSelected(parent: AdapterView<*>) {}
+        }
     }
 
     private fun setupBackButtonHandler() {
@@ -460,6 +515,51 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
             .setPositiveButton("예") { _, _ -> viewModel.deleteClothingItem(args.fromStyleEdit) }
             .setNegativeButton("아니오", null)
             .show()
+    }
+
+    private fun updateResetButtonState(item: ClothingItem) {
+        val resetNeeded = viewModel.isResetNeeded(item)
+        if (resetNeeded) {
+            buttonReset.background = ContextCompat.getDrawable(requireContext(), R.drawable.bg_button_reset)
+            buttonReset.setTextColor(Color.WHITE)
+            buttonReset.isEnabled = viewModel.isProcessing.value != true
+        } else {
+            buttonReset.background = ContextCompat.getDrawable(requireContext(), R.drawable.bg_button_reset_outline)
+            buttonReset.setTextColor(ContextCompat.getColor(requireContext(), R.color.text_primary))
+            buttonReset.isEnabled = false
+        }
+    }
+
+    private fun showResetConfirmDialog() {
+        AlertDialog.Builder(requireContext())
+            .setMessage("AI가 분석한 원래 정보로 초기화하시겠습니까?\n(이름·배경제거 제외)")
+            .setPositiveButton("예") { _, _ -> viewModel.resetToAiDefaults() }
+            .setNegativeButton("아니오", null)
+            .show()
+    }
+
+    private fun syncFitLevelToSize(category: String, selectedSize: String) {
+        val notationType = settingsManager.sizeNotationType
+        val userSize = AddClothingViewModel.calculateSizeLabel(
+            category,
+            settingsManager.estimatedHeight, settingsManager.estimatedWeight, settingsManager.estimatedWaist,
+            notationType
+        ) ?: return
+        val sizeList = AddClothingViewModel.getSizeList(category, notationType)
+        val userIdx = sizeList.indexOf(userSize)
+        val itemIdx = sizeList.indexOf(selectedSize)
+        if (userIdx < 0 || itemIdx < 0) return
+        val diff = kotlin.math.abs(userIdx - itemIdx)
+        val level = when (diff) {
+            0 -> AddClothingViewModel.FIT_VERY_GOOD
+            1 -> AddClothingViewModel.FIT_GOOD
+            2 -> AddClothingViewModel.FIT_NORMAL
+            else -> AddClothingViewModel.FIT_BAD
+        }
+        tvEditFitLevel.text = level
+        tvEditFitLevel.setTextColor(ContextCompat.getColor(requireContext(), AddClothingFragment.fitLevelColorRes(level)))
+        tvEditFitLevel.isVisible = true
+        dividerEditSizeFit.isVisible = true
     }
 
     override fun onTabReselected() {

@@ -266,7 +266,8 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
                         fitMinWaist = analysisResult.fit_min_waist,
                         fitMaxWaist = analysisResult.fit_max_waist,
                         purpose = purposeStr,
-                        purchaseSource = purchaseSource
+                        purchaseSource = purchaseSource,
+                        aiCategory = analysisResult.category
                     )
                     clothingDao.insert(newItem)
                     saved = true
