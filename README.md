@@ -36,9 +36,9 @@
 
 ## 🎬 데모
 
-> 썸네일을 클릭하면 YouTube에서 재생됩니다
+![앱 데모](docs/assets/demo.gif)
 
-[![데모 영상](https://img.youtube.com/vi/BSDagR65s2g/maxresdefault.jpg)](https://youtu.be/BSDagR65s2g?autoplay=1)
+> 전체 영상: [YouTube에서 보기](https://youtu.be/BSDagR65s2g)
 
 ---
 
@@ -105,7 +105,7 @@ ML Kit Selfie Segmentation으로 옷 사진의 배경을 자동 제거합니다.
 
 | 지원 플랫폼 |
 |---|
-| 무신사 / 하이버 / 에이블리 / 29CM / 네이버스토어 / 구구 / 구글 쇼핑 |
+| 쿠팡 / 무신사 / 하이버 / 에이블리 / 29CM / 네이버스토어 / 구글 |
 
 #### 오늘 뭐 살래? (앱 내 쇼핑몰)
 앱 내 자체 상품 목록을 카테고리(상의·하의·아우터·신발·기타)와 검색으로 탐색하고,  
@@ -265,17 +265,20 @@ cd What-should-I-wear-today
 
 ### 2. API 키 설정
 
-프로젝트 루트에 `local.properties` 파일을 열어 아래 두 키를 추가합니다.
+`app/src/main/res/values/` 경로에 `secrets.xml` 파일을 생성하고 아래 내용을 입력합니다.
 
-```properties
-WEATHER_API_KEY=your_openweathermap_api_key
-GEMINI_API_KEY=your_gemini_api_key
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="gemini_api_key" translatable="false">YOUR_GEMINI_API_KEY</string>
+    <string name="openweathermap_api_key" translatable="false">YOUR_OPENWEATHERMAP_API_KEY</string>
+</resources>
 ```
 
-- **OpenWeatherMap API 키** — [openweathermap.org](https://openweathermap.org/api) 에서 무료 발급
 - **Gemini API 키** — [Google AI Studio](https://aistudio.google.com/) 에서 무료 발급
+- **OpenWeatherMap API 키** — [openweathermap.org](https://openweathermap.org/api) 에서 무료 발급
 
-> `local.properties`는 `.gitignore`에 등록되어 있어 저장소에 올라가지 않습니다.  
+> `secrets.xml`은 `.gitignore`에 등록되어 있어 저장소에 올라가지 않습니다.  
 > API 키 없이 실행하면 AI 분석·날씨 조회가 동작하지 않습니다.
 
 ### 3. 빌드 및 실행
