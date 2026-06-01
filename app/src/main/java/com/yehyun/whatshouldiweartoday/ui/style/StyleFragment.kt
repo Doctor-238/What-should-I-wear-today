@@ -285,7 +285,7 @@ class StyleFragment : Fragment(), OnTabReselectedListener {
         val spinner: Spinner = binding.spinnerSortStyle
         val sortOptions = listOf("최신순", "오래된 순", "이름 오름차순", "이름 내림차순")
         val adapter = ArrayAdapter(requireContext(), R.layout.spinner_item_centered_normal, sortOptions)
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        adapter.setDropDownViewResource(R.layout.spinner_dropdown_item)
         spinner.adapter = adapter
 
         val currentSortType = viewModel.getCurrentSortType()

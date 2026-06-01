@@ -18,6 +18,7 @@ import com.yehyun.whatshouldiweartoday.ai.AiModelProvider
 import com.yehyun.whatshouldiweartoday.data.database.AppDatabase
 import com.yehyun.whatshouldiweartoday.data.database.ClothingItem
 import com.yehyun.whatshouldiweartoday.data.preference.SettingsManager
+import com.yehyun.whatshouldiweartoday.util.isNetworkAvailable
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -77,11 +78,16 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
     private val _segmentationSucceeded = MutableLiveData<Boolean>()
     val segmentationSucceeded: LiveData<Boolean> = _segmentationSucceeded
 
+    val fitLevelText = MutableLiveData<String>()
+    val purposeText = MutableLiveData<String>()
+    val sizeLabelText = MutableLiveData<String>()
+
     private val settingsManager = SettingsManager(application)
     private var generativeModel: GenerativeModel? = null
 
     private val _analysisResult = MutableLiveData<ClothingAnalysis?>()
     val analysisResult: LiveData<ClothingAnalysis?> = _analysisResult
+    private var initialAnalysisResult: ClothingAnalysis? = null
 
     private var processedImageJob: Deferred<Bitmap?>? = null
     private var originalImageJob: Deferred<Bitmap>? = null
@@ -100,6 +106,10 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
 
 
     fun onImageSelected(bitmap: Bitmap, apiKey: String) {
+        if (!isNetworkAvailable(getApplication())) {
+            _errorMessage.value = "인터넷에 연결되어 있지 않습니다. 와이파이 또는 모바일 데이터를 확인해주세요."
+            return
+        }
         resetAllState()
         _originalBitmap.value = bitmap
         generativeModel = AiModelProvider.getModel(getApplication(), apiKey)
@@ -115,12 +125,18 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
             val result = analysisJob.await()
             _isAiAnalyzing.postValue(false)
 
-            if (result == null || !result.is_wearable) {
+            if (result == null) {
                 withContext(Dispatchers.Main) {
-                    _errorMessage.value = "올바른 사진을 입력해주세요."
+                    _errorMessage.value = "분석 중 오류가 발생했습니다. 다시 시도해주세요."
+                    resetAllState()
+                }
+            } else if (!result.is_wearable) {
+                withContext(Dispatchers.Main) {
+                    _errorMessage.value = "의류가 감지되지 않았습니다. 의류 사진을 사용해주세요."
                     resetAllState()
                 }
             } else {
+                initialAnalysisResult = result.copy()
                 _analysisResult.postValue(result)
                 val processed = processedImageJob?.await()
                 withContext(Dispatchers.Main) {
@@ -153,7 +169,7 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
         }
     }
 
-    fun saveClothingItem(name: String) {
+    fun saveClothingItem(name: String, selectedSize: String? = null) {
         viewModelScope.launch {
             if (_analysisResult.value == null) {
                 _errorMessage.value = "AI 분석 결과가 없습니다."
@@ -179,22 +195,35 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
                 }
 
                 val analysis = _analysisResult.value!!
-                val baseTemp = analysis.suitable_temperature!!
-                val finalTemp = when (analysis.category) {
-                    "아우터" -> baseTemp - 3.0
-                    "상의", "하의" -> baseTemp + 2.0
-                    else -> baseTemp
-                }
+                val initialAnalysis = initialAnalysisResult ?: analysis
+                val currentBaseTemp = analysis.suitable_temperature!!
+                val initialBaseTemp = initialAnalysis.suitable_temperature ?: currentBaseTemp
+                val currentCategory = analysis.category ?: initialAnalysis.category ?: "기타"
+                val initialCategory = initialAnalysis.category ?: currentCategory
+                val finalTemp = defaultTemperatureForCategory(currentCategory, currentBaseTemp)
 
+                val purposeStr = analysis.purposes?.take(2)?.joinToString(",") ?: ""
+                val savedSize = selectedSize.takeUnless { it == sizeLabelText.value }
+
+                val safeColorHex = analysis.color_hex?.takeIf { isValidHexCode(it) } ?: "#000000"
                 val newClothingItem = ClothingItem(
                     name = name,
                     imageUri = originalPath,
                     processedImageUri = processedPath,
                     useProcessedImage = _useProcessedImage.value ?: false,
-                    category = analysis.category!!,
+                    category = currentCategory,
                     suitableTemperature = finalTemp,
-                    baseTemperature = baseTemp,
-                    colorHex = analysis.color_hex!!
+                    baseTemperature = initialBaseTemp,
+                    colorHex = safeColorHex,
+                    fitMinHeight = analysis.fit_min_height,
+                    fitMaxHeight = analysis.fit_max_height,
+                    fitMinWeight = analysis.fit_min_weight,
+                    fitMaxWeight = analysis.fit_max_weight,
+                    fitMinWaist = analysis.fit_min_waist,
+                    fitMaxWaist = analysis.fit_max_waist,
+                    purpose = purposeStr,
+                    size = savedSize,
+                    aiCategory = initialCategory
                 )
                 withContext(Dispatchers.IO) {
                     AppDatabase.getDatabase(getApplication()).clothingDao().insert(newClothingItem)
@@ -211,6 +240,8 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
     private suspend fun analyzeImageWithRetry(bitmap: Bitmap, maxRetries: Int = 2): ClothingAnalysis? {
         var attempt = 0
         var successfulAnalysis: ClothingAnalysis? = null
+        val allPurposes = settingsManager.getAllPurposes()
+        val purposeListStr = allPurposes.joinToString("', '", "'", "'")
         while (attempt < maxRetries) {
             try {
                 val resizedBitmap = resizeBitmap(bitmap)
@@ -219,11 +250,19 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
                     text("""
                         You are a Precise Climate & Fashion Analyst for Korean weather.
                         Your task is to analyze the clothing item in the image and provide a detailed analysis in a strict JSON format, without any additional text or explanations.
-                        Your JSON response MUST contain ONLY the following keys: "is_wearable", "category", "suitable_temperature", and "color_hex".
-                        - "is_wearable": (boolean) If the image contains a single primary clothing item (or a single person's outfit), this is True. If the image contains multiple people or multiple separate clothing items laid out, this MUST be False.
+                        Your JSON response MUST contain ONLY the following keys: "is_wearable", "category", "suitable_temperature", "color_hex", "fit_min_height", "fit_max_height", "fit_min_weight", "fit_max_weight", "fit_min_waist", "fit_max_waist", "purposes".
+                        - "is_wearable": (boolean) If the image contains at least one wearable clothing item, this is True. If the image contains multiple clothing items, focus on the PRIMARY/MAIN item that appears to be the subject or focus of the photo (NOT necessarily the largest one). Only return False if the image contains no clothing at all (e.g. food, scenery, etc.).
                         - "category": (string) If wearable, one of '상의', '하의', '아우터', '신발', '가방', '모자', '기타'.
                         - "color_hex": (string) If wearable, the dominant color of the item as a hex string.
                         - "suitable_temperature": (double) If wearable, this is the most important. Estimate the MAXIMUM comfortable temperature for this item. The value can be negative for winter clothing. You MUST provide a specific, non-round number with one decimal place (e.g., 23.5, 8.0, -2.5). A generic integer like 15.0 is a bad response. Base your judgment on the visual evidence of material, thickness, and design.
+                        - "fit_min_height": (double) Minimum height in cm for wearing this item (e.g., 155.0).
+                        - "fit_max_height": (double) Maximum height in cm for wearing this item (e.g., 180.0).
+                        - "fit_min_weight": (double) Minimum weight in kg for wearing this item (e.g., 45.0).
+                        - "fit_max_weight": (double) Maximum weight in kg for wearing this item (e.g., 75.0).
+                        - "fit_min_waist": (double or null) Minimum waist circumference in cm that this item fits (e.g., 68.0). Use null ONLY for items where the waistline is irrelevant (oversized tops, shoes, bags, hats, loose jackets). Bottoms and fitted tops MUST have a value.
+                        - "fit_max_waist": (double or null) Maximum waist circumference in cm that this item fits (e.g., 88.0). Follow the same rule as fit_min_waist.
+                        - "purposes": (array of strings) If wearable, select the 1 or 2 MOST suitable purposes from this list: [$purposeListStr]. Pick only the best fitting ones. Maximum 2 purposes per item.
+                        Estimate the body size range this clothing would fit. For free-size/stretchy items, use wider ranges. Base on visual cues: size labels, proportions, material stretch. Waist range should be the user's waist circumference, not the garment's flat measurement.
                     """.trimIndent())
                 }
                 val response = generativeModel!!.generateContent(inputContent)
@@ -249,11 +288,43 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
             temperatureText.postValue("상의, 하의, 아우터에만 표시됩니다.")
             isTemperatureVisible.postValue(false)
             setViewColor(null)
+            fitLevelText.postValue("")
+            purposeText.postValue("")
+            sizeLabelText.postValue("")
             return
         }
 
         val category = result.category ?: "기타"
         categoryText.postValue(category)
+
+        if (settingsManager.bodyFitEnabled) {
+            if (settingsManager.isBodyRegistered) {
+                val level = calculateFitLevel(
+                    settingsManager.estimatedHeight, settingsManager.estimatedWeight, settingsManager.estimatedWaist,
+                    result.fit_min_height, result.fit_max_height,
+                    result.fit_min_weight, result.fit_max_weight,
+                    result.fit_min_waist, result.fit_max_waist
+                )
+                fitLevelText.postValue(level)
+            } else {
+                fitLevelText.postValue("설정에서 사이즈를 등록해주세요")
+            }
+        } else {
+            fitLevelText.postValue("")
+        }
+
+        if (category in SIZE_CATEGORIES) {
+            val sizeLabel = calculateItemSizeLabel(
+                category,
+                result.fit_min_height, result.fit_max_height,
+                result.fit_min_weight, result.fit_max_weight,
+                result.fit_min_waist, result.fit_max_waist,
+                settingsManager.sizeNotationType
+            )
+            sizeLabelText.postValue(sizeLabel ?: "")
+        } else {
+            sizeLabelText.postValue("")
+        }
 
         val isTempCategory = category in listOf("상의", "하의", "아우터")
         isTemperatureVisible.postValue(isTempCategory)
@@ -280,6 +351,13 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
             setViewColor(Color.parseColor(result.color_hex!!))
         } else {
             setViewColor(null)
+        }
+
+        val purposes = result.purposes
+        if (!purposes.isNullOrEmpty()) {
+            purposeText.postValue(purposes.take(2).joinToString(", "))
+        } else {
+            purposeText.postValue("")
         }
     }
 
@@ -323,6 +401,7 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
         _originalBitmap.value = null
         _processedBitmap.value = null
         _analysisResult.value = null
+        initialAnalysisResult = null
         processedImageJob = null
         originalImageJob = null
         _isAiAnalyzing.value = false
@@ -333,6 +412,201 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
         categoryText.value = ""
         temperatureText.value = ""
         _viewColor.value = null
+        fitLevelText.value = ""
+        purposeText.value = ""
+        sizeLabelText.value = ""
+    }
+
+    companion object {
+        const val FIT_VERY_GOOD = "매우 적합"
+        const val FIT_GOOD = "적합"
+        const val FIT_NORMAL = "보통"
+        const val FIT_BAD = "맞지않음"
+        const val FIT_VERY_BAD = "매우 맞지않음"
+        const val FIT_NO_INFO = "정보 없음"
+
+        // Score a single body axis: 4 = inner band (매우 적합), 3 = within range,
+        // 2 = within ~5 units of range, 1 = within ~10 units, 0 = far off.
+        // Returns null if the clothing does not define this axis (treat as neutral).
+        private fun axisScore(userValue: Double, min: Double?, max: Double?, nearMargin: Double, farMargin: Double): Int? {
+            if (min == null || max == null) return null
+            val range = max - min
+            val shrink = range * 0.15
+            return when {
+                userValue in (min + shrink)..(max - shrink) -> 4
+                userValue in min..max -> 3
+                userValue in (min - nearMargin)..(max + nearMargin) -> 2
+                userValue in (min - farMargin)..(max + farMargin) -> 1
+                else -> 0
+            }
+        }
+
+        // Weighted fit level. Height and weight are primary (weight 0.4 each),
+        // waist is supplementary (0.2) and only counts when both the user has
+        // registered a waist AND the clothing defines a waist range.
+        // If only one of those holds, waist is skipped and height/weight renormalize to 0.5 each.
+        fun calculateFitLevel(
+            userHeight: Float, userWeight: Float, userWaist: Float,
+            minH: Double?, maxH: Double?,
+            minW: Double?, maxW: Double?,
+            minWaist: Double?, maxWaist: Double?
+        ): String {
+            val hScore = axisScore(userHeight.toDouble(), minH, maxH, 5.0, 10.0)
+            val wScore = axisScore(userWeight.toDouble(), minW, maxW, 5.0, 10.0)
+            if (hScore == null || wScore == null) return FIT_NO_INFO
+
+            val waistKnown = userWaist > 0f
+            val waistScore = if (waistKnown) axisScore(userWaist.toDouble(), minWaist, maxWaist, 4.0, 8.0) else null
+
+            val combined = if (waistScore != null) {
+                hScore * 0.4 + wScore * 0.4 + waistScore * 0.2
+            } else {
+                hScore * 0.5 + wScore * 0.5
+            }
+
+            // Gate the top band so that both primary axes are at least within-range.
+            val primaryInRange = hScore >= 3 && wScore >= 3
+            // Waist being very wrong should pull down "매우 적합" but not dominate.
+            val waistBad = waistScore != null && waistScore <= 1
+
+        return when {
+            combined >= 3.7 && primaryInRange && !waistBad -> FIT_VERY_GOOD
+                combined >= 3.0 && primaryInRange -> FIT_GOOD
+                combined >= 2.0 -> FIT_NORMAL
+                combined >= 1.0 -> FIT_BAD
+                else -> FIT_VERY_BAD
+            }
+        }
+
+        fun fitLevelToOrder(level: String): Int {
+            return when (level) {
+                FIT_VERY_GOOD -> 0
+                FIT_GOOD -> 1
+                FIT_NORMAL -> 2
+                FIT_BAD -> 3
+                FIT_VERY_BAD -> 4
+                else -> 5
+            }
+        }
+
+        fun defaultTemperatureForCategory(category: String, baseTemperature: Double): Double {
+            return when (category) {
+                "아우터" -> baseTemperature - 3.0
+                "상의", "하의" -> baseTemperature + 2.0
+                else -> baseTemperature
+            }
+        }
+
+        // 상의/아우터: (height-155)/5 + (weight-45)/8 로 사이즈 스코어 계산
+        private fun topSizeScore(height: Double, weight: Double) =
+            (height - 155.0) / 5.0 + (weight - 45.0) / 8.0
+
+        private fun topLetterSize(height: Double, weight: Double): String {
+            val s = topSizeScore(height, weight)
+            return when { s < 1.1 -> "XS"; s < 2.9 -> "S"; s < 4.8 -> "M"; s < 6.7 -> "L"; s < 8.7 -> "XL"; else -> "XXL" }
+        }
+
+        private fun topNumericSize(height: Double, weight: Double): String {
+            val s = topSizeScore(height, weight)
+            return when { s < 1.1 -> "85"; s < 2.9 -> "90"; s < 4.8 -> "95"; s < 6.7 -> "100"; s < 8.7 -> "105"; else -> "110" }
+        }
+
+        // 하의: 허리 우선, 없으면 체중으로 추정
+        private fun bottomWaistEstimate(weight: Double) = weight * 1.0 + 12.0
+
+        private fun bottomLetterSize(weight: Double, waist: Double?): String {
+            val w = waist ?: bottomWaistEstimate(weight)
+            return when { w < 65.0 -> "XS"; w < 70.0 -> "S"; w < 77.0 -> "M"; w < 84.0 -> "L"; w < 91.0 -> "XL"; else -> "XXL" }
+        }
+
+        private fun bottomNumericSize(weight: Double, waist: Double?): String {
+            val w = waist ?: bottomWaistEstimate(weight)
+            return when {
+                w < 67.0 -> "26"; w < 70.0 -> "27"; w < 73.0 -> "28"; w < 76.0 -> "29"
+                w < 79.0 -> "30"; w < 82.0 -> "31"; w < 85.0 -> "32"; w < 88.0 -> "33"; else -> "34"
+            }
+        }
+
+        /**
+         * 카테고리·신체 치수·표기 방식으로 사이즈 레이블 반환.
+         * 상의/아우터 → letter(XS~XXL) 또는 numeric(85~110)
+         * 하의 → letter(XS~XXL) 또는 numeric(26~34)
+         * 그 외 → null (표시하지 않음)
+         */
+        fun calculateSizeLabel(
+            category: String,
+            userHeight: Float,
+            userWeight: Float,
+            userWaist: Float,
+            notationType: String
+        ): String? {
+            val h = userHeight.toDouble()
+            val w = userWeight.toDouble()
+            val waist = if (userWaist > 0f) userWaist.toDouble() else null
+            return when {
+                category in listOf("상의", "아우터") ->
+                    if (notationType == com.yehyun.whatshouldiweartoday.data.preference.SettingsManager.SIZE_NOTATION_NUMERIC)
+                        topNumericSize(h, w) else topLetterSize(h, w)
+                category == "하의" ->
+                    if (notationType == com.yehyun.whatshouldiweartoday.data.preference.SettingsManager.SIZE_NOTATION_NUMERIC)
+                        bottomNumericSize(w, waist) else bottomLetterSize(w, waist)
+                else -> null
+            }
+        }
+
+        /**
+         * 옷 자체의 fit range 중간값으로 사이즈 레이블 계산.
+         * 사용자 신체 측정값과 무관하게 각 옷마다 고유한 사이즈를 반환.
+         */
+        fun calculateItemSizeLabel(
+            category: String,
+            fitMinHeight: Double?, fitMaxHeight: Double?,
+            fitMinWeight: Double?, fitMaxWeight: Double?,
+            fitMinWaist: Double?, fitMaxWaist: Double?,
+            notationType: String
+        ): String? {
+            if (category !in SIZE_CATEGORIES) return null
+            // 20분위수(하위 20%) 사용: AI fit range는 실제 레이블보다 넓게 잡히는 경향이 있어
+            // 단순 중간값은 한 치수 크게 나옴. 하위 20% 지점이 해당 옷의 실제 사이즈에 가장 근접.
+            return when {
+                category in listOf("상의", "아우터") -> {
+                    val minH = fitMinHeight ?: return null
+                    val maxH = fitMaxHeight ?: return null
+                    val minW = fitMinWeight ?: return null
+                    val maxW = fitMaxWeight ?: return null
+                    val h = minH + (maxH - minH) * 0.20
+                    val w = minW + (maxW - minW) * 0.20
+                    if (notationType == com.yehyun.whatshouldiweartoday.data.preference.SettingsManager.SIZE_NOTATION_NUMERIC)
+                        topNumericSize(h, w) else topLetterSize(h, w)
+                }
+                category == "하의" -> {
+                    val waist = if (fitMinWaist != null && fitMaxWaist != null)
+                        fitMinWaist + (fitMaxWaist - fitMinWaist) * 0.20 else null
+                    val minW = fitMinWeight ?: return null
+                    val maxW = fitMaxWeight ?: return null
+                    val w = minW + (maxW - minW) * 0.20
+                    if (notationType == com.yehyun.whatshouldiweartoday.data.preference.SettingsManager.SIZE_NOTATION_NUMERIC)
+                        bottomNumericSize(w, waist) else bottomLetterSize(w, waist)
+                }
+                else -> null
+            }
+        }
+
+        fun getSizeList(category: String, notationType: String): List<String> {
+            return when {
+                category in listOf("상의", "아우터") ->
+                    if (notationType == com.yehyun.whatshouldiweartoday.data.preference.SettingsManager.SIZE_NOTATION_NUMERIC)
+                        listOf("85", "90", "95", "100", "105", "110")
+                    else listOf("XS", "S", "M", "L", "XL", "XXL")
+                category == "하의" ->
+                    if (notationType == com.yehyun.whatshouldiweartoday.data.preference.SettingsManager.SIZE_NOTATION_NUMERIC)
+                        listOf("26", "27", "28", "29", "30", "31", "32", "33", "34")
+                    else listOf("XS", "S", "M", "L", "XL", "XXL")
+                else -> emptyList()
+            }
+        }
+
+        val SIZE_CATEGORIES = setOf("상의", "하의", "아우터")
     }
 
     fun refreshDisplayWithNewSettings() {

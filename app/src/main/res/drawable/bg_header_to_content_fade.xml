@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <!-- Smooth transition from header bottom to content background -->
+    <gradient
+        android:angle="270"
+        android:startColor="#E8EDF6"
+        android:centerColor="#EBF0F8"
+        android:endColor="#EEF3FA"
+        android:type="linear"/>
+    <size android:height="16dp"/>
+</shape>

@@ -32,12 +32,14 @@ import androidx.navigation.fragment.findNavController
 import androidx.viewpager2.widget.ViewPager2
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkInfo
 import androidx.work.workDataOf
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
 import com.yehyun.whatshouldiweartoday.MainViewModel
 import com.yehyun.whatshouldiweartoday.R
 import com.yehyun.whatshouldiweartoday.databinding.FragmentClosetBinding
+import com.yehyun.whatshouldiweartoday.data.preference.SettingsManager
 import com.yehyun.whatshouldiweartoday.ui.OnTabReselectedListener
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -83,13 +85,11 @@ class ClosetFragment : Fragment(), OnTabReselectedListener {
     ) { uris ->
         if (uris.isNotEmpty()) {
             viewLifecycleOwner.lifecycleScope.launch {
-                binding.fabBatchAdd.showProgress(0)
                 val copiedImagePaths = copyUrisToCache(uris)
                 if (copiedImagePaths.isNotEmpty()) {
                     startBatchAddWorker(copiedImagePaths.toTypedArray())
                 } else {
                     showToast("이미지를 처리하는 데 실패했습니다.")
-                    binding.fabBatchAdd.hideProgress()
                 }
             }
         }
@@ -142,6 +142,10 @@ class ClosetFragment : Fragment(), OnTabReselectedListener {
             findNavController().navigate(R.id.action_navigation_closet_to_addClothingFragment)
         }
 
+        binding.fabShopping.setOnClickListener {
+            findNavController().navigate(R.id.action_navigation_closet_to_shoppingFragment)
+        }
+
         binding.fabBatchAdd.setOnClickListener {
             if (System.currentTimeMillis() - lastFabClickTime < 700) {
                 return@setOnClickListener
@@ -176,23 +180,29 @@ class ClosetFragment : Fragment(), OnTabReselectedListener {
         viewModel.selectedItems.observe(viewLifecycleOwner) { notifyAdapterSelectionChanged() }
 
         viewModel.batchAddWorkInfo.observe(viewLifecycleOwner) { workInfos ->
-            val workInfo = workInfos.firstOrNull() ?: run {
+            if (workInfos.isNullOrEmpty()) {
                 binding.fabBatchAdd.hideProgress()
                 return@observe
             }
 
-            if (workInfo.state.isFinished) {
+            val allFinished = workInfos.all { it.state.isFinished }
+            val runningWork = workInfos.firstOrNull { it.state == WorkInfo.State.RUNNING }
+
+            if (allFinished) {
                 lifecycleScope.launch {
                     delay(500)
                     _binding?.fabBatchAdd?.hideProgress()
                     viewModel.workManager.pruneWork()
                 }
-            } else {
-                val progress = workInfo.progress
+            } else if (runningWork != null) {
+                val progress = runningWork.progress
                 val current = progress.getInt(BatchAddWorker.PROGRESS_CURRENT, 0)
                 val total = progress.getInt(BatchAddWorker.PROGRESS_TOTAL, 1)
                 val percentage = if (total > 0) (current * 100 / total) else 0
                 binding.fabBatchAdd.showProgress(percentage)
+            } else {
+                // Work is enqueued but not yet running (waiting for previous batch)
+                binding.fabBatchAdd.showProgress(0)
             }
         }
 
@@ -370,15 +380,38 @@ class ClosetFragment : Fragment(), OnTabReselectedListener {
     }
 
     private fun startBatchAddWorker(imagePaths: Array<String>) {
-        val batchId = "batch_${System.currentTimeMillis()}"
-        val workRequest = OneTimeWorkRequestBuilder<BatchAddWorker>()
-            .setInputData(workDataOf(
-                BatchAddWorker.KEY_BATCH_ID to batchId,
-                BatchAddWorker.KEY_IMAGE_PATHS to imagePaths,
-                BatchAddWorker.KEY_API to getString(R.string.gemini_api_key)
-            ))
-            .build()
-        viewModel.workManager.enqueueUniqueWork("batch_add", ExistingWorkPolicy.KEEP, workRequest)
+        viewLifecycleOwner.lifecycleScope.launch {
+            val hasRunningWork = withContext(Dispatchers.IO) {
+                try {
+                    viewModel.workManager.getWorkInfosForUniqueWork("batch_add").get()
+                        .any { !it.state.isFinished }
+                } catch (e: Exception) { false }
+            }
+
+            val batchId = "batch_${System.currentTimeMillis()}"
+
+            // Write paths to file to avoid WorkManager 10KB Data limit
+            val pathsFile = withContext(Dispatchers.IO) {
+                val file = File(requireContext().cacheDir, "batch_paths_$batchId.txt")
+                file.writeText(imagePaths.joinToString("\n"))
+                file
+            }
+
+            val workRequest = OneTimeWorkRequestBuilder<BatchAddWorker>()
+                .setInputData(workDataOf(
+                    BatchAddWorker.KEY_BATCH_ID to batchId,
+                    BatchAddWorker.KEY_PATHS_FILE to pathsFile.absolutePath,
+                    BatchAddWorker.KEY_API to getString(R.string.gemini_api_key)
+                ))
+                .build()
+            viewModel.workManager.enqueueUniqueWork("batch_add", ExistingWorkPolicy.APPEND_OR_REPLACE, workRequest)
+
+            if (hasRunningWork) {
+                showToast("${imagePaths.size}개의 옷이 대기열에 추가되었습니다.")
+            } else {
+                binding.fabBatchAdd.showProgress(0)
+            }
+        }
     }
 
 
@@ -411,9 +444,12 @@ class ClosetFragment : Fragment(), OnTabReselectedListener {
 
     private fun setupSortSpinner() {
         val spinner: Spinner = binding.spinnerSort
-        val sortOptions = listOf("최신순", "오래된 순", "이름 오름차순", "이름 내림차순", "온도 오름차순", "온도 내림차순")
+        val settingsManager = SettingsManager(requireContext())
+        val baseSortOptions = listOf("최신순", "오래된 순", "이름 오름차순", "이름 내림차순", "온도 오름차순", "온도 내림차순")
+        val purposeOptions = settingsManager.getAllPurposes()
+        val sortOptions = baseSortOptions + purposeOptions
         val arrayAdapter = ArrayAdapter(requireContext(), R.layout.spinner_item_centered_normal, sortOptions)
-        arrayAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        arrayAdapter.setDropDownViewResource(R.layout.spinner_dropdown_item)
         spinner.adapter = arrayAdapter
 
         val currentSortType = viewModel.getCurrentSortType()

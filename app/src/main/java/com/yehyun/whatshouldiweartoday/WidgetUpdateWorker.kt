@@ -32,6 +32,7 @@ import com.yehyun.whatshouldiweartoday.data.repository.ClothingRepository
 import com.yehyun.whatshouldiweartoday.data.repository.WeatherRepository
 import com.yehyun.whatshouldiweartoday.ui.home.DailyWeatherSummary
 import com.yehyun.whatshouldiweartoday.ui.home.RecommendationResult
+import com.yehyun.whatshouldiweartoday.util.isNetworkAvailable
 import kotlinx.coroutines.tasks.await
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -119,11 +120,14 @@ class WidgetUpdateWorker(private val appContext: Context, workerParams: WorkerPa
         try {
             showLoadingState(appWidgetId, remoteViews, isToday)
 
-            if (ActivityCompat.checkSelfPermission(appContext, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            if (!isNetworkAvailable(appContext)) {
+                errorMessage = "인터넷 연결 없음"
+            } else if (ActivityCompat.checkSelfPermission(appContext, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
+                && ActivityCompat.checkSelfPermission(appContext, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
                 errorMessage = "위치 권한을 허용해주세요!"
             } else {
                 val location = LocationServices.getFusedLocationProviderClient(appContext)
-                    .getCurrentLocation(Priority.PRIORITY_BALANCED_POWER_ACCURACY, CancellationTokenSource().token).await()
+                    .getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, CancellationTokenSource().token).await()
 
                 if (location == null) {
                     errorMessage = "위치 정보를 가져올 수 없습니다. GPS를 켜주세요."
@@ -265,7 +269,7 @@ class WidgetUpdateWorker(private val appContext: Context, workerParams: WorkerPa
             shader.setLocalMatrix(matrix)
             paint.shader = shader
 
-            val cornerRadius = 24f
+            val cornerRadius = 30f
             canvas.drawRoundRect(RectF(0f, 0f, dstSize, dstSize), cornerRadius, cornerRadius, paint)
 
             decodedBitmap.recycle()
@@ -274,7 +278,7 @@ class WidgetUpdateWorker(private val appContext: Context, workerParams: WorkerPa
                 isAntiAlias = true
                 color = ContextCompat.getColor(appContext, R.color.clothing_item_border)
                 style = Paint.Style.STROKE
-                strokeWidth = 8f
+                strokeWidth = 4f
             }
             val borderRect = RectF(borderPaint.strokeWidth / 2, borderPaint.strokeWidth / 2, dstSize - borderPaint.strokeWidth / 2, dstSize - borderPaint.strokeWidth / 2)
             canvas.drawRoundRect(borderRect, cornerRadius, cornerRadius, borderPaint)

@@ -72,54 +72,96 @@ class EditClothingViewModel(application: Application) : AndroidViewModel(applica
     }
 
     fun updateName(name: String) {
-        _currentClothingItem.value?.let {
-            if (it.name != name) {
-                it.name = name
-                _currentClothingItem.postValue(it)
+        _currentClothingItem.value?.let { current ->
+            if (current.name != name) {
+                _currentClothingItem.value = current.copy(name = name)
                 checkForChanges()
             }
         }
     }
 
     fun updateCategory(category: String) {
-        _currentClothingItem.value?.let {
-            if (it.category != category) {
-                it.category = category
-                val baseTemp = it.baseTemperature
-                it.suitableTemperature = when (category) {
-                    "아우터" -> baseTemp - 3.0
-                    "상의", "하의" -> baseTemp + 2.0
-                    else -> baseTemp
-                }
-                _currentClothingItem.postValue(it)
+        _currentClothingItem.value?.let { current ->
+            if (current.category != category) {
+                _currentClothingItem.value = current.copy(
+                    category = category,
+                    suitableTemperature = defaultTemperatureForCategory(category, current.baseTemperature)
+                )
                 checkForChanges()
             }
         }
     }
 
     fun increaseTemp() {
-        _currentClothingItem.value?.let {
-            it.suitableTemperature += 0.5
-            _currentClothingItem.postValue(it)
+        _currentClothingItem.value?.let { current ->
+            _currentClothingItem.value = current.copy(
+                suitableTemperature = current.suitableTemperature + 0.5
+            )
             checkForChanges()
         }
     }
 
     fun decreaseTemp() {
-        _currentClothingItem.value?.let {
-            it.suitableTemperature -= 0.5
-            _currentClothingItem.postValue(it)
+        _currentClothingItem.value?.let { current ->
+            _currentClothingItem.value = current.copy(
+                suitableTemperature = current.suitableTemperature - 0.5
+            )
             checkForChanges()
         }
     }
 
-    fun updateUseProcessedImage(use: Boolean) {
-        _currentClothingItem.value?.let {
-            if (it.useProcessedImage != use) {
-                it.useProcessedImage = use
-                _currentClothingItem.postValue(it)
+    fun resetToAiDefaults() {
+        _currentClothingItem.value?.let { current ->
+            val resetCategory = aiDefaultCategory(current)
+            _currentClothingItem.value = current.copy(
+                category = resetCategory,
+                suitableTemperature = defaultTemperatureForCategory(resetCategory, current.baseTemperature),
+                size = null
+            )
+            checkForChanges()
+        }
+    }
+
+    fun updateSize(size: String?) {
+        _currentClothingItem.value?.let { current ->
+            if (current.size != size) {
+                _currentClothingItem.value = current.copy(size = size)
                 checkForChanges()
             }
+        }
+    }
+
+    fun updateUseProcessedImage(use: Boolean) {
+        _currentClothingItem.value?.let { current ->
+            if (current.useProcessedImage != use) {
+                _currentClothingItem.value = current.copy(useProcessedImage = use)
+                checkForChanges()
+            }
+        }
+    }
+
+    fun isResetNeeded(item: ClothingItem): Boolean {
+        val resetCategory = aiDefaultCategory(item)
+        val resetTemp = defaultTemperatureForCategory(resetCategory, item.baseTemperature)
+        val categoryChanged = item.category != resetCategory
+        val tempChanged = kotlin.math.abs(item.suitableTemperature - resetTemp) > 0.01
+        val sizeChanged = item.size != null
+        return categoryChanged || tempChanged || sizeChanged
+    }
+
+    private fun aiDefaultCategory(item: ClothingItem): String {
+        return item.aiCategory
+            ?.trim()
+            ?.takeIf { it.isNotEmpty() }
+            ?: originalClothingItem?.category
+            ?: item.category
+    }
+
+    private fun defaultTemperatureForCategory(category: String, baseTemperature: Double): Double {
+        return when (category) {
+            "아우터" -> baseTemperature - 3.0
+            "상의", "하의" -> baseTemperature + 2.0
+            else -> baseTemperature
         }
     }
 
@@ -143,14 +185,16 @@ class EditClothingViewModel(application: Application) : AndroidViewModel(applica
         }
     }
 
-    fun deleteClothingItem() {
+    fun deleteClothingItem(skipOrphanCleanup: Boolean = false) {
         if (_isProcessing.value == true) return
         _currentClothingItem.value?.let { itemToDelete ->
             _isProcessing.value = true
             viewModelScope.launch {
                 try {
                     repository.delete(itemToDelete)
-                    styleDao.deleteOrphanedStyles()
+                    if (!skipOrphanCleanup) {
+                        styleDao.deleteOrphanedStyles()
+                    }
                     _isDeleteComplete.postValue(true)
                 } finally {
                     _isProcessing.postValue(false)

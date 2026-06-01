@@ -133,10 +133,13 @@ class ClothingAdapter(
                 true
             }
 
+            val fitColor = getFitBorderColor(itemView.context, item)
+            val defaultColor = ContextCompat.getColor(itemView.context, R.color.weather_card_blue_bg)
+            val thickness = if (fitColor != defaultColor) 2.5f else 1.5f
             imageContainer.strokeWidth = TypedValue.applyDimension(
-                TypedValue.COMPLEX_UNIT_DIP, 1.5f, itemView.context.resources.displayMetrics
+                TypedValue.COMPLEX_UNIT_DIP, thickness, itemView.context.resources.displayMetrics
             ).toInt()
-            imageContainer.strokeColor = ContextCompat.getColor(itemView.context, R.color.weather_card_blue_bg)
+            imageContainer.strokeColor = fitColor
 
             if (settingsManager.showRecommendationIcon) {
                 if (isPackable) {
@@ -154,6 +157,28 @@ class ClothingAdapter(
 
             updateDeleteModeUI(isDeleteMode())
             updateSelectionUI(isItemSelected(item.id))
+        }
+
+        private fun getFitBorderColor(context: android.content.Context, item: ClothingItem): Int {
+            val defaultColor = ContextCompat.getColor(context, R.color.weather_card_blue_bg)
+            if (!settingsManager.bodyFitEnabled || !settingsManager.bodyFitBorderEnabled || !settingsManager.isBodyRegistered) {
+                return defaultColor
+            }
+            // 상의/하의/아우터 외 카테고리는 테두리 표시 안 함
+            if (item.category !in AddClothingViewModel.SIZE_CATEGORIES) return defaultColor
+            val level = AddClothingViewModel.calculateFitLevel(
+                settingsManager.estimatedHeight, settingsManager.estimatedWeight, settingsManager.estimatedWaist,
+                item.fitMinHeight, item.fitMaxHeight,
+                item.fitMinWeight, item.fitMaxWeight,
+                item.fitMinWaist, item.fitMaxWaist
+            )
+            return when (level) {
+                AddClothingViewModel.FIT_VERY_GOOD, AddClothingViewModel.FIT_GOOD ->
+                    ContextCompat.getColor(context, R.color.fit_green)
+                AddClothingViewModel.FIT_BAD, AddClothingViewModel.FIT_VERY_BAD ->
+                    ContextCompat.getColor(context, R.color.fit_red)
+                else -> defaultColor
+            }
         }
 
         fun updateDeleteModeUI(isDelete: Boolean) {

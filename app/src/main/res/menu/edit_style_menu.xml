@@ -5,5 +5,5 @@
         android:id="@+id/menu_save_style"
         android:title="저장하기"
         android:textStyle="bold"
-        app:showAsAction="ifRoom" />
+        app:showAsAction="ifRoom"/>
 </menu>

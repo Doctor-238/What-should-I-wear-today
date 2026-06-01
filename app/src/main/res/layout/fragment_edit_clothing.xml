@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
@@ -10,59 +11,72 @@
         android:id="@+id/toolbar_edit"
         android:layout_width="0dp"
         android:layout_height="?attr/actionBarSize"
-        android:textStyle="bold"
+        android:background="@drawable/bg_header_unified"
+        android:elevation="0dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         app:navigationIcon="@drawable/ic_arrow_back"
         app:title="옷 수정"
-        app:titleCentered="true" />
+        app:titleCentered="true"
+        app:titleTextColor="@color/text_primary"
+        app:titleTextAppearance="@style/TextAppearance.App.ToolbarTitle"
+        app:menu="@menu/edit_clothing_menu"/>
+
+    <View
+        android:id="@+id/toolbar_divider"
+        android:layout_width="match_parent"
+        android:layout_height="12dp"
+        android:background="@drawable/bg_header_to_content_fade"
+        app:layout_constraintTop_toBottomOf="@id/toolbar_edit"/>
 
     <ScrollView
         android:id="@+id/scrollView"
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:scrollbars="none"
+        android:clipToPadding="false"
+        android:clipChildren="false"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/toolbar_edit">
+        app:layout_constraintTop_toBottomOf="@id/toolbar_divider">
 
         <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:paddingVertical="16dp">
+            android:paddingTop="20dp"
+            android:paddingBottom="36dp">
 
             <FrameLayout
                 android:id="@+id/frameLayout_edit_preview"
                 android:layout_width="0dp"
                 android:layout_height="0dp"
-                android:layout_marginHorizontal="16dp"
+                android:layout_marginHorizontal="20dp"
                 android:background="@drawable/bg_cloth_spinner"
-                android:padding="16dp"
+                android:padding="12dp"
+                android:elevation="6dp"
                 app:layout_constraintDimensionRatio="1:1"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent"
-                app:strokeColor="@color/weather_card_blue_bg"
-                app:strokeWidth="1.5dp">
+                app:layout_constraintTop_toTopOf="parent">
 
                 <ImageView
                     android:id="@+id/imageView_edit_preview"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
                     android:scaleType="fitCenter"
-                    tools:src="@tools:sample/backgrounds/scenic" />
+                    tools:src="@tools:sample/backgrounds/scenic"/>
 
                 <ImageView
                     android:id="@+id/icon_special_edit"
                     android:layout_width="32dp"
                     android:layout_height="32dp"
                     android:layout_gravity="bottom|end"
-                    android:layout_margin="8dp"
+                    android:layout_margin="10dp"
                     android:visibility="gone"
                     tools:src="@tools:sample/sun"
-                    tools:visibility="visible" />
+                    tools:visibility="visible"/>
 
             </FrameLayout>
 
@@ -70,11 +84,12 @@
                 android:id="@+id/card_ai_info_edit"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginHorizontal="16dp"
-                android:layout_marginTop="24dp"
-                app:cardBackgroundColor="@color/settings_card_background"
-                app:cardCornerRadius="16dp"
-                app:cardElevation="4dp"
+                android:layout_marginHorizontal="20dp"
+                android:layout_marginTop="16dp"
+                app:cardBackgroundColor="@color/surface"
+                app:cardCornerRadius="24dp"
+                app:cardElevation="6dp"
+                app:strokeWidth="0dp"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/frameLayout_edit_preview">
@@ -83,13 +98,14 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:paddingHorizontal="16dp"
-                    android:paddingVertical="8dp">
+                    android:paddingHorizontal="20dp"
+                    android:paddingVertical="4dp">
 
+                    <!-- FIX #4: Temperature area — hint only shows for non-temp categories, replacing temp controls -->
                     <androidx.constraintlayout.widget.ConstraintLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:paddingVertical="8dp">
+                        android:paddingVertical="14dp">
 
                         <TextView
                             android:id="@+id/tv_edit_temp_label"
@@ -97,57 +113,77 @@
                             android:layout_height="wrap_content"
                             android:text="적정 온도"
                             android:textColor="@color/text_primary"
-                            android:textSize="16sp"
+                            android:textSize="14sp"
                             android:textStyle="bold"
                             app:layout_constraintBottom_toBottomOf="parent"
                             app:layout_constraintStart_toStartOf="parent"
-                            app:layout_constraintTop_toTopOf="parent" />
+                            app:layout_constraintTop_toTopOf="parent"/>
 
+                        <!-- Hint: only visible when category is NOT 상의/하의/아우터 -->
+                        <TextView
+                            android:id="@+id/tv_edit_temp_hint"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:text="상의, 하의, 아우터에만 표시됩니다."
+                            android:textColor="@color/text_tertiary"
+                            android:textSize="11sp"
+                            android:gravity="end"
+                            android:layout_marginStart="8dp"
+                            android:visibility="gone"
+                            app:layout_constraintBottom_toBottomOf="@id/tv_edit_temp_label"
+                            app:layout_constraintEnd_toEndOf="parent"
+                            app:layout_constraintStart_toEndOf="@id/tv_edit_temp_label"
+                            app:layout_constraintTop_toTopOf="@id/tv_edit_temp_label"/>
+
+                        <!-- Temperature controls: only visible when category IS 상의/하의/아우터 -->
                         <ImageButton
                             android:id="@+id/button_edit_temp_decrease"
-                            android:layout_width="26dp"
-                            android:layout_height="26dp"
-                            android:layout_marginEnd="8dp"
+                            android:layout_width="32dp"
+                            android:layout_height="32dp"
+                            android:layout_marginEnd="10dp"
                             android:background="@drawable/bg_button_minus"
                             android:contentDescription="온도 내리기"
                             android:src="@drawable/ic_minus"
+                            android:elevation="3dp"
                             app:layout_constraintBottom_toBottomOf="parent"
                             app:layout_constraintEnd_toStartOf="@id/textView_edit_temperature"
-                            app:layout_constraintTop_toTopOf="parent" />
+                            app:layout_constraintTop_toTopOf="parent"/>
 
                         <TextView
                             android:id="@+id/textView_edit_temperature"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_marginEnd="8dp"
+                            android:layout_marginEnd="10dp"
                             android:textColor="@color/text_primary"
-                            android:textSize="16sp"
+                            android:textSize="13sp"
+                            android:textStyle="bold"
                             app:layout_constraintBottom_toBottomOf="parent"
                             app:layout_constraintEnd_toStartOf="@id/button_edit_temp_increase"
                             app:layout_constraintTop_toTopOf="parent"
-                            tools:text="-7.5°C ~ -2.5°C" />
+                            tools:text="-7.5°C ~ -2.5°C"/>
 
                         <ImageButton
                             android:id="@+id/button_edit_temp_increase"
-                            android:layout_width="26dp"
-                            android:layout_height="26dp"
+                            android:layout_width="32dp"
+                            android:layout_height="32dp"
                             android:background="@drawable/bg_button_plus"
                             android:contentDescription="온도 올리기"
                             android:src="@drawable/ic_plus"
+                            android:elevation="3dp"
                             app:layout_constraintBottom_toBottomOf="parent"
                             app:layout_constraintEnd_toEndOf="parent"
-                            app:layout_constraintTop_toTopOf="parent" />
+                            app:layout_constraintTop_toTopOf="parent"/>
                     </androidx.constraintlayout.widget.ConstraintLayout>
 
                     <View
                         android:layout_width="match_parent"
                         android:layout_height="1dp"
-                        android:background="#F0F0F0" />
+                        android:background="@color/divider_color"/>
 
                     <RelativeLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:paddingVertical="8dp">
+                        android:paddingVertical="14dp">
 
                         <TextView
                             android:layout_width="wrap_content"
@@ -156,27 +192,140 @@
                             android:layout_centerVertical="true"
                             android:text="색상"
                             android:textColor="@color/text_primary"
-                            android:textSize="16sp"
-                            android:textStyle="bold" />
+                            android:textSize="14sp"
+                            android:textStyle="bold"/>
 
                         <View
                             android:id="@+id/view_color_swatch_edit"
-                            android:layout_width="24dp"
-                            android:layout_height="24dp"
+                            android:layout_width="28dp"
+                            android:layout_height="28dp"
                             android:layout_alignParentEnd="true"
                             android:layout_centerVertical="true"
-                            tools:background="#000000" />
+                            android:elevation="2dp"
+                            tools:background="#000000"/>
+                    </RelativeLayout>
+
+                    <View
+                        android:id="@+id/divider_edit_fit_level"
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:background="@color/divider_color"/>
+
+                    <RelativeLayout
+                        android:id="@+id/layout_edit_fit_level"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:paddingVertical="14dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="사이즈"
+                            android:textStyle="bold"
+                            android:layout_alignParentStart="true"
+                            android:layout_centerVertical="true"
+                            android:textColor="@color/text_primary"
+                            android:textSize="14sp"/>
+
+                        <!-- 우측: [적합여부] │ [사이즈] -->
+                        <LinearLayout
+                            android:id="@+id/ll_edit_size_info"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_alignParentEnd="true"
+                            android:layout_centerVertical="true"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical">
+
+                            <TextView
+                                android:id="@+id/tv_edit_fit_level"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:textSize="13sp"
+                                android:textStyle="bold"
+                                tools:text="적합"/>
+
+                            <View
+                                android:id="@+id/divider_edit_size_fit"
+                                android:layout_width="1dp"
+                                android:layout_height="14dp"
+                                android:background="@color/divider_color"
+                                android:layout_marginHorizontal="8dp"/>
+
+                            <FrameLayout
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:background="@drawable/bg_settings_spinner"
+                                android:clickable="true"
+                                android:focusable="true"
+                                android:elevation="3dp">
+                                <Spinner
+                                    android:id="@+id/spinner_edit_size"
+                                    android:layout_width="100dp"
+                                    android:layout_height="42dp"
+                                    android:background="@android:color/transparent"
+                                    android:gravity="center"
+                                    android:spinnerMode="dropdown"/>
+                                <ImageView
+                                    android:layout_width="16dp"
+                                    android:layout_height="16dp"
+                                    android:layout_gravity="end|center_vertical"
+                                    android:layout_marginEnd="14dp"
+                                    android:src="@drawable/ic_dropdown_arrow"
+                                    tools:ignore="ContentDescription"/>
+                            </FrameLayout>
+
+                        </LinearLayout>
+                    </RelativeLayout>
+
+                    <View
+                        android:id="@+id/divider_edit_purpose"
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:background="@color/divider_color"
+                        android:visibility="gone"/>
+
+                    <RelativeLayout
+                        android:id="@+id/layout_edit_purpose"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:paddingVertical="14dp"
+                        android:visibility="gone">
+                        <TextView
+                            android:id="@+id/tv_purpose_label_edit"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="용도"
+                            android:textStyle="bold"
+                            android:layout_alignParentStart="true"
+                            android:layout_centerVertical="true"
+                            android:textColor="@color/text_primary"
+                            android:textSize="14sp"/>
+                        <TextView
+                            android:id="@+id/tv_edit_purpose"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_alignParentEnd="true"
+                            android:layout_centerVertical="true"
+                            android:layout_toEndOf="@id/tv_purpose_label_edit"
+                            android:layout_marginStart="16dp"
+                            android:gravity="end"
+                            android:textColor="@color/primary"
+                            android:textSize="13sp"
+                            android:textStyle="bold"
+                            tools:text="일상용, 활동용"/>
                     </RelativeLayout>
 
                     <View
                         android:layout_width="match_parent"
                         android:layout_height="1dp"
-                        android:background="#F0F0F0" />
+                        android:background="@color/divider_color"/>
 
                     <RelativeLayout
                         android:id="@+id/layout_background_removal"
                         android:layout_width="match_parent"
-                        android:layout_height="wrap_content">
+                        android:layout_height="wrap_content"
+                        android:paddingVertical="6dp">
 
                         <TextView
                             android:layout_width="wrap_content"
@@ -185,34 +334,87 @@
                             android:layout_centerVertical="true"
                             android:text="배경 제거"
                             android:textColor="@color/text_primary"
-                            android:textSize="16sp"
-                            android:textStyle="bold" />
+                            android:textSize="14sp"
+                            android:textStyle="bold"/>
 
                         <com.google.android.material.switchmaterial.SwitchMaterial
                             android:id="@+id/switch_edit_remove_background"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_alignParentEnd="true"
-                            android:layout_centerVertical="true" />
+                            android:layout_centerVertical="true"/>
+                    </RelativeLayout>
+
+                    <!-- Purchase source section -->
+                    <View
+                        android:id="@+id/divider_purchase_source"
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:background="@color/divider_color"
+                        android:visibility="gone"/>
+
+                    <RelativeLayout
+                        android:id="@+id/layout_purchase_source"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:paddingVertical="12dp"
+                        android:visibility="gone">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_alignParentStart="true"
+                            android:layout_centerVertical="true"
+                            android:text="구매처"
+                            android:textColor="@color/text_primary"
+                            android:textSize="14sp"
+                            android:textStyle="bold"/>
+
+                        <LinearLayout
+                            android:id="@+id/ll_purchase_source"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_alignParentEnd="true"
+                            android:layout_centerVertical="true"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical">
+
+                            <ImageView
+                                android:id="@+id/iv_purchase_source_icon"
+                                android:layout_width="20dp"
+                                android:layout_height="20dp"
+                                android:scaleType="fitCenter"
+                                android:layout_marginEnd="6dp"
+                                android:visibility="gone"
+                                tools:ignore="ContentDescription"/>
+
+                            <TextView
+                                android:id="@+id/tv_purchase_source"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:textSize="13sp"
+                                android:textColor="@color/text_secondary"
+                                tools:text="쿠팡에서 구매"/>
+                        </LinearLayout>
                     </RelativeLayout>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/textInputLayout_edit_name"
-                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                style="@style/Widget.App.TextInputLayout"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginHorizontal="16dp"
-                android:layout_marginTop="24dp"
-                app:boxCornerRadiusBottomEnd="12dp"
-                app:boxCornerRadiusBottomStart="12dp"
-                app:boxCornerRadiusTopEnd="12dp"
-                app:boxCornerRadiusTopStart="12dp"
+                android:layout_marginHorizontal="20dp"
+                android:layout_marginTop="16dp"
+                app:boxCornerRadiusBottomEnd="16dp"
+                app:boxCornerRadiusBottomStart="16dp"
+                app:boxCornerRadiusTopEnd="16dp"
+                app:boxCornerRadiusTopStart="16dp"
                 app:boxStrokeColor="@color/text_input_box_stroke_color"
                 app:counterEnabled="true"
                 app:counterMaxLength="20"
-                app:hintTextColor="@color/tab_selected_text"
+                app:hintTextColor="@color/primary"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/card_ai_info_edit">
@@ -223,28 +425,30 @@
                     android:layout_height="wrap_content"
                     android:hint="옷 이름"
                     android:inputType="text"
-                    android:maxLength="20" />
+                    android:maxLength="20"/>
             </com.google.android.material.textfield.TextInputLayout>
 
             <TextView
                 android:id="@+id/textView_edit_category_label"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginHorizontal="16dp"
-                android:layout_marginTop="4dp"
+                android:layout_marginHorizontal="20dp"
+                android:layout_marginTop="20dp"
                 android:text="종류"
                 android:textColor="@color/text_primary"
-                android:textSize="16sp"
+                android:textSize="14sp"
                 android:textStyle="bold"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/textInputLayout_edit_name" />
+                app:layout_constraintTop_toBottomOf="@id/textInputLayout_edit_name"/>
 
             <com.google.android.material.chip.ChipGroup
                 android:id="@+id/chipGroup_edit_category"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginHorizontal="16dp"
+                android:layout_marginHorizontal="20dp"
+                android:layout_marginTop="10dp"
                 app:chipSpacingHorizontal="8dp"
+                app:chipSpacingVertical="6dp"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/textView_edit_category_label"
@@ -253,98 +457,126 @@
 
                 <com.google.android.material.chip.Chip
                     android:id="@+id/chip_edit_top"
-                    style="@style/Widget.MaterialComponents.Chip.Choice"
+                    style="@style/Widget.App.Chip"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="상의"
                     android:textColor="@color/chip_textcolor_selector"
                     app:chipBackgroundColor="@color/chip_backgroundcolor_selector"
                     app:chipStrokeColor="@color/fab_color_style_tab"
-                    app:chipStrokeWidth="2dp" />
+                    app:chipStrokeWidth="1.5dp"/>
 
                 <com.google.android.material.chip.Chip
                     android:id="@+id/chip_edit_bottom"
-                    style="@style/Widget.MaterialComponents.Chip.Choice"
+                    style="@style/Widget.App.Chip"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="하의"
                     android:textColor="@color/chip_textcolor_selector"
                     app:chipBackgroundColor="@color/chip_backgroundcolor_selector"
                     app:chipStrokeColor="@color/fab_color_style_tab"
-                    app:chipStrokeWidth="2dp" />
+                    app:chipStrokeWidth="1.5dp"/>
 
                 <com.google.android.material.chip.Chip
                     android:id="@+id/chip_edit_outer"
-                    style="@style/Widget.MaterialComponents.Chip.Choice"
+                    style="@style/Widget.App.Chip"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="아우터"
                     android:textColor="@color/chip_textcolor_selector"
                     app:chipBackgroundColor="@color/chip_backgroundcolor_selector"
                     app:chipStrokeColor="@color/fab_color_style_tab"
-                    app:chipStrokeWidth="2dp" />
+                    app:chipStrokeWidth="1.5dp"/>
 
                 <com.google.android.material.chip.Chip
                     android:id="@+id/chip_edit_shoe"
-                    style="@style/Widget.MaterialComponents.Chip.Choice"
+                    style="@style/Widget.App.Chip"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="신발"
                     android:textColor="@color/chip_textcolor_selector"
                     app:chipBackgroundColor="@color/chip_backgroundcolor_selector"
                     app:chipStrokeColor="@color/fab_color_style_tab"
-                    app:chipStrokeWidth="2dp" />
+                    app:chipStrokeWidth="1.5dp"/>
 
                 <com.google.android.material.chip.Chip
                     android:id="@+id/chip_edit_bag"
-                    style="@style/Widget.MaterialComponents.Chip.Choice"
+                    style="@style/Widget.App.Chip"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="가방"
                     android:textColor="@color/chip_textcolor_selector"
                     app:chipBackgroundColor="@color/chip_backgroundcolor_selector"
                     app:chipStrokeColor="@color/fab_color_style_tab"
-                    app:chipStrokeWidth="2dp" />
+                    app:chipStrokeWidth="1.5dp"/>
 
                 <com.google.android.material.chip.Chip
                     android:id="@+id/chip_edit_hat"
-                    style="@style/Widget.MaterialComponents.Chip.Choice"
+                    style="@style/Widget.App.Chip"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="모자"
                     android:textColor="@color/chip_textcolor_selector"
                     app:chipBackgroundColor="@color/chip_backgroundcolor_selector"
                     app:chipStrokeColor="@color/fab_color_style_tab"
-                    app:chipStrokeWidth="2dp" />
+                    app:chipStrokeWidth="1.5dp"/>
 
                 <com.google.android.material.chip.Chip
                     android:id="@+id/chip_edit_other"
-                    style="@style/Widget.MaterialComponents.Chip.Choice"
+                    style="@style/Widget.App.Chip"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="기타"
                     android:textColor="@color/chip_textcolor_selector"
                     app:chipBackgroundColor="@color/chip_backgroundcolor_selector"
                     app:chipStrokeColor="@color/fab_color_style_tab"
-                    app:chipStrokeWidth="2dp" />
+                    app:chipStrokeWidth="1.5dp"/>
 
             </com.google.android.material.chip.ChipGroup>
 
-            <Button
-                android:id="@+id/button_delete"
-                style="@style/Widget.Material3.Button.OutlinedButton"
-                android:layout_width="wrap_content"
-                android:layout_height="60dp"
-                android:layout_marginTop="20dp"
-                android:paddingHorizontal="48dp"
-                android:text="삭제하기"
-                android:textColor="?attr/colorError"
-                android:textStyle="bold"
-                app:cornerRadius="24dp"
+            <LinearLayout
+                android:id="@+id/layout_action_buttons"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="28dp"
+                android:layout_marginHorizontal="20dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/chipGroup_edit_category"
-                app:strokeColor="?attr/colorError" />
+                app:layout_constraintTop_toBottomOf="@id/chipGroup_edit_category">
+
+                <Button
+                    android:id="@+id/button_reset"
+                    android:layout_width="0dp"
+                    android:layout_height="56dp"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="8dp"
+                    android:text="변경 초기화"
+                    android:textColor="@color/white"
+                    android:textStyle="bold"
+                    android:textSize="14sp"
+                    android:background="@drawable/bg_button_reset"
+                    android:elevation="6dp"
+                    android:stateListAnimator="@null"
+                    app:backgroundTint="@null"/>
+
+                <Button
+                    android:id="@+id/button_delete"
+                    android:layout_width="0dp"
+                    android:layout_height="56dp"
+                    android:layout_weight="1"
+                    android:layout_marginStart="8dp"
+                    android:text="삭제하기"
+                    android:textColor="@color/white"
+                    android:textStyle="bold"
+                    android:textSize="14sp"
+                    android:background="@drawable/bg_button_danger"
+                    android:elevation="6dp"
+                    android:stateListAnimator="@null"
+                    app:backgroundTint="@null"/>
+
+            </LinearLayout>
 
         </androidx.constraintlayout.widget.ConstraintLayout>
 

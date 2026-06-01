@@ -9,43 +9,33 @@ import kotlinx.coroutines.withContext
 import java.io.File
 
 
-@Database(entities = [ClothingItem::class, SavedStyle::class, StyleItemCrossRef::class], version = 13, exportSchema = false)
+@Database(entities = [ClothingItem::class, SavedStyle::class, StyleItemCrossRef::class], version = 20, exportSchema = false)
 
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun clothingDao(): ClothingDao
     abstract fun styleDao(): StyleDao
 
-    override fun clearAllTables() {
-    }
-
-    suspend fun clearAllData(context: Context) {
+    suspend fun clearAllData() {
         withContext(Dispatchers.IO) {
-
             val allItems = clothingDao().getAllItemsLists()
 
             allItems.forEach { item ->
-                try {
-                    val file = File(item.imageUri)
-                    if (file.exists()) {
-                        file.delete()
-                    }
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
+                deleteFileIfExists(item.imageUri)
+                deleteFileIfExists(item.processedImageUri)
             }
-            allItems.forEach { item ->
-                try {
-                    val file = File(item.processedImageUri)
-                    if (file.exists()) {
-                        file.delete()
-                    }
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
 
-                clearAllTables()
-            }
+            clearAllTables()
+        }
+    }
+
+    private fun deleteFileIfExists(path: String?) {
+        if (path.isNullOrBlank()) return
+        try {
+            val file = File(path)
+            if (file.exists()) file.delete()
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
     }
 
@@ -61,7 +51,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "clothing_database"
                 )
-                    .fallbackToDestructiveMigration()
+                    .addMigrations(*ALL_MIGRATIONS)
                     .build()
                 INSTANCE = instance
                 instance

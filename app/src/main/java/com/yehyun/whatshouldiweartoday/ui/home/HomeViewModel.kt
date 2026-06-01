@@ -20,11 +20,15 @@ import com.yehyun.whatshouldiweartoday.data.database.ClothingItem
 import com.yehyun.whatshouldiweartoday.data.preference.SettingsManager
 import com.yehyun.whatshouldiweartoday.data.repository.ClothingRepository
 import com.yehyun.whatshouldiweartoday.data.repository.WeatherRepository
+import com.yehyun.whatshouldiweartoday.ui.closet.AddClothingViewModel
+import com.yehyun.whatshouldiweartoday.util.isNetworkAvailable
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import java.io.IOException
+import java.time.Duration
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import kotlin.math.abs
 
@@ -45,7 +49,8 @@ data class DailyWeatherSummary(
     val maxFeelsLike: Double,
     val minFeelsLike: Double,
     val weatherCondition: String,
-    val precipitationProbability: Int
+    val precipitationProbability: Int,
+    val weatherIcon: String = "01d"
 )
 
 @SuppressLint("MissingPermission")
@@ -66,6 +71,20 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     val todayRecommendation: LiveData<RecommendationResult?> = _todayRecommendation
     private val _tomorrowRecommendation = MutableLiveData<RecommendationResult?>()
     val tomorrowRecommendation: LiveData<RecommendationResult?> = _tomorrowRecommendation
+
+    // Extended-day state (3일뒤 이후 선택 가능한 날짜)
+    // OpenWeatherMap 5일/3시간 forecast → 일 오프셋 0..4 까지 가능, 3일뒤부터 선택 허용
+    private val extendedForecastsByOffset = mutableMapOf<Int, List<Forecast>>()
+    private var cachedAllClothes: List<ClothingItem> = emptyList()
+    private val _availableExtendedDays = MutableLiveData<List<Int>>(emptyList())
+    val availableExtendedDays: LiveData<List<Int>> = _availableExtendedDays
+    private val _selectedExtendedDay = MutableLiveData<Int>(MIN_EXTENDED_DAY)
+    val selectedExtendedDay: LiveData<Int> = _selectedExtendedDay
+    private val _extendedWeatherSummary = MutableLiveData<DailyWeatherSummary?>()
+    val extendedWeatherSummary: LiveData<DailyWeatherSummary?> = _extendedWeatherSummary
+    private val _extendedRecommendation = MutableLiveData<RecommendationResult?>()
+    val extendedRecommendation: LiveData<RecommendationResult?> = _extendedRecommendation
+
     private val _error = MutableLiveData<String?>()
     val error: LiveData<String?> = _error
     private val _isLoading = MutableLiveData<Boolean>()
@@ -77,10 +96,16 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     private val _todayRecommendedClothingIds = MutableLiveData<Set<Int>>(emptySet())
     val todayRecommendedClothingIds: LiveData<Set<Int>> = _todayRecommendedClothingIds
 
+    private val _allDailySummaries = MutableLiveData<Map<Int, DailyWeatherSummary>>(emptyMap())
+    val allDailySummaries: LiveData<Map<Int, DailyWeatherSummary>> = _allDailySummaries
+
     var permissionRequestedThisSession = false
 
     companion object {
         private const val SIGNIFICANT_TEMP_DIFFERENCE = 12.0
+        // OpenWeatherMap 5일/3시간 forecast 기준: 오늘(0) ~ 4일뒤(4) 까지 데이터 제공
+        const val MIN_EXTENDED_DAY = 2
+        const val MAX_EXTENDED_DAY = 4
     }
 
     init {
@@ -105,7 +130,12 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         fetchJob = viewModelScope.launch {
             startLoading()
             try {
-                if (ActivityCompat.checkSelfPermission(getApplication(), Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                if (!isNetworkAvailable(getApplication())) {
+                    _error.postValue("인터넷에 연결되어 있지 않습니다. 와이파이 또는 모바일 데이터를 확인해주세요.")
+                    return@launch
+                }
+                if (ActivityCompat.checkSelfPermission(getApplication(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
+                    && ActivityCompat.checkSelfPermission(getApplication(), Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
                     throw SecurityException("위치 권한이 없습니다.")
                 }
                 val location = getFreshLocation()
@@ -130,7 +160,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         }
 
         return fusedLocationClient.getCurrentLocation(
-            Priority.PRIORITY_BALANCED_POWER_ACCURACY,
+            Priority.PRIORITY_HIGH_ACCURACY,
             cancellationTokenSource.token
         ).await()
     }
@@ -166,6 +196,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         val todayForecasts = forecastsByDate[today] ?: emptyList()
         val tomorrowForecasts = forecastsByDate[tomorrow] ?: emptyList()
         val allClothes = clothingRepository.getAllItemsList()
+        cachedAllClothes = allClothes
         if (todayForecasts.isNotEmpty()) {
             val summary = createDailySummary(todayForecasts)
             _todayWeatherSummary.postValue(summary)
@@ -183,6 +214,58 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             _tomorrowWeatherSummary.postValue(null)
             _tomorrowRecommendation.postValue(null)
         }
+
+        // 2일뒤 이후 데이터 수집 (OpenWeatherMap 5일/3시간: 최대 day+4)
+        extendedForecastsByOffset.clear()
+        val available = mutableListOf<Int>()
+        for (offset in MIN_EXTENDED_DAY..MAX_EXTENDED_DAY) {
+            val date = today.plusDays(offset.toLong())
+            val forecasts = forecastsByDate[date] ?: emptyList()
+            if (forecasts.isNotEmpty()) {
+                extendedForecastsByOffset[offset] = forecasts
+                available.add(offset)
+            }
+        }
+        _availableExtendedDays.postValue(available)
+
+        // 말 추천용: 내일~4일뒤 일별 요약 노출
+        val summaryMap = mutableMapOf<Int, DailyWeatherSummary>()
+        for (offset in 1..4) {
+            val date = today.plusDays(offset.toLong())
+            val forecasts = forecastsByDate[date] ?: emptyList()
+            if (forecasts.isNotEmpty()) summaryMap[offset] = createDailySummary(forecasts)
+        }
+        _allDailySummaries.postValue(summaryMap)
+
+        // 현재 선택된 날짜가 사용 불가능하면 가장 가까운 가능한 날짜로 조정
+        val currentSelected = _selectedExtendedDay.value ?: MIN_EXTENDED_DAY
+        val effectiveSelected = when {
+            available.isEmpty() -> currentSelected
+            currentSelected in available -> currentSelected
+            else -> available.first()
+        }
+        if (effectiveSelected != currentSelected) {
+            _selectedExtendedDay.postValue(effectiveSelected)
+        }
+        updateExtendedForDay(effectiveSelected)
+    }
+
+    private fun updateExtendedForDay(dayOffset: Int) {
+        val forecasts = extendedForecastsByOffset[dayOffset]
+        if (forecasts == null || forecasts.isEmpty()) {
+            _extendedWeatherSummary.postValue(null)
+            _extendedRecommendation.postValue(null)
+            return
+        }
+        val summary = createDailySummary(forecasts)
+        _extendedWeatherSummary.postValue(summary)
+        _extendedRecommendation.postValue(generateRecommendation(summary, cachedAllClothes, isToday = false))
+    }
+
+    fun setSelectedExtendedDay(dayOffset: Int) {
+        if (_selectedExtendedDay.value == dayOffset) return
+        _selectedExtendedDay.value = dayOffset
+        updateExtendedForDay(dayOffset)
     }
 
     private fun createDailySummary(forecasts: List<Forecast>): DailyWeatherSummary {
@@ -191,12 +274,31 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         val maxFeelsLike = forecasts.maxOf { it.main.feels_like }
         val minFeelsLike = forecasts.minOf { it.main.feels_like }
         val pop = (forecasts.maxOf { it.pop } * 100).toInt()
-        val weatherCondition = when {
-            forecasts.any { it.weather.any { w -> w.main.equals("Rain", true) } } -> "비"
-            forecasts.any { it.weather.any { w -> w.main.equals("Snow", true) } } -> "눈"
-            else -> forecasts.first().weather.first().description
+        val now = LocalDateTime.now()
+        val dtFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+        val representativeForecast = forecasts.minByOrNull { forecast ->
+            abs(Duration.between(now, LocalDateTime.parse(forecast.dt_txt, dtFormatter)).toMinutes())
+        } ?: forecasts.first()
+        val representativeTime = LocalDateTime.parse(representativeForecast.dt_txt, dtFormatter)
+        val futureForecasts = forecasts.filter {
+            !LocalDateTime.parse(it.dt_txt, dtFormatter).isBefore(representativeTime)
         }
-        return DailyWeatherSummary("", maxTemp, minTemp, maxFeelsLike, minFeelsLike, weatherCondition, pop)
+        val weatherCondition = when {
+            futureForecasts.any { it.weather.any { w -> w.main.equals("Rain", true) } } -> "비"
+            futureForecasts.any { it.weather.any { w -> w.main.equals("Snow", true) } } -> "눈"
+            else -> representativeForecast.weather.first().description
+        }
+        val weatherIcon = getRepresentativeIcon(forecasts)
+        return DailyWeatherSummary("", maxTemp, minTemp, maxFeelsLike, minFeelsLike, weatherCondition, pop, weatherIcon)
+    }
+
+    private fun getRepresentativeIcon(forecasts: List<Forecast>): String {
+        val priority = listOf("11", "13", "10", "09", "50", "04", "03", "02", "01")
+        for (prefix in priority) {
+            val found = forecasts.firstOrNull { f -> f.weather.any { w -> w.icon.startsWith(prefix) } }
+            if (found != null) return found.weather.first { it.icon.startsWith(prefix) }.icon
+        }
+        return forecasts.firstOrNull()?.weather?.firstOrNull()?.icon ?: "01d"
     }
 
     fun generateRecommendation(summary: DailyWeatherSummary, allClothes: List<ClothingItem>, isToday: Boolean = true): RecommendationResult {
@@ -240,9 +342,44 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
 
-        val bestTop = recommendedTops.minByOrNull { abs(it.suitableTemperature + settingsManager.getTemperatureTolerance() - 1 - maxTempCriteria) }
-        val bestBottom = recommendedBottoms.minByOrNull { abs(it.suitableTemperature + settingsManager.getTemperatureTolerance() - 1 - maxTempCriteria) }
-        val bestOuter = recommendedOuters.minByOrNull { abs(it.suitableTemperature + settingsManager.getTemperatureTolerance() - 1 - maxTempCriteria) }
+        val fitEnabled = settingsManager.bodyFitEnabled && settingsManager.isBodyRegistered
+        val userHeight = settingsManager.estimatedHeight
+        val userWeight = settingsManager.estimatedWeight
+        val purposeEnabled = settingsManager.clothingPurposeEnabled
+        val selectedPurpose = settingsManager.selectedPurpose
+
+        val userWaist = settingsManager.estimatedWaist
+        fun fitOrder(item: ClothingItem): Int {
+            if (!fitEnabled) return 0
+            val level = AddClothingViewModel.calculateFitLevel(
+                userHeight, userWeight, userWaist,
+                item.fitMinHeight, item.fitMaxHeight,
+                item.fitMinWeight, item.fitMaxWeight,
+                item.fitMinWaist, item.fitMaxWaist
+            )
+            return AddClothingViewModel.fitLevelToOrder(level)
+        }
+
+        fun purposeOrder(item: ClothingItem): Int {
+            if (!purposeEnabled) return 0
+            val purposes = item.purpose.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+            return if (purposes.contains(selectedPurpose)) 0 else 1
+        }
+
+        fun bestPick(items: List<ClothingItem>): ClothingItem? {
+            if (!purposeEnabled && !fitEnabled) {
+                return items.minByOrNull { abs(it.suitableTemperature + settingsManager.getTemperatureTolerance() - 1 - maxTempCriteria) }
+            }
+            return items.sortedWith(
+                compareBy<ClothingItem> { purposeOrder(it) }
+                    .thenBy { fitOrder(it) }
+                    .thenBy { abs(it.suitableTemperature + settingsManager.getTemperatureTolerance() - 1 - maxTempCriteria) }
+            ).firstOrNull()
+        }
+
+        val bestTop = bestPick(recommendedTops)
+        val bestBottom = bestPick(recommendedBottoms)
+        val bestOuter = bestPick(recommendedOuters)
         val bestCombination = listOfNotNull(bestTop, bestBottom, bestOuter)
 
         val umbrellaRecommendation = when {
@@ -258,10 +395,14 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             _todayRecommendedClothingIds.postValue(allRecommendedIds)
         }
 
+        val fitThenTempComparator = compareBy<ClothingItem> { purposeOrder(it) }
+            .thenBy { fitOrder(it) }
+            .thenByDescending { it.suitableTemperature }
+
         return RecommendationResult(
-            recommendedTops.sortedByDescending { it.suitableTemperature },
-            recommendedBottoms.sortedByDescending { it.suitableTemperature },
-            recommendedOuters.sortedByDescending { it.suitableTemperature },
+            recommendedTops.sortedWith(fitThenTempComparator),
+            recommendedBottoms.sortedWith(fitThenTempComparator),
+            recommendedOuters.sortedWith(fitThenTempComparator),
             bestCombination,
             packableOuters,
             umbrellaRecommendation,

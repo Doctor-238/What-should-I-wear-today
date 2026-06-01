@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+
+    <!-- shopping bag body -->
+    <path
+        android:fillColor="#FF6B6B"
+        android:pathData="M10,18 L38,18 L35,40 Q34.5,42 32,42 L16,42 Q13.5,42 13,40 Z"/>
+
+    <!-- bag handle left -->
+    <path
+        android:fillColor="@android:color/transparent"
+        android:strokeColor="#FF6B6B"
+        android:strokeWidth="2.5"
+        android:strokeLineCap="round"
+        android:pathData="M18,18 Q18,10 24,10 Q30,10 30,18"/>
+
+    <!-- star sparkle top right -->
+    <path
+        android:fillColor="#FFD700"
+        android:pathData="M36,8 L37,10.5 L39.5,10.5 L37.5,12 L38.5,14.5 L36,13 L33.5,14.5 L34.5,12 L32.5,10.5 L35,10.5 Z"/>
+
+    <!-- small star top left -->
+    <path
+        android:fillColor="#FFD700"
+        android:pathData="M8,6 L8.8,8 L11,8 L9.3,9.3 L10,11.5 L8,10.2 L6,11.5 L6.7,9.3 L5,8 L7.2,8 Z"/>
+
+    <!-- price tag circle on bag -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M24,25 A5,5 0 1,0 24,35 A5,5 0 1,0 24,25 Z"/>
+
+    <!-- W symbol inside circle -->
+    <path
+        android:fillColor="#FF6B6B"
+        android:strokeWidth="0"
+        android:pathData="M20.5,28 L22,33 L24,30 L26,33 L27.5,28 L26.5,28 L25.3,31.5 L24,29 L22.7,31.5 L21.5,28 Z"/>
+</vector>

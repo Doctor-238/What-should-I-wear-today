@@ -32,13 +32,13 @@ class ProgressFab @JvmOverloads constructor(
     private val progressPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         strokeWidth = 18f
-        color = Color.parseColor("#0059ff")
+        color = Color.WHITE
     }
 
     private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         textAlign = Paint.Align.CENTER
         typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-        color = Color.parseColor("#424242")
+        color = Color.WHITE
         textSize = TypedValue.applyDimension(
             TypedValue.COMPLEX_UNIT_SP, 16f, resources.displayMetrics
         )

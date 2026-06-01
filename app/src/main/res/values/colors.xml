@@ -4,34 +4,136 @@
     <color name="white">#FFFFFFFF</color>
     <color name="dark_purple">#FF6200EE</color>
 
-    <color name="status_bar_blue">#7ac2e9</color>
-    <color name="app_background">#FFFFFF</color>
+    <color name="primary">#2B8EE8</color>
+    <color name="primary_dark">#1868C0</color>
+    <color name="primary_light">#E4F1FD</color>
+    <color name="primary_border">#96C8F2</color>
+
+    <!-- Accent colors for variety -->
+    <color name="accent_purple">#7C6AE8</color>
+    <color name="accent_purple_light">#EDE8FF</color>
+    <color name="accent_coral">#FF7B6B</color>
+    <color name="accent_coral_light">#FFF0EE</color>
+    <color name="accent_amber">#FFB74D</color>
+    <color name="accent_amber_light">#FFF8EC</color>
+
+    <!-- Warm accent additions -->
+    <color name="accent_peach">#FFAB91</color>
+    <color name="accent_peach_light">#FFF3EE</color>
+    <color name="accent_teal">#4DB6AC</color>
+    <color name="accent_teal_light">#E0F2F1</color>
+
+    <color name="status_bar_blue">#1A6CC4</color>
+    <color name="app_background">#EEF3FA</color>
+    <color name="surface">#FFFFFF</color>
+    <color name="surface_variant">#F5FAFF</color>
+    <color name="surface_warm">#FFFCFA</color>
     <color name="weather_card_background">#FFFFFF</color>
-    <color name="weather_card_stroke">#E5E7EB</color>
-    <color name="text_primary">#111827</color>
-    <color name="text_secondary">#6B7281</color>
-    <color name="text_tertiary">#4B5563</color>
-    <color name="tab_selected_text">#000000</color>
-    <color name="tab_unselected_text">#9CA3AF</color>
-    <color name="weather_card_blue_bg">#b2cbe6</color>
+    <color name="weather_card_stroke">#BCDCF8</color>
 
-    <color name="bottom_nav_background">#e3e3e3</color>
+    <color name="text_primary">#0A1822</color>
+    <color name="text_secondary">#5C6E80</color>
+    <color name="text_tertiary">#94ABBA</color>
+    <color name="text_hint">#A8BCCC</color>
 
-    <color name="settings_section_title">#8A8A8A</color>
+    <color name="tab_selected_text">#2B8EE8</color>
+    <color name="tab_unselected_text">#8094A8</color>
+    <color name="tab_selected_bg_start">#6B7AEE</color>
+    <color name="tab_selected_bg_end">#8B6CE0</color>
+    <color name="tab_container_bg">#F0ECF8</color>
+    <color name="tab_container_gradient_start">#F2EEFA</color>
+    <color name="tab_container_gradient_mid">#EDE8F6</color>
+    <color name="tab_container_gradient_end">#E8E2F2</color>
+    <color name="weather_card_blue_bg">#96CCF4</color>
+
+    <color name="bottom_nav_background">#FFFFFF</color>
+    <color name="bottom_nav_surface">#FFFFFF</color>
+    <color name="nav_border">#D8E8F4</color>
+
+    <color name="settings_section_title">#7A8DA0</color>
     <color name="settings_card_background">#FFFFFF</color>
-    <color name="settings_spinner_blue">#0EB4FC</color>
-    <color name="settings_reset_button_text">#FF4646</color>
-    <color name="slider_track_inactive_color">#E0E0E0</color>
+    <color name="settings_spinner_blue">#2B8EE8</color>
+    <color name="settings_reset_button_text">#E03030</color>
+
+    <color name="slider_track_inactive_color">#C4DFF4</color>
     <color name="slider_thumb_color">#FFFFFF</color>
-    <color name="clothing_item_border">#7ac2e9</color>
 
-    <color name="style_card_background">#e4f4fe</color>
-    <color name="style_background">#f1e5d9</color>
-    <color name="search_view_stroke_color">#EAEAEA</color>
-    <color name="fab_color_style_tab">#88CCFD</color>
-    <color name="temp_high_red">#FF6B6B</color>
-    <color name="temp_low_blue">#54A0FF</color>
+    <color name="clothing_item_border">#D0E2F0</color>
+    <color name="input_border">#BDD2E6</color>
+    <color name="search_bg">#F2F8FF</color>
 
-    <color name="delete_button_red_active">#FF4646</color>
-    <color name="delete_button_red_inactive">#FFBDBD</color>
+    <color name="style_card_background">#EDE8F8</color>
+    <color name="style_background">#FFF2E8</color>
+    <color name="fab_color_style_tab">#2B8EE8</color>
+    <color name="fab_color_light_purple">#B39DDB</color>
+
+    <color name="temp_high_red">#FF5050</color>
+    <color name="temp_low_blue">#B8DFFF</color>
+    <!-- FIX #1: Min temp now pure white for max readability on blue gradient -->
+    <color name="temp_min_text">#FFFFFF</color>
+
+    <color name="delete_button_red_active">#E03030</color>
+    <color name="delete_button_red_inactive">#FFB8B6</color>
+
+    <color name="button_plus_green">#28C456</color>
+    <color name="button_minus_red">#FF3C34</color>
+
+    <color name="chip_selected_bg">#2B8EE8</color>
+    <color name="chip_unselected_bg">#EBF5FF</color>
+
+    <color name="bottom_nav_item_selected_bg">#00000000</color>
+
+    <color name="card_border">#D0DEF0</color>
+    <color name="divider_color">#E2EDF6</color>
+    <color name="ic_launcher_background">#F0F8FF</color>
+
+    <color name="card_shadow_color">#1A2B8EE8</color>
+    <color name="card_inner_highlight">#FAFCFF</color>
+    <color name="toolbar_end_color">#EEF3FA</color>
+
+    <color name="fit_green">#4CAF50</color>
+    <color name="fit_red">#E03030</color>
+
+    <!-- Gradient overlays -->
+    <color name="gradient_blue_start">#5BBEF8</color>
+    <color name="gradient_blue_mid">#3B8EE8</color>
+    <color name="gradient_purple_end">#7C6AE8</color>
+
+    <!-- Empty state -->
+    <color name="empty_state_bg_start">#F0F6FF</color>
+    <color name="empty_state_bg_end">#F4F0FF</color>
+    <color name="empty_state_icon">#B0C8E8</color>
+
+    <!-- Section header gradient -->
+    <color name="section_header_start">#F8FBFF</color>
+    <color name="section_header_end">#EEF3FA</color>
+
+    <!-- Header gradient unified flow -->
+    <color name="header_gradient_top">#FFFFFF</color>
+    <color name="header_gradient_mid">#F6FAFF</color>
+    <color name="header_gradient_bottom">#EFF4FC</color>
+
+    <!-- Rich gradient colors for premium feel -->
+    <color name="gradient_rich_blue">#2E8EEA</color>
+    <color name="gradient_rich_purple">#6B6AE8</color>
+    <color name="gradient_rich_indigo">#5B72E8</color>
+
+    <!-- Info card variety colors -->
+    <color name="info_card_blue_start">#F0F8FF</color>
+    <color name="info_card_blue_end">#EAF0FF</color>
+    <color name="info_card_amber_start">#FFFAF0</color>
+    <color name="info_card_amber_end">#FFF5E6</color>
+    <color name="info_card_coral_start">#FFF5F3</color>
+    <color name="info_card_coral_end">#FFECE8</color>
+
+    <!-- Mall redesign colors -->
+    <color name="mall_accent">#FF4E6A</color>
+    <color name="mall_accent_light">#FFF0F3</color>
+    <color name="mall_header_start">#1A1A2E</color>
+    <color name="mall_header_end">#252545</color>
+    <color name="mall_star_gold">#FFB800</color>
+    <color name="mall_free_ship_text">#00A86B</color>
+    <color name="mall_bg">#F5F5F7</color>
+    <color name="mall_new_badge">#7B61FF</color>
+    <color name="mall_original_price">#AAAAAA</color>
 </resources>

@@ -11,12 +11,14 @@ import android.net.Uri
 import android.os.Bundle
 import android.view.View
 import android.view.inputmethod.InputMethodManager
+import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.ProgressBar
 import android.widget.ScrollView
+import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
@@ -36,6 +38,7 @@ import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.switchmaterial.SwitchMaterial
 import com.google.android.material.textfield.TextInputEditText
 import com.yehyun.whatshouldiweartoday.R
+import com.yehyun.whatshouldiweartoday.data.preference.SettingsManager
 import com.yehyun.whatshouldiweartoday.ui.OnTabReselectedListener
 import kotlinx.serialization.Serializable
 import java.io.InputStream
@@ -46,7 +49,14 @@ data class ClothingAnalysis(
     val is_wearable: Boolean,
     val category: String? = null,
     var suitable_temperature: Double? = null,
-    val color_hex: String? = null
+    val color_hex: String? = null,
+    val fit_min_height: Double? = null,
+    val fit_max_height: Double? = null,
+    val fit_min_weight: Double? = null,
+    val fit_max_weight: Double? = null,
+    val fit_min_waist: Double? = null,
+    val fit_max_waist: Double? = null,
+    val purposes: List<String>? = null
 )
 
 class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabReselectedListener {
@@ -70,7 +80,15 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabResel
 
     private lateinit var buttonTempIncrease: ImageButton
     private lateinit var buttonTempDecrease: ImageButton
-
+    private lateinit var tvInfoFitLevel: TextView
+    private lateinit var layoutFitLevel: View
+    private lateinit var dividerFitLevel: View
+    private lateinit var tvTempOnlyLabel: TextView
+    private lateinit var tvInfoPurpose: TextView
+    private lateinit var layoutPurpose: View
+    private lateinit var dividerPurpose: View
+    private lateinit var spinnerAddSize: Spinner
+    private lateinit var dividerAddSizeFit: View
 
     private lateinit var onBackPressedCallback: OnBackPressedCallback
 
@@ -162,6 +180,15 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabResel
 
         buttonTempIncrease = view.findViewById(R.id.button_temp_increase)
         buttonTempDecrease = view.findViewById(R.id.button_temp_decrease)
+        tvInfoFitLevel = view.findViewById(R.id.tv_info_fit_level)
+        layoutFitLevel = view.findViewById(R.id.layout_fit_level)
+        dividerFitLevel = view.findViewById(R.id.divider_fit_level)
+        tvTempOnlyLabel = view.findViewById(R.id.tv_temp_only_label)
+        tvInfoPurpose = view.findViewById(R.id.tv_info_purpose)
+        layoutPurpose = view.findViewById(R.id.layout_purpose)
+        dividerPurpose = view.findViewById(R.id.divider_purpose)
+        spinnerAddSize = view.findViewById(R.id.spinner_add_size)
+        dividerAddSizeFit = view.findViewById(R.id.divider_add_size_fit)
     }
 
     private fun observeViewModel() {
@@ -205,6 +232,8 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabResel
         viewModel.isTemperatureVisible.observe(viewLifecycleOwner) { isVisible ->
             buttonTempIncrease.isVisible = isVisible
             buttonTempDecrease.isVisible = isVisible
+            tvInfoTemperature.isVisible = isVisible
+            tvTempOnlyLabel.isVisible = !isVisible
             val textColorRes = if (isVisible) R.color.text_primary else R.color.text_secondary
             tvInfoTemperature.setTextColor(ContextCompat.getColor(requireContext(), textColorRes))
         }
@@ -216,6 +245,24 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabResel
         viewModel.categoryText.observe(viewLifecycleOwner) { text ->
             tvInfoCategory.text = text
             cardAiInfo.isVisible = text.isNotEmpty()
+            val isSizeCategory = text in AddClothingViewModel.SIZE_CATEGORIES
+            if (!isSizeCategory) {
+                layoutFitLevel.isVisible = false
+                dividerFitLevel.isVisible = false
+            } else if (cardAiInfo.isVisible) {
+                layoutFitLevel.isVisible = true
+                dividerFitLevel.isVisible = true
+                updateSizeSpinnerOptions(text)
+            }
+        }
+
+        viewModel.sizeLabelText.observe(viewLifecycleOwner) { sizeLabel ->
+            if (!sizeLabel.isNullOrEmpty()) {
+                val category = viewModel.categoryText.value ?: return@observe
+                val options = getSizeOptions(category)
+                val idx = options.indexOf(sizeLabel)
+                if (idx >= 0) spinnerAddSize.setSelection(idx)
+            }
         }
 
         viewModel.viewColor.observe(viewLifecycleOwner) { color ->
@@ -229,6 +276,29 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabResel
                 viewInfoColorSwatch.isVisible = true
             } else {
                 viewInfoColorSwatch.isVisible = false
+            }
+        }
+
+        viewModel.fitLevelText.observe(viewLifecycleOwner) { text ->
+            if (text.isNullOrEmpty()) {
+                tvInfoFitLevel.isVisible = false
+                dividerAddSizeFit.isVisible = false
+            } else {
+                tvInfoFitLevel.isVisible = true
+                dividerAddSizeFit.isVisible = true
+                tvInfoFitLevel.text = text
+                tvInfoFitLevel.setTextColor(ContextCompat.getColor(requireContext(), fitLevelColorRes(text)))
+            }
+        }
+
+        viewModel.purposeText.observe(viewLifecycleOwner) { text ->
+            if (text.isNullOrEmpty()) {
+                layoutPurpose.isVisible = false
+                dividerPurpose.isVisible = false
+            } else {
+                layoutPurpose.isVisible = true
+                dividerPurpose.isVisible = true
+                tvInfoPurpose.text = text
             }
         }
 
@@ -291,7 +361,8 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabResel
         }
         val imm = context?.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
         imm?.hideSoftInputFromWindow(view?.windowToken, 0)
-        viewModel.saveClothingItem(name)
+        val selectedSize = if (layoutFitLevel.isVisible) spinnerAddSize.selectedItem as? String else null
+        viewModel.saveClothingItem(name, selectedSize)
     }
 
     private fun setupBackButtonHandler() {
@@ -330,4 +401,32 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabResel
     }
 
     override fun onTabReselected() { handleBackButton() }
+
+    private fun getSizeOptions(category: String): List<String> {
+        return AddClothingViewModel.getSizeList(category, SettingsManager(requireContext()).sizeNotationType)
+    }
+
+    private fun updateSizeSpinnerOptions(category: String) {
+        val options = getSizeOptions(category)
+        if (options.isEmpty()) return
+        val adapter = ArrayAdapter(requireContext(), R.layout.spinner_item_centered, options)
+        adapter.setDropDownViewResource(R.layout.spinner_dropdown_item)
+        spinnerAddSize.adapter = adapter
+        val calculatedSize = viewModel.sizeLabelText.value
+        if (!calculatedSize.isNullOrEmpty()) {
+            val idx = options.indexOf(calculatedSize)
+            if (idx >= 0) spinnerAddSize.setSelection(idx)
+        }
+    }
+
+    companion object {
+        fun fitLevelColorRes(level: String): Int {
+            return when (level) {
+                AddClothingViewModel.FIT_VERY_GOOD, AddClothingViewModel.FIT_GOOD -> R.color.fit_green
+                AddClothingViewModel.FIT_NORMAL -> R.color.text_secondary
+                AddClothingViewModel.FIT_BAD, AddClothingViewModel.FIT_VERY_BAD -> R.color.fit_red
+                else -> R.color.text_tertiary
+            }
+        }
+    }
 }

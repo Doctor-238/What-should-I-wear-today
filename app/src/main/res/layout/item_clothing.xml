@@ -4,10 +4,10 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_margin="10dp"
-    app:cardBackgroundColor="@color/style_card_background"
-    app:cardCornerRadius="15dp"
-    app:cardElevation="2dp"
+    android:layout_margin="7dp"
+    app:cardBackgroundColor="@color/surface"
+    app:cardCornerRadius="22dp"
+    app:cardElevation="6dp"
     app:strokeWidth="0dp">
 
     <FrameLayout
@@ -17,42 +17,43 @@
         <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:padding="15dp"
-            android:paddingBottom="0dp">
+            android:paddingTop="11dp"
+            android:paddingHorizontal="11dp"
+            android:paddingBottom="12dp">
 
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/image_container"
                 android:layout_width="0dp"
                 android:layout_height="0dp"
-                app:cardCornerRadius="20dp"
-                app:cardElevation="0dp"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="2dp"
                 app:layout_constraintDimensionRatio="1:1"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent"
-                app:strokeColor="@color/weather_card_blue_bg"
-                app:strokeWidth="1.5dp">
+                app:strokeColor="@color/clothing_item_border"
+                app:strokeWidth="1dp">
 
                 <ImageView
                     android:id="@+id/iv_clothing_item"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:background="@color/white"
+                    android:background="@color/primary_light"
                     android:scaleType="centerCrop"
-                    tools:src="@tools:sample/backgrounds/scenic" />
+                    tools:src="@tools:sample/backgrounds/scenic"/>
 
             </com.google.android.material.card.MaterialCardView>
 
             <ImageView
                 android:id="@+id/icon_special"
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:layout_margin="8dp"
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:layout_margin="6dp"
                 android:src="@drawable/ic_packable_bag"
                 android:visibility="gone"
                 app:layout_constraintBottom_toBottomOf="@id/image_container"
                 app:layout_constraintEnd_toEndOf="@id/image_container"
-                tools:visibility="visible" />
+                tools:visibility="visible"/>
 
             <TextView
                 android:id="@+id/tv_clothing_name"
@@ -60,14 +61,16 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
                 android:gravity="center"
-                android:paddingHorizontal="4dp"
-                android:textColor="@android:color/black"
-                android:textSize="14sp"
+                android:paddingHorizontal="2dp"
+                android:textColor="@color/text_primary"
+                android:textSize="12sp"
                 android:textStyle="bold"
+                android:maxLines="1"
+                android:ellipsize="end"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/image_container"
-                tools:text="멋진 검은 티셔츠" />
+                tools:text="멋진 검은 티셔츠"/>
 
             <TextView
                 android:id="@+id/tv_clothing_temp"
@@ -75,38 +78,37 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="2dp"
                 android:gravity="center"
-                android:textSize="12sp"
+                android:textSize="10sp"
+                android:textColor="@color/text_secondary"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/tv_clothing_name"
-                tools:text="15.0°C ~ 25.0°C" />
+                tools:text="15.0° ~ 25.0°"/>
 
             <View
                 android:id="@+id/view_clothing_color"
-                android:layout_width="16dp"
-                android:layout_height="16dp"
-                android:layout_marginTop="4dp"
+                android:layout_width="12dp"
+                android:layout_height="12dp"
+                android:layout_marginTop="6dp"
+                android:layout_marginBottom="2dp"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/tv_clothing_temp"
-                tools:background="#4A6E8A" />
+                tools:background="#4A6E8A"/>
 
         </androidx.constraintlayout.widget.ConstraintLayout>
 
         <ImageView
             android:id="@+id/iv_delete_checkbox"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
             android:layout_gravity="top|end"
-            android:layout_marginTop="4dp"
-            android:layout_marginEnd="4dp"
-            android:padding="4dp"
+            android:layout_margin="8dp"
+            android:padding="2dp"
             android:src="@drawable/ic_checkbox_unchecked_custom"
             android:visibility="gone"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            tools:visibility="visible" />
+            tools:visibility="visible"/>
 
     </FrameLayout>
 </com.google.android.material.card.MaterialCardView>

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Glow -->
+    <item android:top="1dp" android:left="1dp" android:right="1dp">
+        <shape android:shape="rectangle">
+            <solid android:color="#107B6AE8"/>
+            <corners android:radius="6dp"/>
+        </shape>
+    </item>
+    <!-- Gradient bar: purple → blue-purple → indigo -->
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:angle="270"
+                android:startColor="#9B7AE8"
+                android:centerColor="#7B6AE8"
+                android:endColor="#5B6EE0"
+                android:type="linear"/>
+            <corners android:radius="4dp"/>
+        </shape>
+    </item>
+</layer-list>
