@@ -34,6 +34,9 @@ import androidx.exifinterface.media.ExifInterface
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
+import androidx.recyclerview.widget.ItemTouchHelper
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.switchmaterial.SwitchMaterial
 import com.google.android.material.textfield.TextInputEditText
@@ -56,7 +59,9 @@ data class ClothingAnalysis(
     val fit_max_weight: Double? = null,
     val fit_min_waist: Double? = null,
     val fit_max_waist: Double? = null,
-    val purposes: List<String>? = null
+    val purposes: List<String>? = null,
+    val clothing_area_ratio: Double? = null,
+    val clothing_completeness_ratio: Double? = null
 )
 
 class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabReselectedListener {
@@ -84,9 +89,10 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabResel
     private lateinit var layoutFitLevel: View
     private lateinit var dividerFitLevel: View
     private lateinit var tvTempOnlyLabel: TextView
-    private lateinit var tvInfoPurpose: TextView
+    private lateinit var rvPurposeChips: RecyclerView
     private lateinit var layoutPurpose: View
     private lateinit var dividerPurpose: View
+    private lateinit var purposeAdapter: PurposeChipAdapter
     private lateinit var spinnerAddSize: Spinner
     private lateinit var dividerAddSizeFit: View
 
@@ -151,6 +157,7 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabResel
             constraintSet.applyTo(container)
         }
 
+        setupPurposeChips()
         setupListeners()
         setupBackButtonHandler()
         observeViewModel()
@@ -184,7 +191,7 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabResel
         layoutFitLevel = view.findViewById(R.id.layout_fit_level)
         dividerFitLevel = view.findViewById(R.id.divider_fit_level)
         tvTempOnlyLabel = view.findViewById(R.id.tv_temp_only_label)
-        tvInfoPurpose = view.findViewById(R.id.tv_info_purpose)
+        rvPurposeChips = view.findViewById(R.id.rv_purpose_chips)
         layoutPurpose = view.findViewById(R.id.layout_purpose)
         dividerPurpose = view.findViewById(R.id.divider_purpose)
         spinnerAddSize = view.findViewById(R.id.spinner_add_size)
@@ -244,12 +251,15 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabResel
 
         viewModel.categoryText.observe(viewLifecycleOwner) { text ->
             tvInfoCategory.text = text
-            cardAiInfo.isVisible = text.isNotEmpty()
+            val cardVisible = text.isNotEmpty()
+            cardAiInfo.isVisible = cardVisible
+            layoutPurpose.isVisible = cardVisible
+            dividerPurpose.isVisible = cardVisible
             val isSizeCategory = text in AddClothingViewModel.SIZE_CATEGORIES
             if (!isSizeCategory) {
                 layoutFitLevel.isVisible = false
                 dividerFitLevel.isVisible = false
-            } else if (cardAiInfo.isVisible) {
+            } else if (cardVisible) {
                 layoutFitLevel.isVisible = true
                 dividerFitLevel.isVisible = true
                 updateSizeSpinnerOptions(text)
@@ -291,15 +301,8 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabResel
             }
         }
 
-        viewModel.purposeText.observe(viewLifecycleOwner) { text ->
-            if (text.isNullOrEmpty()) {
-                layoutPurpose.isVisible = false
-                dividerPurpose.isVisible = false
-            } else {
-                layoutPurpose.isVisible = true
-                dividerPurpose.isVisible = true
-                tvInfoPurpose.text = text
-            }
+        viewModel.purposeList.observe(viewLifecycleOwner) { list ->
+            purposeAdapter.submitList(list)
         }
 
         viewModel.isSaveCompleted.observe(viewLifecycleOwner) { isCompleted ->
@@ -417,6 +420,72 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabResel
             val idx = options.indexOf(calculatedSize)
             if (idx >= 0) spinnerAddSize.setSelection(idx)
         }
+    }
+
+    private fun setupPurposeChips() {
+        purposeAdapter = PurposeChipAdapter(
+            onDeleteRequest = { pos, purpose -> confirmDeletePurpose(pos, purpose) },
+            onAddRequest = { showAddPurposeDialog() }
+        )
+        rvPurposeChips.layoutManager = LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false)
+        rvPurposeChips.adapter = purposeAdapter
+
+        val callback = object : ItemTouchHelper.Callback() {
+            override fun getMovementFlags(rv: RecyclerView, vh: RecyclerView.ViewHolder): Int {
+                if (vh.itemViewType != PurposeChipAdapter.TYPE_CHIP) return makeMovementFlags(0, 0)
+                return makeMovementFlags(ItemTouchHelper.START or ItemTouchHelper.END, 0)
+            }
+            override fun onMove(rv: RecyclerView, from: RecyclerView.ViewHolder, to: RecyclerView.ViewHolder): Boolean {
+                if (to.itemViewType != PurposeChipAdapter.TYPE_CHIP) return false
+                purposeAdapter.moveItem(from.adapterPosition, to.adapterPosition)
+                return true
+            }
+            override fun onSwiped(vh: RecyclerView.ViewHolder, dir: Int) {}
+            override fun isLongPressDragEnabled() = true
+            override fun onSelectedChanged(vh: RecyclerView.ViewHolder?, actionState: Int) {
+                super.onSelectedChanged(vh, actionState)
+                if (actionState == ItemTouchHelper.ACTION_STATE_DRAG) {
+                    vh?.itemView?.animate()?.scaleX(1.12f)?.scaleY(1.12f)?.setDuration(120)?.start()
+                    vh?.itemView?.elevation = 10f
+                }
+            }
+            override fun clearView(rv: RecyclerView, vh: RecyclerView.ViewHolder) {
+                super.clearView(rv, vh)
+                vh.itemView.animate()?.scaleX(1f)?.scaleY(1f)?.setDuration(120)?.start()
+                vh.itemView.elevation = 0f
+                viewModel.updatePurposes(purposeAdapter.getPurposes())
+                purposeAdapter.refreshColors()
+            }
+        }
+        ItemTouchHelper(callback).attachToRecyclerView(rvPurposeChips)
+    }
+
+    private fun confirmDeletePurpose(pos: Int, purpose: String) {
+        AlertDialog.Builder(requireContext())
+            .setMessage("'$purpose' 용도를 삭제하시겠습니까?")
+            .setPositiveButton("예") { _, _ ->
+                val updated = purposeAdapter.getPurposes().toMutableList().also { it.removeAt(pos) }
+                viewModel.updatePurposes(updated)
+            }
+            .setNegativeButton("아니오", null)
+            .show()
+    }
+
+    private fun showAddPurposeDialog() {
+        val current = purposeAdapter.getPurposes()
+        val available = viewModel.getAvailablePurposes().filter { it !in current }
+        if (available.isEmpty()) {
+            showToast("추가 가능한 용도가 없습니다.")
+            return
+        }
+        AlertDialog.Builder(requireContext())
+            .setTitle("용도 추가")
+            .setItems(available.toTypedArray()) { _, which ->
+                val updated = current.toMutableList().also { it.add(available[which]) }
+                viewModel.updatePurposes(updated)
+            }
+            .setNegativeButton("취소", null)
+            .show()
     }
 
     companion object {

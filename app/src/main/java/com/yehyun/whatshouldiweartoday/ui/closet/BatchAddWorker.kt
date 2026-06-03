@@ -29,6 +29,10 @@ import com.yehyun.whatshouldiweartoday.ai.AiModelProvider
 import com.yehyun.whatshouldiweartoday.data.database.AppDatabase
 import com.yehyun.whatshouldiweartoday.data.database.ClothingItem
 import com.yehyun.whatshouldiweartoday.data.preference.SettingsManager
+import com.yehyun.whatshouldiweartoday.util.PERCEPTUAL_HASH_THRESHOLD
+import com.yehyun.whatshouldiweartoday.util.computePerceptualHash
+import com.yehyun.whatshouldiweartoday.util.hammingDistance
+import com.yehyun.whatshouldiweartoday.util.trimBorders
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.tasks.await
@@ -90,6 +94,7 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
         var failureCount = 0
         var currentProgress = completedPaths.size
 
+        val existingHashes = clothingDao.getAllImageHashes().toHashSet()
 
         try {
             setForeground(getForegroundInfo())
@@ -107,15 +112,22 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
 
 
                 try {
-                    val bitmap = getCorrectlyOrientedBitmap(path)
-                    if (bitmap != null) {
-                        val saved = analyzeAndSave(bitmap, generativeModel, purchaseSource)
-                        if (saved) {
-                            successCount++
-                            completedPaths.add(path)
-                            prefs.edit().putStringSet(batchId, completedPaths).apply()
-                        } else {
+                    val raw = getCorrectlyOrientedBitmap(path)
+                    if (raw != null) {
+                        val bitmap = trimBorders(raw).also { if (it !== raw) raw.recycle() }
+                        val hash = computePerceptualHash(bitmap)
+                        if (existingHashes.any { hammingDistance(hash, it) <= PERCEPTUAL_HASH_THRESHOLD }) {
                             failureCount++
+                        } else {
+                            val saved = analyzeAndSave(bitmap, hash, generativeModel, purchaseSource)
+                            if (saved) {
+                                existingHashes.add(hash)
+                                successCount++
+                                completedPaths.add(path)
+                                prefs.edit().putStringSet(batchId, completedPaths).apply()
+                            } else {
+                                failureCount++
+                            }
                         }
                     } else {
                         failureCount++
@@ -210,7 +222,7 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
         notificationManager.notify(COMPLETE_NOTIFICATION_ID, notification)
     }
 
-    private suspend fun analyzeAndSave(bitmap: Bitmap, model: GenerativeModel, purchaseSource: String? = null): Boolean {
+    private suspend fun analyzeAndSave(bitmap: Bitmap, imageHash: String, model: GenerativeModel, purchaseSource: String? = null): Boolean {
         var saved = false
         coroutineScope {
             if (isStopped) return@coroutineScope
@@ -229,6 +241,12 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
             if (isStopped) return@coroutineScope
 
             if (analysisResult == null || !analysisResult.is_wearable) {
+                return@coroutineScope
+            }
+            if ((analysisResult.clothing_area_ratio ?: 1.0) < 0.1) {
+                return@coroutineScope
+            }
+            if ((analysisResult.clothing_completeness_ratio ?: 1.0) < 0.3) {
                 return@coroutineScope
             }
 
@@ -267,7 +285,8 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
                         fitMaxWaist = analysisResult.fit_max_waist,
                         purpose = purposeStr,
                         purchaseSource = purchaseSource,
-                        aiCategory = analysisResult.category
+                        aiCategory = analysisResult.category,
+                        imageHash = imageHash
                     )
                     clothingDao.insert(newItem)
                     saved = true
@@ -325,7 +344,7 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
                     text("""
                         You are a Precise Climate & Fashion Analyst for Korean weather.
                         Your task is to analyze the clothing item in the image and provide a detailed analysis in a strict JSON format, without any additional text or explanations.
-                        Your JSON response MUST contain ONLY the following keys: "is_wearable", "category", "suitable_temperature", "color_hex", "fit_min_height", "fit_max_height", "fit_min_weight", "fit_max_weight", "fit_min_waist", "fit_max_waist", "purposes".
+                        Your JSON response MUST contain ONLY the following keys: "is_wearable", "category", "suitable_temperature", "color_hex", "fit_min_height", "fit_max_height", "fit_min_weight", "fit_max_weight", "fit_min_waist", "fit_max_waist", "purposes", "clothing_area_ratio", "clothing_completeness_ratio".
                         - "is_wearable": (boolean) If the image contains at least one wearable clothing item, this is True. If the image contains multiple clothing items, focus on the PRIMARY/MAIN item that appears to be the subject or focus of the photo (NOT necessarily the largest one). Only return False if the image contains no clothing at all (e.g. food, scenery, etc.).
                         - "category": (string) If wearable, one of '상의', '하의', '아우터', '신발', '가방', '모자', '기타'.
                         - "color_hex": (string) If wearable, the dominant color of the item as a hex string.
@@ -337,6 +356,8 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
                         - "fit_min_waist": (double or null) Minimum waist circumference in cm that this item fits (e.g., 68.0). Use null ONLY for items where the waistline is irrelevant (oversized tops, shoes, bags, hats, loose jackets). Bottoms and fitted tops MUST have a value.
                         - "fit_max_waist": (double or null) Maximum waist circumference in cm that this item fits (e.g., 88.0). Follow the same rule as fit_min_waist.
                         - "purposes": (array of strings) If wearable, select the 1 or 2 MOST suitable purposes from this list: [$purposeListStr]. Pick only the best fitting ones. Maximum 2 purposes per item.
+                        - "clothing_area_ratio": (double) Estimate the fraction (0.0 to 1.0) of the total image area occupied by the main clothing item. A close-up shot filling the frame = 0.7-0.9. A small item in a wider scene = 0.1-0.3. Only a tiny corner or fragment visible = 0.05 or less.
+                        - "clothing_completeness_ratio": (double) Estimate the fraction (0.0 to 1.0) of the FULL clothing item that is actually visible in the image, regardless of how large it appears. A fully visible garment = 0.9-1.0. Heavily cropped but most is visible = 0.5-0.8. Only a collar, sleeve, hem, or small detail = 0.1-0.2. Only an extreme fragment = 0.05 or less.
                         Estimate the body size range this clothing would fit. For free-size/stretchy items, use wider ranges. Base on visual cues: size labels, proportions, material stretch. Waist range should be the user's waist circumference, not the garment's flat measurement.
                     """.trimIndent())
                 }
@@ -358,19 +379,57 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
     }
 
     private fun createBitmapWithMask(original: Bitmap, mask: SegmentationMask): Bitmap {
-        val maskedBitmap = Bitmap.createBitmap(original.width, original.height, Bitmap.Config.ARGB_8888)
-        val maskBuffer = mask.buffer
         val maskWidth = mask.width
         val maskHeight = mask.height
+        val n = maskWidth * maskHeight
         val sensitivity = settingsManager.getBackgroundSensitivityValue()
+
+        val fg = BooleanArray(n)
+        val buf = mask.buffer
+        for (i in 0 until n) fg[i] = buf.float > sensitivity
+        buf.rewind()
+
+        val visited = BooleanArray(n)
+        val queue = IntArray(n)
+        var bestStart = -1
+        var bestSize = 0
+        for (seed in 0 until n) {
+            if (!fg[seed] || visited[seed]) continue
+            var head = 0; var tail = 0
+            queue[tail++] = seed; visited[seed] = true
+            while (head < tail) {
+                val idx = queue[head++]
+                val x = idx % maskWidth; val y = idx / maskWidth
+                if (x > 0 && fg[idx - 1] && !visited[idx - 1])                       { visited[idx - 1] = true; queue[tail++] = idx - 1 }
+                if (x < maskWidth - 1 && fg[idx + 1] && !visited[idx + 1])            { visited[idx + 1] = true; queue[tail++] = idx + 1 }
+                if (y > 0 && fg[idx - maskWidth] && !visited[idx - maskWidth])        { visited[idx - maskWidth] = true; queue[tail++] = idx - maskWidth }
+                if (y < maskHeight - 1 && fg[idx + maskWidth] && !visited[idx + maskWidth]) { visited[idx + maskWidth] = true; queue[tail++] = idx + maskWidth }
+            }
+            if (tail > bestSize) { bestSize = tail; bestStart = seed }
+        }
+
+        visited.fill(false)
+        if (bestStart >= 0) {
+            var head = 0; var tail = 0
+            queue[tail++] = bestStart; visited[bestStart] = true
+            while (head < tail) {
+                val idx = queue[head++]
+                val x = idx % maskWidth; val y = idx / maskWidth
+                if (x > 0 && fg[idx - 1] && !visited[idx - 1])                       { visited[idx - 1] = true; queue[tail++] = idx - 1 }
+                if (x < maskWidth - 1 && fg[idx + 1] && !visited[idx + 1])            { visited[idx + 1] = true; queue[tail++] = idx + 1 }
+                if (y > 0 && fg[idx - maskWidth] && !visited[idx - maskWidth])        { visited[idx - maskWidth] = true; queue[tail++] = idx - maskWidth }
+                if (y < maskHeight - 1 && fg[idx + maskWidth] && !visited[idx + maskWidth]) { visited[idx + maskWidth] = true; queue[tail++] = idx + maskWidth }
+            }
+        }
+
+        val maskedBitmap = Bitmap.createBitmap(original.width, original.height, Bitmap.Config.ARGB_8888)
         for (y in 0 until maskHeight) {
             for (x in 0 until maskWidth) {
-                if (maskBuffer.float > sensitivity) {
+                if (visited[y * maskWidth + x]) {
                     maskedBitmap.setPixel(x, y, original.getPixel(x, y))
                 }
             }
         }
-        maskBuffer.rewind()
         return maskedBitmap
     }
 

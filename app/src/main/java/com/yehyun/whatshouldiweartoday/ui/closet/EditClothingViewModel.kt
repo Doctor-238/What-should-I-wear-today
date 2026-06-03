@@ -116,9 +116,20 @@ class EditClothingViewModel(application: Application) : AndroidViewModel(applica
             _currentClothingItem.value = current.copy(
                 category = resetCategory,
                 suitableTemperature = defaultTemperatureForCategory(resetCategory, current.baseTemperature),
-                size = null
+                size = null,
+                purpose = originalClothingItem?.purpose ?: current.purpose
             )
             checkForChanges()
+        }
+    }
+
+    fun updatePurposes(list: List<String>) {
+        _currentClothingItem.value?.let { current ->
+            val purposeStr = list.joinToString(",")
+            if (current.purpose != purposeStr) {
+                _currentClothingItem.value = current.copy(purpose = purposeStr)
+                checkForChanges()
+            }
         }
     }
 
@@ -146,7 +157,8 @@ class EditClothingViewModel(application: Application) : AndroidViewModel(applica
         val categoryChanged = item.category != resetCategory
         val tempChanged = kotlin.math.abs(item.suitableTemperature - resetTemp) > 0.01
         val sizeChanged = item.size != null
-        return categoryChanged || tempChanged || sizeChanged
+        val purposeChanged = item.purpose != (originalClothingItem?.purpose ?: item.purpose)
+        return categoryChanged || tempChanged || sizeChanged || purposeChanged
     }
 
     private fun aiDefaultCategory(item: ClothingItem): String {
