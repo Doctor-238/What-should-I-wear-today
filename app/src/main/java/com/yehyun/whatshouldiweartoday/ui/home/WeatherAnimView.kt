@@ -249,7 +249,7 @@ class WeatherAnimView @JvmOverloads constructor(
     private fun drawPartlyCloudy(canvas: Canvas, cx: Float, cy: Float) {
         val sw = cloudSin * iconR * 0.13f
         sun(canvas, cx + iconR * 0.22f, cy - iconR * 0.22f, iconR * 0.82f, 9)
-        cloud(canvas, cx - iconR * 0.12f + sw, cy + iconR * 0.20f, iconR * 0.82f)
+        cloud(canvas, cx - iconR * 0.12f + sw, cy + iconR * 0.36f, iconR * 0.94f)
     }
 
     private fun drawCloudy(canvas: Canvas, cx: Float, cy: Float) {
