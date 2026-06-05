@@ -117,7 +117,9 @@ class WeatherAnimView @JvmOverloads constructor(
         super.onSizeChanged(sw, sh, oldw, oldh)
         w = sw.toFloat(); h = sh.toFloat()
         if (sw <= 0 || sh <= 0) return
-        iconR = min(26f * dp, w * 0.43f * 0.38f)
+        val isTablet = context.resources.configuration.smallestScreenWidthDp >= 600
+        val maxIconR = if (isTablet) 42f * dp else 26f * dp
+        iconR = min(maxIconR, w * 0.43f * 0.38f)
         val rng = java.util.Random(42)
         drops  = List(24) { Drop(rng.nextFloat(), rng.nextFloat(), 9f + rng.nextFloat() * 13f, 0.55f + rng.nextFloat() * 0.5f, 0.72f + rng.nextFloat() * 0.28f) }
         flakes = List(16) { Flake(rng.nextFloat(), rng.nextFloat(), 6f + rng.nextFloat() * 6f,  0.22f + rng.nextFloat() * 0.28f, 9f + rng.nextFloat() * 15f, rng.nextFloat() * 360f) }

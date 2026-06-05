@@ -38,6 +38,7 @@
             <androidx.constraintlayout.widget.ConstraintLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:minHeight="@dimen/weather_card_min_height"
                 android:background="@drawable/bg_weather_card_gradient">
 
                 <!-- Full-bleed animation layer behind all content -->
