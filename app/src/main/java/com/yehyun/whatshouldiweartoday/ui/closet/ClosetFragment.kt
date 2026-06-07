@@ -40,6 +40,7 @@ import com.yehyun.whatshouldiweartoday.MainViewModel
 import com.yehyun.whatshouldiweartoday.R
 import com.yehyun.whatshouldiweartoday.databinding.FragmentClosetBinding
 import com.yehyun.whatshouldiweartoday.data.preference.SettingsManager
+import com.yehyun.whatshouldiweartoday.ui.SectionedSpinnerAdapter
 import com.yehyun.whatshouldiweartoday.ui.OnTabReselectedListener
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -401,7 +402,7 @@ class ClosetFragment : Fragment(), OnTabReselectedListener {
                 .setInputData(workDataOf(
                     BatchAddWorker.KEY_BATCH_ID to batchId,
                     BatchAddWorker.KEY_PATHS_FILE to pathsFile.absolutePath,
-                    BatchAddWorker.KEY_API to getString(R.string.gemini_api_key)
+                    BatchAddWorker.KEY_API to SettingsManager(requireContext()).getEffectiveGeminiApiKey()
                 ))
                 .build()
             viewModel.workManager.enqueueUniqueWork("batch_add", ExistingWorkPolicy.APPEND_OR_REPLACE, workRequest)
@@ -445,29 +446,22 @@ class ClosetFragment : Fragment(), OnTabReselectedListener {
     private fun setupSortSpinner() {
         val spinner: Spinner = binding.spinnerSort
         val settingsManager = SettingsManager(requireContext())
-        val baseSortOptions = listOf("최신순", "오래된 순", "이름 오름차순", "이름 내림차순", "온도 오름차순", "온도 내림차순")
-        val purposeOptions = settingsManager.getAllPurposes()
-        val sortOptions = baseSortOptions + purposeOptions
-        val arrayAdapter = ArrayAdapter(requireContext(), R.layout.spinner_item_centered_normal, sortOptions)
-        arrayAdapter.setDropDownViewResource(R.layout.spinner_dropdown_item)
-        spinner.adapter = arrayAdapter
+        val base = listOf("최신순", "오래된 순", "이름 오름차순", "이름 내림차순", "온도 오름차순", "온도 내림차순")
+        val purposes = settingsManager.getAllPurposes()
+        val sa = SectionedSpinnerAdapter(requireContext(), base, "용도로 정렬", purposes)
+        spinner.adapter = sa
 
-        val currentSortType = viewModel.getCurrentSortType()
-        val currentPosition = sortOptions.indexOf(currentSortType)
-        if (currentPosition >= 0) {
-            spinner.setSelection(currentPosition)
-        }
+        spinner.setSelection(sa.positionOf(viewModel.getCurrentSortType()))
 
         spinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
-                if(position!=currentPosition){
-                    viewModel.setSortType(sortOptions[position])
-                    val current = binding.viewPagerCloset.currentItem
-                    val fragment =
-                        childFragmentManager.findFragmentByTag("f$current") as? ClothingListFragment
-                    fragment?.scrollToTop()
-                }else{viewModel.setSortType(sortOptions[position])}
-
+                val text = sa.textAt(position) ?: return
+                val changed = text != viewModel.getCurrentSortType()
+                viewModel.setSortType(text)
+                if (changed) {
+                    val cur = binding.viewPagerCloset.currentItem
+                    (childFragmentManager.findFragmentByTag("f$cur") as? ClothingListFragment)?.scrollToTop()
+                }
             }
             override fun onNothingSelected(parent: AdapterView<*>?) {}
         }

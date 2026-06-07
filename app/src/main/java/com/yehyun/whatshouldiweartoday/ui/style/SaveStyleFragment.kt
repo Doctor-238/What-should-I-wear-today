@@ -1,6 +1,8 @@
 package com.yehyun.whatshouldiweartoday.ui.style
 
 import android.content.res.Configuration
+import android.graphics.Color
+import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
@@ -23,7 +25,10 @@ import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import androidx.recyclerview.widget.DefaultItemAnimator
+import androidx.recyclerview.widget.ItemTouchHelper
+import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.yehyun.whatshouldiweartoday.ui.closet.PurposeChipAdapter
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
@@ -41,6 +46,7 @@ class SaveStyleFragment : Fragment(R.layout.fragment_save_style), OnTabReselecte
     private val mainViewModel: MainViewModel by activityViewModels()
     private val args: SaveStyleFragmentArgs by navArgs()
     private lateinit var adapter: SaveStyleAdapter
+    private lateinit var purposeAdapter: PurposeChipAdapter
     private lateinit var tabLayout: TabLayout
     private lateinit var tvSelectionGuide: TextView
     private lateinit var chipGroupSeason: ChipGroup
@@ -81,6 +87,7 @@ class SaveStyleFragment : Fragment(R.layout.fragment_save_style), OnTabReselecte
         }
 
 
+        setupPurposeChips(view)
         setupRecyclerView(view)
         setupListeners(view)
         setupTabs(view)
@@ -316,6 +323,75 @@ class SaveStyleFragment : Fragment(R.layout.fragment_save_style), OnTabReselecte
 
     override fun onTabReselected() {
         handleBackButton()
+    }
+
+    private fun setupPurposeChips(view: View) {
+        purposeAdapter = PurposeChipAdapter(
+            onDeleteRequest = { pos, purpose -> confirmDeletePurpose(pos, purpose) },
+            onAddRequest = { showAddPurposeDialog() }
+        )
+        val rv = view.findViewById<RecyclerView>(R.id.rv_style_purpose_chips)
+        rv.layoutManager = LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false)
+        rv.adapter = purposeAdapter
+        val vPad = (6 * resources.displayMetrics.density).toInt()
+        rv.setPadding(0, vPad, 0, vPad)
+        rv.background = GradientDrawable(
+            GradientDrawable.Orientation.LEFT_RIGHT,
+            intArrayOf(Color.argb(72, 43, 142, 232), Color.argb(0, 43, 142, 232))
+        ).also { it.cornerRadius = 14f * resources.displayMetrics.density }
+
+        val cb = object : ItemTouchHelper.Callback() {
+            override fun getMovementFlags(r: RecyclerView, vh: RecyclerView.ViewHolder): Int {
+                if (vh.itemViewType != PurposeChipAdapter.TYPE_CHIP) return makeMovementFlags(0, 0)
+                return makeMovementFlags(ItemTouchHelper.START or ItemTouchHelper.END, 0)
+            }
+            override fun onMove(r: RecyclerView, from: RecyclerView.ViewHolder, to: RecyclerView.ViewHolder): Boolean {
+                if (to.itemViewType != PurposeChipAdapter.TYPE_CHIP) return false
+                purposeAdapter.moveItem(from.adapterPosition, to.adapterPosition); return true
+            }
+            override fun onSwiped(vh: RecyclerView.ViewHolder, d: Int) {}
+            override fun isLongPressDragEnabled() = true
+            override fun onSelectedChanged(vh: RecyclerView.ViewHolder?, actionState: Int) {
+                super.onSelectedChanged(vh, actionState)
+                if (actionState == ItemTouchHelper.ACTION_STATE_DRAG) {
+                    vh?.itemView?.animate()?.scaleX(1.12f)?.scaleY(1.12f)?.setDuration(120)?.start()
+                    vh?.itemView?.elevation = 10f
+                }
+            }
+            override fun clearView(r: RecyclerView, vh: RecyclerView.ViewHolder) {
+                super.clearView(r, vh)
+                vh.itemView.animate()?.scaleX(1f)?.scaleY(1f)?.setDuration(120)?.start()
+                vh.itemView.elevation = 0f
+                viewModel.updatePurposes(purposeAdapter.getPurposes())
+                purposeAdapter.refreshColors()
+            }
+        }
+        ItemTouchHelper(cb).attachToRecyclerView(rv)
+
+        viewModel.purposeList.observe(viewLifecycleOwner) { list -> purposeAdapter.submitList(list) }
+    }
+
+    private fun confirmDeletePurpose(pos: Int, purpose: String) {
+        AlertDialog.Builder(requireContext())
+            .setMessage("'$purpose' 용도를 삭제하시겠습니까?")
+            .setPositiveButton("예") { _, _ ->
+                val updated = purposeAdapter.getPurposes().toMutableList().also { it.removeAt(pos) }
+                viewModel.updatePurposes(updated)
+            }
+            .setNegativeButton("아니오", null).show()
+    }
+
+    private fun showAddPurposeDialog() {
+        val current = purposeAdapter.getPurposes()
+        val available = viewModel.getAvailablePurposes().filter { it !in current }
+        if (available.isEmpty()) { toast?.cancel(); toast = android.widget.Toast.makeText(requireContext(), "추가 가능한 용도가 없습니다.", android.widget.Toast.LENGTH_SHORT); toast?.show(); return }
+        AlertDialog.Builder(requireContext())
+            .setTitle("용도 추가")
+            .setItems(available.toTypedArray()) { _, which ->
+                val updated = current.toMutableList().also { it.add(available[which]) }
+                viewModel.updatePurposes(updated)
+            }
+            .setNegativeButton("취소", null).show()
     }
 
     override fun onDestroyView() {

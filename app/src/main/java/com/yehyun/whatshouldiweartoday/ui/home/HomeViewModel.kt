@@ -198,7 +198,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         val allClothes = clothingRepository.getAllItemsList()
         cachedAllClothes = allClothes
         if (todayForecasts.isNotEmpty()) {
-            val summary = createDailySummary(todayForecasts)
+            val summary = createDailySummary(todayForecasts, isToday = true)
             _todayWeatherSummary.postValue(summary)
             _todayRecommendation.postValue(generateRecommendation(summary, allClothes))
         } else {
@@ -268,7 +268,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         updateExtendedForDay(dayOffset)
     }
 
-    private fun createDailySummary(forecasts: List<Forecast>): DailyWeatherSummary {
+    private fun createDailySummary(forecasts: List<Forecast>, isToday: Boolean = false): DailyWeatherSummary {
         val maxTemp = forecasts.maxOf { it.main.temp_max }
         val minTemp = forecasts.minOf { it.main.temp_min }
         val maxFeelsLike = forecasts.maxOf { it.main.feels_like }
@@ -288,17 +288,48 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             futureForecasts.any { it.weather.any { w -> w.main.equals("Snow", true) } } -> "눈"
             else -> representativeForecast.weather.first().description
         }
-        val weatherIcon = getRepresentativeIcon(forecasts)
+        val weatherIcon = if (isToday) {
+            getTodayIcon(representativeForecast, futureForecasts)
+        } else {
+            getWeightedIcon(forecasts)
+        }
         return DailyWeatherSummary("", maxTemp, minTemp, maxFeelsLike, minFeelsLike, weatherCondition, pop, weatherIcon)
     }
 
-    private fun getRepresentativeIcon(forecasts: List<Forecast>): String {
-        val priority = listOf("11", "13", "10", "09", "50", "04", "03", "02", "01")
-        for (prefix in priority) {
+    // 오늘: 현재 시간대 아이콘 기준, 이후 시간대에 악천후(비/눈/천둥/이슬비/안개)가 있으면 그걸로 표시
+    private fun getTodayIcon(currentForecast: Forecast, futureForecasts: List<Forecast>): String {
+        val severePrefixes = listOf("11", "13", "10", "09", "50")
+        for (prefix in severePrefixes) {
+            val found = futureForecasts.firstOrNull { f -> f.weather.any { w -> w.icon.startsWith(prefix) } }
+            if (found != null) return found.weather.first { it.icon.startsWith(prefix) }.icon
+        }
+        return currentForecast.weather.firstOrNull()?.icon ?: "01d"
+    }
+
+    // 다른 날: 악천후가 있으면 최우선, 아니면 맑음/구름 비율로 가중평균
+    private fun getWeightedIcon(forecasts: List<Forecast>): String {
+        val severePrefixes = listOf("11", "13", "10", "09")
+        for (prefix in severePrefixes) {
             val found = forecasts.firstOrNull { f -> f.weather.any { w -> w.icon.startsWith(prefix) } }
             if (found != null) return found.weather.first { it.icon.startsWith(prefix) }.icon
         }
-        return forecasts.firstOrNull()?.weather?.firstOrNull()?.icon ?: "01d"
+        val scores = forecasts.mapNotNull { f ->
+            when (f.weather.firstOrNull()?.icon?.take(2)) {
+                "01" -> 0
+                "02" -> 1
+                "03" -> 2
+                "04" -> 3
+                "50" -> 2  // 안개는 구름 수준으로 처리
+                else -> null
+            }
+        }
+        if (scores.isEmpty()) return forecasts.firstOrNull()?.weather?.firstOrNull()?.icon ?: "01d"
+        return when {
+            scores.average() < 1.0 -> "01d"
+            scores.average() < 2.0 -> "02d"
+            scores.average() < 2.5 -> "03d"
+            else -> "04d"
+        }
     }
 
     fun generateRecommendation(summary: DailyWeatherSummary, allClothes: List<ClothingItem>, isToday: Boolean = true): RecommendationResult {

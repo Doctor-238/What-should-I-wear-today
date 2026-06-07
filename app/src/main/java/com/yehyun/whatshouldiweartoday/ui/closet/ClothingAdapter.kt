@@ -34,12 +34,19 @@ class ClothingAdapter(
 
     fun setRecommendedIds(ids: Set<Int>) {
         this.recommendedIds = ids
-        notifyDataSetChanged()
+        if (itemCount > 0) notifyDataSetChanged()
     }
 
     fun setPackableOuters(outers: List<ClothingItem>) {
         this.packableOuters = outers
-        notifyDataSetChanged()
+        if (itemCount > 0) notifyDataSetChanged()
+    }
+
+    override fun onCurrentListChanged(previousList: List<ClothingItem>, currentList: List<ClothingItem>) {
+        super.onCurrentListChanged(previousList, currentList)
+        if (recommendedIds.isNotEmpty() || packableOuters.isNotEmpty()) {
+            notifyDataSetChanged()
+        }
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ClothingViewHolder {

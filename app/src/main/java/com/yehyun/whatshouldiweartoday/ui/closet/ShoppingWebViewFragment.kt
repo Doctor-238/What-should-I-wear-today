@@ -534,7 +534,7 @@ class ShoppingWebViewFragment : Fragment(), OnTabReselectedListener {
                     workDataOf(
                         BatchAddWorker.KEY_BATCH_ID to batchId,
                         BatchAddWorker.KEY_PATHS_FILE to pathsFile.absolutePath,
-                        BatchAddWorker.KEY_API to getString(R.string.gemini_api_key),
+                        BatchAddWorker.KEY_API to com.yehyun.whatshouldiweartoday.data.preference.SettingsManager(requireContext()).getEffectiveGeminiApiKey(),
                         BatchAddWorker.KEY_PURCHASE_SOURCE to platform.name
                     )
                 )

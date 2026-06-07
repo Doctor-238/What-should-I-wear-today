@@ -36,6 +36,68 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 
     data class PurposeValidationResult(val purpose: String, val isValid: Boolean, val message: String)
 
+    private val _isApiKeyValidating = MutableLiveData(false)
+    val isApiKeyValidating: LiveData<Boolean> = _isApiKeyValidating
+
+    sealed class ApiKeyResult {
+        data class Success(val isCustomKey: Boolean) : ApiKeyResult()
+        data class Error(val message: String) : ApiKeyResult()
+    }
+
+    private val _apiKeyResult = MutableLiveData<Event<ApiKeyResult>>()
+    val apiKeyResult: LiveData<Event<ApiKeyResult>> = _apiKeyResult
+
+    fun validateAndSaveApiKey(apiKey: String) {
+        if (_isApiKeyValidating.value == true) return
+        val trimmedKey = apiKey.trim()
+        if (trimmedKey.isEmpty()) {
+            _apiKeyResult.value = Event(ApiKeyResult.Error("API 키를 입력해주세요."))
+            return
+        }
+        _isApiKeyValidating.value = true
+        viewModelScope.launch {
+            try {
+                val model = GenerativeModel(
+                    modelName = settingsManager.getAiModelName(),
+                    apiKey = trimmedKey
+                )
+                withContext(Dispatchers.IO) {
+                    val content = com.google.ai.client.generativeai.type.content { text("hi") }
+                    model.generateContent(content)
+                }
+                settingsManager.customGeminiApiKey = trimmedKey
+                _apiKeyResult.postValue(Event(ApiKeyResult.Success(true)))
+            } catch (e: Exception) {
+                _apiKeyResult.postValue(Event(ApiKeyResult.Error(categorizeApiKeyError(e))))
+            } finally {
+                _isApiKeyValidating.postValue(false)
+            }
+        }
+    }
+
+    fun resetApiKeyToDefault() {
+        settingsManager.customGeminiApiKey = ""
+        _apiKeyResult.value = Event(ApiKeyResult.Success(false))
+    }
+
+    private fun categorizeApiKeyError(e: Exception): String {
+        val msg = (e.message ?: e.toString()).lowercase()
+        return when {
+            msg.contains("api_key_invalid") || msg.contains("api key not valid") ||
+            msg.contains("invalid api key") || msg.contains("invalid_argument") && msg.contains("key") ->
+                "유효하지 않은 API 키입니다. Gemini API 키가 맞는지 확인해주세요."
+            msg.contains("resource_exhausted") || msg.contains("quota") || msg.contains("429") ->
+                "API 할당량(quota)이 초과된 키입니다. 잠시 후 다시 시도해주세요."
+            msg.contains("permission_denied") || msg.contains("403") ->
+                "API 키 접근 권한이 없습니다. Google AI Studio에서 Gemini API 활성화 여부를 확인해주세요."
+            msg.contains("404") || msg.contains("not_found") ->
+                "모델을 찾을 수 없습니다. API 키가 유효한지 다시 확인해주세요."
+            msg.contains("unknownhostexception") || msg.contains("timeout") || msg.contains("network") ->
+                "네트워크 오류입니다. 인터넷 연결을 확인해주세요."
+            else -> "키 검증 실패: ${e.javaClass.simpleName}"
+        }
+    }
+
     fun validateAndAddPurpose(purpose: String, apiKey: String) {
         if (_isPurposeValidating.value == true) return
 

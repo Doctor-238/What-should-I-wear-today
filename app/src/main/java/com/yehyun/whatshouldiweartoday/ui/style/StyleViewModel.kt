@@ -118,7 +118,15 @@ class StyleViewModel(application: Application) : AndroidViewModel(application) {
                 "오래된 순" -> filtered.sortedBy { it.style.styleId }
                 "이름 오름차순" -> filtered.sortedBy { it.style.styleName }
                 "이름 내림차순" -> filtered.sortedByDescending { it.style.styleName }
-                else -> filtered.sortedByDescending { it.style.styleId } // "최신순"
+                "최신순" -> filtered.sortedByDescending { it.style.styleId }
+                else -> {
+                    // purpose-based: matching styles first (by recent), then the rest (by recent)
+                    filtered.sortedWith(
+                        compareByDescending<StyleWithItems> {
+                            it.style.purpose.split(",").map { p -> p.trim() }.contains(sort)
+                        }.thenByDescending { it.style.styleId }
+                    )
+                }
             }
 
             val groupedBySeason = sorted.groupBy { it.style.season }
@@ -143,6 +151,7 @@ class StyleViewModel(application: Application) : AndroidViewModel(application) {
     fun setSortType(sortType: String) {
         if (_sortType.value != sortType) {
             _sortType.value = sortType
+            settingsManager.styleSortType = sortType
             _sortTypeChanged.value = Unit
         }
     }

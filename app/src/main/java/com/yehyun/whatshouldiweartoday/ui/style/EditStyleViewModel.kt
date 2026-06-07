@@ -9,6 +9,7 @@ import androidx.lifecycle.viewModelScope
 import com.yehyun.whatshouldiweartoday.data.database.AppDatabase
 import com.yehyun.whatshouldiweartoday.data.database.ClothingItem
 import com.yehyun.whatshouldiweartoday.data.database.SavedStyle
+import com.yehyun.whatshouldiweartoday.data.preference.SettingsManager
 import com.yehyun.whatshouldiweartoday.data.repository.ClothingRepository
 import com.yehyun.whatshouldiweartoday.data.repository.StyleRepository
 import kotlinx.coroutines.launch
@@ -17,6 +18,7 @@ class EditStyleViewModel(application: Application) : AndroidViewModel(applicatio
 
     private val styleRepository: StyleRepository
     private val clothingRepository: ClothingRepository
+    private val settingsManager = SettingsManager(application)
 
     private val _clothingCategory = MutableLiveData("전체")
     val filteredClothes = MediatorLiveData<List<ClothingItem>>()
@@ -31,6 +33,7 @@ class EditStyleViewModel(application: Application) : AndroidViewModel(applicatio
 
     val currentStyleName = MutableLiveData<String>()
     val currentSeason = MutableLiveData<String>()
+    val purposeList = MutableLiveData<List<String>>(emptyList())
 
     private val _selectedItems = MutableLiveData<MutableList<ClothingItem>>(mutableListOf())
     val selectedItems: LiveData<MutableList<ClothingItem>> = _selectedItems
@@ -117,6 +120,9 @@ class EditStyleViewModel(application: Application) : AndroidViewModel(applicatio
                 setSortedSelectedItems(styleWithItems.items.toMutableList())
                 currentStyleName.value = styleWithItems.style.styleName
                 currentSeason.value = styleWithItems.style.season
+                if (!isInitialLoadComplete || purposeList.value?.isEmpty() == true) {
+                    purposeList.value = styleWithItems.style.purpose.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+                }
                 toolbarTitle.value = "'${styleWithItems.style.styleName}' 수정"
 
                 checkForChanges()
@@ -183,13 +189,17 @@ class EditStyleViewModel(application: Application) : AndroidViewModel(applicatio
         val nameChanged = originalStyle?.styleName != currentStyleName.value
         val seasonChanged = originalStyle?.season != currentSeason.value
         val itemsChanged = initialItemIds != selectedItems.value?.map { it.id }?.toSet()
+        val purposeChanged = originalStyle?.purpose != (purposeList.value?.joinToString(",") ?: "")
 
-        val hasChanges = nameChanged || seasonChanged || itemsChanged
+        val hasChanges = nameChanged || seasonChanged || itemsChanged || purposeChanged
         val isSavable = hasChanges && !currentStyleName.value.isNullOrEmpty() && !currentSeason.value.isNullOrEmpty()
 
         saveButtonEnabled.value = isSavable
         backPressedCallbackEnabled.value = hasChanges
     }
+
+    fun updatePurposes(list: List<String>) { purposeList.value = list; checkForChanges() }
+    fun getAvailablePurposes(): List<String> = settingsManager.getAllPurposes()
 
     fun onNameChanged(newName: String) {
         if (currentStyleName.value != newName) {
@@ -224,7 +234,7 @@ class EditStyleViewModel(application: Application) : AndroidViewModel(applicatio
         _isProcessing.value = true
         viewModelScope.launch {
             try {
-                val updatedStyle = style.copy(styleName = name, season = season)
+                val updatedStyle = style.copy(styleName = name, season = season, purpose = purposeList.value?.joinToString(",") ?: "")
                 styleRepository.updateStyleWithItems(updatedStyle, items)
                 _isUpdateComplete.postValue(true)
             } finally {

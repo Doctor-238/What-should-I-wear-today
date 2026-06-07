@@ -1,151 +1,325 @@
-## 👕 나만의 코디 추천 앱 **오늘 뭐 입을까?**
+# 👕 오늘 뭐 입지?
 
->옷을 업로드하면 인공지능이 날씨에 맞게 코디를 추천해요
+> 내 옷장을 등록해두면 AI가 날씨에 맞는 코디를 매일 추천해주는 Android 앱
 
-<a href="https://ibb.co/1GMH9722"><img src="https://i.ibb.co/ZzSyhGTT/image.png" alt="image" border="0"></a>
+옷이 많은데 뭘 입을지 모르겠거나, 날씨를 보고 옷을 고르는 게 귀찮을 때 사용하는 앱입니다.  
+옷 사진을 올리면 Gemini AI가 카테고리·온도·색상을 자동으로 분석해 옷장을 만들어주고,  
+오늘 날씨에 맞는 최적의 코디 조합을 추천해줍니다.
 
+![Platform](https://img.shields.io/badge/Platform-Android-3DDC84?logo=android&logoColor=white)
+![Language](https://img.shields.io/badge/Language-Kotlin-7F52FF?logo=kotlin&logoColor=white)
+![Min SDK](https://img.shields.io/badge/Min%20SDK-26%20(Android%208.0)-blue)
+![AI](https://img.shields.io/badge/AI-Google%20Gemini-4285F4?logo=google&logoColor=white)
 
-## 🗒️ 프로젝트 설명  
-**오늘 뭐 입지?** 는 날씨에 따라 인공지능이 코디 스타일을 추천하는 앱입니다.
+---
 
-내가 가진 옷, 혹은 가지고 싶은 옷 사진을 업로드하여 스타일을 추천받을 준비를 해주세요
-
-직접 옷을 선택하여 나만의 스타일을 저장할 수 있습니다
-
-## 📱 실행 데모
+## 📱 화면 구성
 
 <table>
   <tr>
-    <td><a href="https://ibb.co/vCGmbfcb"><img src="https://i.ibb.co/0pSZk1nk/1-2.png" width="300"></a></td>
-    <td><a href="https://ibb.co/SFhQX77"><img src="https://i.ibb.co/1FDsfJJ/2-1.png" width="300"></a></td>
+    <td align="center"><img src="docs/assets/screen_home.png" width="160"><br><sub><b>홈 · AI 코디 추천</b></sub></td>
+    <td align="center"><img src="docs/assets/screen_closet.png" width="160"><br><sub><b>옷장 목록</b></sub></td>
+    <td align="center"><img src="docs/assets/screen_add_clothing.png" width="160"><br><sub><b>옷 추가 · AI 분석</b></sub></td>
+    <td align="center"><img src="docs/assets/screen_style_list.png" width="160"><br><sub><b>스타일 목록</b></sub></td>
+    <td align="center"><img src="docs/assets/screen_style_create.png" width="160"><br><sub><b>나만의 스타일</b></sub></td>
   </tr>
   <tr>
-    <td><a href="https://ibb.co/JjCjw3Xb"><img src="https://i.ibb.co/pjnjBhCs/3-1.png" width="300"></a></td>
-    <td><a href="https://ibb.co/nMZyqX0p"><img src="https://i.ibb.co/Jj0TWYdZ/4-1.png" width="300"></a></td>
+    <td align="center"><img src="docs/assets/screen_settings_main.png" width="160"><br><sub><b>설정</b></sub></td>
+    <td align="center"><img src="docs/assets/screen_settings_detail.png" width="160"><br><sub><b>체형 · 온도 설정</b></sub></td>
+    <td align="center"><img src="docs/assets/screen_settings_info.png" width="160"><br><sub><b>사용자 정보</b></sub></td>
+    <td align="center"><img src="docs/assets/screen_shopping_brands.png" width="160"><br><sub><b>쇼핑몰 선택</b></sub></td>
+    <td align="center"><img src="docs/assets/screen_shopping_list.png" width="160"><br><sub><b>오늘 뭐 살래?</b></sub></td>
   </tr>
 </table>
 
+---
 
-## 🛠 주요 기능   
+## 🎬 데모
 
-### 1. AI 기반 코디 추천 및 개인화
-- **현재 및 미래 날씨 반영:** 현재 시간을 기준으로 오늘의 날씨를 반영하며, 내일 날씨까지 고려하여 옷을 추천합니다.
+![앱 데모](docs/assets/demo.gif)
 
-- **온도 기반 추천:** 자체 AI 분석 로직에 따라 상의, 하의, 아우터 등 날씨에 맞는 옷을 추천하며, 가장 적합한 조합은 최적의 코디로 선정하여 제시합니다. 사용자의 체질과 선호도에 맞춰 적정 온도 범위를 조절할 수 있으며, 이 설정은 코디 추천 로직에 직접 반영됩니다.
+> 전체 영상: [YouTube에서 보기](https://youtu.be/BSDagR65s2g)
 
-- **일교차 알림:** 하루 최고/최저 기온차가 12도 이상일 경우, "일교차가 커요. 가벼운 아우터를 챙기세요!"와 같은 메시지와 함께 챙겨갈 아우터를 별도로 추천합니다. 이 아우터는 특별 아이콘으로 구별되어 표시됩니다.
+---
 
-### 2. 스마트한 옷 관리
+## 🛠 주요 기능
 
-- **AI 사진 분석:** 옷 사진을 업로드하면 AI가 의류 여부를 판별하고, 자동으로 분류(상의, 하의, 아우터 등), 적정 온도, 색상을 분석합니다.
+### 🏠 홈 — AI 코디 추천
 
-- **배경 제거:** 업로드된 옷 사진의 배경을 제거할 수 있으며, 배경 제거 민감도를 사용자가 직접 조절할 수 있습니다.
+앱을 실행하면 현재 위치를 자동으로 가져와 OpenWeatherMap에서 날씨 데이터를 조회하고,  
+Gemini AI가 내 옷장 전체를 분석해 그날 날씨에 맞는 코디를 구성합니다.
 
-- **일괄 추가:** 여러 옷을 한 번에 추가할 수 있는 기능으로, 백그라운드에서 작업이 진행되며 진행 상황을 알림으로 확인할 수 있습니다. 작업 도중 앱을 종료해도 계속 진행됩니다.
+- **날짜 탭** — 오늘 / 내일 / 3일 뒤 탭 전환으로 날짜별 코디 미리 확인  
+  (설정에서 확장 예보를 켜면 최대 5일 뒤까지 확인 가능)
+- **최적 코디** — AI가 그날 날씨에 가장 잘 맞는 상의·하의·아우터 1개 조합을 선정
+- **카테고리별 추천** — 최적 코디 외에도 추천 상의·하의·아우터 목록을 별도 제공
+- **일교차 알림** — 하루 최고·최저 기온 차가 12°C 이상이면 챙겨갈 아우터를 별도 추천 (특별 아이콘으로 구분)
+- **우산 알림** — 강수확률 40% 이상이면 "우산을 챙기세요", 70% 이상이면 강화 알림 배너 표시
+- **체질·온도 반영** — 설정한 체질(추위/더위 민감도)과 온도 범위(좁게/보통/넓게)가 추천 로직에 직접 적용
+- **착용 목적 반영** — 격식 / 일상 / 활동 / 데이트 / 집앞 등 오늘의 목적을 설정하면 상황에 맞게 추천
 
-### 3. 사용자 맞춤형 편의 기능
+---
 
-- **스타일 저장 및 관리:** 홈 화면에서 추천된 코디를 스타일로 저장하거나, 여러 옷을 조합하여 자신만의 스타일을 만들 수 있습니다.
+### 👔 옷장 — 스마트 의류 관리
 
-- **상황별 알림:** 비 올 확률이 40% 또는 70% 이상일 경우, 우산을 챙기도록 화면 하단에 알림 메시지를 표시합니다.
+#### AI 이미지 분석
+옷 사진을 올리면 Gemini AI가 아래 항목을 자동으로 인식합니다.
 
-- **데이터 관리:** 앱 내의 옷과 스타일을 분류별로 관리할 수 있으며, 검색 및 정렬 기능을 지원합니다. 스타일 내 옷을 삭제하면 해당 스타일도 자동으로 삭제되어 불필요한 데이터가 남지 않습니다.
+| 분석 항목 | 내용 |
+|---|---|
+| 카테고리 | 상의 / 하의 / 아우터 / 진발 / 기타 자동 분류 |
+| 적정 온도 | 해당 옷이 적합한 온도 범위 (예: 10°C ~ 20°C) |
+| 색상 | 주요 색상 HEX 코드 추출 |
 
-## 💻 개발 및 빌드
+분석값은 저장 전에 수동으로 수정할 수 있습니다.
 
-### 라이브러리 설치
-``` bash
-npm install
-``` 
+#### 배경 제거
+ML Kit Selfie Segmentation으로 옷 사진의 배경을 자동 제거합니다.  
+배경과 옷의 경계가 모호한 경우를 위해 **민감도를 1~5단계**로 조절할 수 있습니다.
 
-### 개발 모드 실행
-``` bash
-npm run dev
-``` 
+#### 일괄 추가
+여러 옷 사진을 한 번에 선택하면 WorkManager가 백그라운드에서 순차 처리합니다.  
+진행 상황은 알림으로 확인할 수 있으며, 앱을 종료해도 작업이 중단되지 않습니다.
 
-### 프로덕션 빌드
-``` bash
-npm run build
-``` 
+#### 목록 관리
+- 카테고리 탭: 전체 / 상의 / 하의 / 아우터 / 진발
+- 이름 검색 및 최신순 정렬
+- 개별 옷 정보 수정 및 삭제
 
-## ⚙️ 개발 환경
+---
 
-언어: Kotlin
+### 👗 스타일 — 코디 저장·관리
 
-IDE: Android Studio
+- **홈에서 바로 저장** — AI가 추천한 코디를 버튼 한 번으로 스타일에 저장
+- **직접 조합** — 옷장에서 원하는 옷을 골라 나만의 스타일 생성
+- **계절별 분류** — 봄 / 여름 / 가을 / 겨울로 구분해 저장
+- **자동 정리** — 스타일에 포함된 옷을 삭제하면 해당 스타일도 함께 정리되어 빈 스타일이 남지 않음
+- 스타일 이름 설정, 편집, 삭제 지원
 
-Build Tool: Gradle
+---
 
-UI Framework: XML-based View System
+### 🛍 쇼핑 연동
 
-AI 분석: Google Gemini API
+#### 외부 쇼핑몰 바로가기
+오늘 AI가 추천한 코디 키워드를 바탕으로 원하는 쇼핑 플랫폼을 골라 검색할 수 있습니다.
 
-Database: Room (SQLite 기반 로컬 DB)
+| 지원 플랫폼 |
+|---|
+| 쿠팡 / 무신사 / 하이버 / 에이블리 / 29CM / 네이버스토어 / 구글 |
+
+#### 오늘 뭐 살래? (앱 내 쇼핑몰)
+앱 내 자체 상품 목록을 카테고리(상의·하의·아우터·신발·기타)와 검색으로 탐색하고,  
+AI 맞춤 추천 버튼으로 현재 날씨·체형 정보를 반영한 상품을 추천받을 수 있습니다.  
+마음에 드는 상품은 하트 버튼으로 위시리스트에 저장합니다.
+
+---
+
+### ⚙️ 맞춤 설정
+
+앱의 모든 추천 로직이 아래 설정값을 반영합니다.
+
+#### 체질 · 온도
+
+| 설정 | 옵션 | 효과 |
+|---|---|---|
+| 체질 | 5단계 (추위 많이 탐 → 더위 많이 탐) | 기온 기준 ±3°C까지 보정 |
+| 온도 범위 | 좁게 / 보통 / 넓게 | 옷별 적정 온도 허용 범위 조절 |
+
+#### 체형 · 사이즈
+
+| 설정 | 내용 |
+|---|---|
+| 체형 정보 | 키·몸무게·허리 등록 → 추천 코디에 사이즈 아이콘 표시 |
+| 사이즈 표기 | 영문 (XS/S/M/L/XL) 또는 숫자 (상의 85~110, 하의 26~34) 선택 |
+
+#### AI · 기타
+
+| 설정 | 옵션 |
+|---|---|
+| AI 모델 | 빠름 (Gemini 2.5 Flash Lite) / 정확 (Gemini 2.5 Flash) |
+| 착용 목적 | 격식 / 일상 / 활동 / 데이트 / 집앞 + 커스텀 목적 직접 추가 |
+| 배경 제거 민감도 | 1~5단계 |
+| 확장 예보 | on 시 3일 뒤 이후 날짜까지 코디 확인 가능 |
+| 추천 아이콘 표시 | 옷장 목록에서 오늘 추천된 옷 아이콘 on/off |
+| 전체 초기화 | 모든 설정을 기본값으로 리셋 |
+
+---
+
+### 📌 홈 위젯
+
+앱을 열지 않고도 홈 화면에서 오늘의 추천 코디를 바로 확인할 수 있는 위젯을 지원합니다.  
+WidgetUpdateWorker가 백그라운드에서 위젯을 자동으로 갱신합니다.
+
+---
+
+## 🏗 기술 구조
+
+<img src="docs/assets/architecture.png" width="680">
+
+**패턴:** MVVM + Repository + Single Activity
+
+```
+UI Layer         Fragment + XML ViewBinding (Navigation Component)
+      │
+      │  LiveData 관찰 / Event 단발성 소비
+      ▼
+ViewModel        HomeViewModel / ClosetViewModel / StyleViewModel
+Layer            MallMainViewModel / SettingsViewModel ...
+      │
+      │  suspend 함수 / Kotlin Coroutines
+      ▼
+Repository       ClothingRepository ── Room DB  (ClothingItem, v13)
+Layer            StyleRepository    ── Room DB  (SavedStyle + CrossRef)
+                 WeatherRepository  ── OpenWeatherMap API (Retrofit2)
+                 MallRepository     ── Room DB  (MallItem)
+      │
+      │  직접 호출
+      ▼
+External         Google Gemini API   옷 이미지 분석 + 코디 추천
+Services         ML Kit              옷 사진 배경 제거
+                 OpenWeatherMap      현재 날씨 + 5일 예보
+                 Google Location     현재 위치 좌표
+```
+
+- **Navigation:** `MainActivity` 단일 Activity + Navigation Component, 하단 탭 4개
+- **비동기:** `viewModelScope.launch` / Kotlin Coroutines 전체 적용
+- **이미지 로딩:** Glide 4.16 + `MyAppGlideModule`
+- **백그라운드:** WorkManager (`BatchAddWorker`, `MallBatchAddWorker`, `WidgetUpdateWorker`)
+- **이벤트 래퍼:** `Event<T>` — 단발성 LiveData 소비 (토스트·네비게이션 중복 방지)
+
+---
 
 ## 📂 프로젝트 구조
 
-```txt
-.
-├── app
-│   ├── build.gradle.kts
-│   ├── proguard-rules.pro
-│   └── src
-│       ├── androidTest
-│       │   └── java
-│       │       └── com
-│       │           └── yehyun
-│       │               └── whatshouldiweartoday
-│       ├── main
-│       │   ├── AndroidManifest.xml
-│       │   ├── ic_launcher-playstore.png
-│       │   ├── java
-│       │   │   └── com
-│       │   │       └── yehyun
-│       │   │           └── whatshouldiweartoday
-│       │   └── res
-│       │       ├── color
-│       │       ├── drawable
-│       │       ├── layout
-│       │       ├── menu
-│       │       ├── mipmap-anydpi-v26
-│       │       ├── mipmap-hdpi
-│       │       ├── mipmap-mdpi
-│       │       ├── mipmap-xhdpi
-│       │       ├── mipmap-xxhdpi
-│       │       ├── mipmap-xxxhdpi
-│       │       ├── navigation
-│       │       ├── values
-│       │       └── xml
-│       └── test
-│           └── java
-│               └── com
-│                   └── yehyun
-│                       └── whatshouldiweartoday
-├── build.gradle.kts
-├── gradle
-│   └── wrapper
-│       ├── gradle-wrapper.jar
-│       └── gradle-wrapper.properties
-├── gradle.properties
-├── gradlew
-├── gradlew.bat
-├── local.properties
-├── project-structure-detailed.txt
-├── project-structure.txt
-├── project-structure1.txt
-└── settings.gradle.kts
+```
+app/src/main/java/.../whatshouldiweartoday/
+├── ai/
+│   └── AiModelProvider.kt          # Gemini 모델 초기화 (Flash / Flash Lite 선택)
+├── data/
+│   ├── api/
+│   │   ├── WeatherApiService.kt    # OpenWeatherMap Retrofit 인터페이스
+│   │   └── WeatherResponse.kt      # 날씨 응답 모델
+│   ├── database/
+│   │   ├── AppDatabase.kt          # Room DB (v13)
+│   │   ├── ClothingItem.kt         # 옷 Entity (카테고리·온도·색상·이미지 URI)
+│   │   ├── ClothingDao.kt
+│   │   ├── SavedStyle.kt           # 스타일 Entity (계절 포함)
+│   │   ├── StyleItemCrossRef.kt    # 스타일 ↔ 옷 M:N 연결 테이블
+│   │   ├── Migrations.kt           # Room 마이그레이션
+│   │   └── mall/
+│   │       ├── MallDatabase.kt
+│   │       ├── MallItem.kt         # 쇼핑몰 상품 Entity
+│   │       └── MallDao.kt
+│   ├── preference/
+│   │   └── SettingsManager.kt      # SharedPreferences 래퍼 (모든 설정값)
+│   └── repository/
+│       ├── ClothingRepository.kt
+│       ├── StyleRepository.kt
+│       ├── WeatherRepository.kt
+│       └── MallRepository.kt
+├── ui/
+│   ├── home/
+│   │   ├── HomeFragment.kt         # 날씨 조회 + 코디 추천 메인 화면
+│   │   ├── HomeViewModel.kt        # 추천 로직 + 날씨 데이터 처리
+│   │   ├── RecommendationFragment.kt
+│   │   └── WeatherAnimView.kt      # 날씨 상태 커스텀 뷰
+│   ├── closet/
+│   │   ├── ClosetFragment.kt       # 옷장 목록 (카테고리 탭)
+│   │   ├── AddClothingFragment.kt  # 옷 추가 + AI 분석
+│   │   ├── EditClothingFragment.kt
+│   │   └── BatchAddWorker.kt       # WorkManager: 일괄 추가 백그라운드 처리
+│   ├── style/
+│   │   ├── StyleFragment.kt        # 스타일 목록 (계절 탭)
+│   │   ├── SaveStyleFragment.kt    # 스타일 저장
+│   │   └── EditStyleFragment.kt
+│   ├── mall/
+│   │   ├── MallMainFragment.kt     # 내부 쇼핑몰 목록
+│   │   ├── MallItemDetailFragment.kt
+│   │   ├── MallRecommendationFragment.kt
+│   │   ├── CartFragment.kt
+│   │   ├── WishlistFragment.kt
+│   │   └── MallBatchAddWorker.kt
+│   ├── settings/
+│   │   └── SettingsFragment.kt
+│   └── custom/
+│       ├── CropOverlayView.kt      # 이미지 크롭 커스텀 뷰
+│       └── ProgressFab.kt          # 진행률 표시 FAB
+├── util/
+│   ├── Event.kt                    # 단발성 LiveData 이벤트 래퍼
+│   └── NetworkUtils.kt
+├── TodayRecoWidgetProvider.kt      # 홈 위젯
+├── WidgetUpdateWorker.kt
+└── MainActivity.kt
 ```
 
+---
 
-## 🧑‍💻 역할 분담
-- 2171297 유예현 [(Doctor-238)](https://github.com/Doctor-238/)
-  - 기획 / 기능 설계
-  - 프론트엔드 개발
-  - 백엔드 연동, 로컬 데이터 처리
+## 🚀 시작하기
 
-- 2171429 이지원 [(CH4ER1)](https://github.com/CH4ER1)
-  - UI/UX 디자인
-  - 문서 작성
+### 1. 저장소 클론
 
-## ✍️ 디자인 원본 (Canva)
-- https://www.canva.com/design/DAGrymWtjvE/3CGKh1Iugw0eGi7S_W8V1A/edit?utm_content=DAGrymWtjvE&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton
+```bash
+git clone https://github.com/Doctor-238/What-should-I-wear-today.git
+cd What-should-I-wear-today
+```
+
+### 2. API 키 설정
+
+`app/src/main/res/values/` 경로에 `secrets.xml` 파일을 생성하고 아래 내용을 입력합니다.
+
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="gemini_api_key" translatable="false">YOUR_GEMINI_API_KEY</string>
+    <string name="openweathermap_api_key" translatable="false">YOUR_OPENWEATHERMAP_API_KEY</string>
+</resources>
+```
+
+- **Gemini API 키** — [Google AI Studio](https://aistudio.google.com/) 에서 무료 발급
+- **OpenWeatherMap API 키** — [openweathermap.org](https://openweathermap.org/api) 에서 무료 발급
+
+> `secrets.xml`은 `.gitignore`에 등록되어 있어 저장소에 올라가지 않습니다.  
+> API 키 없이 실행하면 AI 분석·날씨 조회가 동작하지 않습니다.
+
+### 3. 빌드 및 실행
+
+```bash
+./gradlew assembleDebug          # 디버그 APK 빌드
+./gradlew assembleRelease        # 릴리즈 APK 빌드
+./gradlew testDebugUnitTest      # 유닛 테스트
+./gradlew connectedAndroidTest   # 기기 연결 후 통합 테스트
+./gradlew lint                   # 린트 검사
+./gradlew clean                  # 빌드 캐시 정리
+```
+
+Android Studio에서는 `app` 모듈을 선택하고 **Run** 버튼으로 바로 실행할 수 있습니다.
+
+---
+
+## ⚙️ 개발 환경
+
+| 항목 | 내용 |
+|---|---|
+| 언어 | Kotlin |
+| IDE | Android Studio |
+| Min SDK | 26 (Android 8.0) |
+| Target / Compile SDK | 34 |
+| 빌드 시스템 | Gradle Kotlin DSL |
+| UI | XML View System + ViewBinding |
+| 비동기 | Kotlin Coroutines + viewModelScope |
+| 로컬 DB | Room 2.6 (SQLite, v13) |
+| 네트워크 | Retrofit2 + OkHttp + kotlinx.serialization |
+| AI | Google Gemini 2.5 Flash / Flash Lite |
+| 이미지 처리 | ML Kit Selfie Segmentation, Glide 4.16 |
+| 백그라운드 | WorkManager 2.9 |
+| 위치 | Google Play Services Location 21.3 |
+| 스플래시 | AndroidX Core SplashScreen |
+
+---
+
+## 🧑‍💻 팀
+
+| 이름 | GitHub | 역할 |
+|---|---|---|
+| 유예현 | [Doctor-238](https://github.com/Doctor-238/) | 기획 · 기능 설계 · Android 개발 · API 연동 |
+| 이지원 | [CH4ER1](https://github.com/CH4ER1) | UI/UX 디자인 · 문서 작성 |

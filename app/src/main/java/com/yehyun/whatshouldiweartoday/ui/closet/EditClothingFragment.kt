@@ -25,6 +25,9 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
+import androidx.recyclerview.widget.ItemTouchHelper
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.content.ContextCompat
@@ -77,9 +80,10 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
     private var isBindingSpinner = false
     private var spinnerBindingGeneration = 0
     private lateinit var tvEditTempHint: TextView
-    private lateinit var tvEditPurpose: TextView
+    private lateinit var rvEditPurposeChips: RecyclerView
     private lateinit var layoutEditPurpose: View
     private lateinit var dividerEditPurpose: View
+    private lateinit var purposeAdapter: PurposeChipAdapter
 
     private var toast: Toast? = null
 
@@ -112,6 +116,7 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
         }
 
         viewModel.loadClothingItem(args.clothingItemId)
+        setupPurposeChips()
         setupBackButtonHandler()
         setupListeners()
         observeViewModel()
@@ -137,7 +142,7 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
         layoutEditFitLevel = view.findViewById(R.id.layout_edit_fit_level)
         dividerEditFitLevel = view.findViewById(R.id.divider_edit_fit_level)
         tvEditTempHint = view.findViewById(R.id.tv_edit_temp_hint)
-        tvEditPurpose = view.findViewById(R.id.tv_edit_purpose)
+        rvEditPurposeChips = view.findViewById(R.id.rv_edit_purpose_chips)
         layoutEditPurpose = view.findViewById(R.id.layout_edit_purpose)
         dividerEditPurpose = view.findViewById(R.id.divider_edit_purpose)
     }
@@ -354,14 +359,9 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
 
     private fun updatePurposeDisplay(item: ClothingItem) {
         val purposes = item.purpose.split(",").map { it.trim() }.filter { it.isNotEmpty() }
-        if (purposes.isEmpty()) {
-            layoutEditPurpose.isVisible = false
-            dividerEditPurpose.isVisible = false
-        } else {
-            layoutEditPurpose.isVisible = true
-            dividerEditPurpose.isVisible = true
-            tvEditPurpose.text = purposes.joinToString(", ")
-        }
+        layoutEditPurpose.isVisible = true
+        dividerEditPurpose.isVisible = true
+        purposeAdapter.submitList(purposes)
     }
 
     private fun updatePurchaseSourceDisplay(item: ClothingItem) {
@@ -564,6 +564,72 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
 
     override fun onTabReselected() {
         handleBackButton()
+    }
+
+    private fun setupPurposeChips() {
+        purposeAdapter = PurposeChipAdapter(
+            onDeleteRequest = { pos, purpose -> confirmDeletePurpose(pos, purpose) },
+            onAddRequest = { showAddPurposeDialog() }
+        )
+        rvEditPurposeChips.layoutManager = LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false)
+        rvEditPurposeChips.adapter = purposeAdapter
+
+        val callback = object : ItemTouchHelper.Callback() {
+            override fun getMovementFlags(rv: RecyclerView, vh: RecyclerView.ViewHolder): Int {
+                if (vh.itemViewType != PurposeChipAdapter.TYPE_CHIP) return makeMovementFlags(0, 0)
+                return makeMovementFlags(ItemTouchHelper.START or ItemTouchHelper.END, 0)
+            }
+            override fun onMove(rv: RecyclerView, from: RecyclerView.ViewHolder, to: RecyclerView.ViewHolder): Boolean {
+                if (to.itemViewType != PurposeChipAdapter.TYPE_CHIP) return false
+                purposeAdapter.moveItem(from.adapterPosition, to.adapterPosition)
+                return true
+            }
+            override fun onSwiped(vh: RecyclerView.ViewHolder, dir: Int) {}
+            override fun isLongPressDragEnabled() = true
+            override fun onSelectedChanged(vh: RecyclerView.ViewHolder?, actionState: Int) {
+                super.onSelectedChanged(vh, actionState)
+                if (actionState == ItemTouchHelper.ACTION_STATE_DRAG) {
+                    vh?.itemView?.animate()?.scaleX(1.12f)?.scaleY(1.12f)?.setDuration(120)?.start()
+                    vh?.itemView?.elevation = 10f
+                }
+            }
+            override fun clearView(rv: RecyclerView, vh: RecyclerView.ViewHolder) {
+                super.clearView(rv, vh)
+                vh.itemView.animate()?.scaleX(1f)?.scaleY(1f)?.setDuration(120)?.start()
+                vh.itemView.elevation = 0f
+                viewModel.updatePurposes(purposeAdapter.getPurposes())
+                purposeAdapter.refreshColors()
+            }
+        }
+        ItemTouchHelper(callback).attachToRecyclerView(rvEditPurposeChips)
+    }
+
+    private fun confirmDeletePurpose(pos: Int, purpose: String) {
+        AlertDialog.Builder(requireContext())
+            .setMessage("'$purpose' 용도를 삭제하시겠습니까?")
+            .setPositiveButton("예") { _, _ ->
+                val updated = purposeAdapter.getPurposes().toMutableList().also { it.removeAt(pos) }
+                viewModel.updatePurposes(updated)
+            }
+            .setNegativeButton("아니오", null)
+            .show()
+    }
+
+    private fun showAddPurposeDialog() {
+        val current = purposeAdapter.getPurposes()
+        val available = settingsManager.getAllPurposes().filter { it !in current }
+        if (available.isEmpty()) {
+            showToast("추가 가능한 용도가 없습니다.")
+            return
+        }
+        AlertDialog.Builder(requireContext())
+            .setTitle("용도 추가")
+            .setItems(available.toTypedArray()) { _, which ->
+                val updated = current.toMutableList().also { it.add(available[which]) }
+                viewModel.updatePurposes(updated)
+            }
+            .setNegativeButton("취소", null)
+            .show()
     }
 
     override fun onDestroyView() {

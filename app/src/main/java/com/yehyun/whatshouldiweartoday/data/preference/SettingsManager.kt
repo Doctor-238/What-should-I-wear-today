@@ -2,9 +2,11 @@ package com.yehyun.whatshouldiweartoday.data.preference
 
 import android.content.Context
 import android.content.SharedPreferences
+import com.yehyun.whatshouldiweartoday.R
 
 class SettingsManager(context: Context) {
 
+    private val appContext = context.applicationContext
     private val prefs: SharedPreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
     var temperatureRange: String
@@ -183,6 +185,21 @@ class SettingsManager(context: Context) {
         return if (aiModel == AI_MODEL_FAST) "gemini-2.5-flash-lite" else "gemini-2.5-flash"
     }
 
+    var customGeminiApiKey: String
+        get() = prefs.getString(KEY_CUSTOM_GEMINI_API_KEY, "") ?: ""
+        set(value) {
+            prefs.edit().putString(KEY_CUSTOM_GEMINI_API_KEY, value).commit()
+        }
+
+    val isUsingCustomGeminiApiKey: Boolean
+        get() = customGeminiApiKey.isNotEmpty()
+
+    fun getEffectiveGeminiApiKey(): String {
+        val customKey = customGeminiApiKey
+        return if (customKey.isNotEmpty()) customKey
+        else appContext.getString(R.string.gemini_api_key)
+    }
+
     var wishlistedItemIds: Set<String>
         get() = prefs.getStringSet(KEY_WISHLISTED_ITEMS, emptySet()) ?: emptySet()
         set(value) { prefs.edit().putStringSet(KEY_WISHLISTED_ITEMS, value).commit() }
@@ -225,6 +242,7 @@ class SettingsManager(context: Context) {
         private const val KEY_SELECTED_PURPOSE = "selected_purpose"
         private const val KEY_CUSTOM_PURPOSES = "custom_purposes"
         private const val KEY_WISHLISTED_ITEMS = "wishlisted_item_ids"
+        private const val KEY_CUSTOM_GEMINI_API_KEY = "custom_gemini_api_key"
 
         val DEFAULT_PURPOSES = listOf("격식있는 자리용", "일상용", "활동용", "데이트용", "집앞용")
 

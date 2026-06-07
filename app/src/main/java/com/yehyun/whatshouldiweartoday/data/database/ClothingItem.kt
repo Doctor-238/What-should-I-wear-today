@@ -25,5 +25,6 @@ data class ClothingItem(
     val purpose: String = "",
     val purchaseSource: String? = null,
     var size: String? = null,
-    val aiCategory: String? = null
+    val aiCategory: String? = null,
+    val imageHash: String? = null
 )

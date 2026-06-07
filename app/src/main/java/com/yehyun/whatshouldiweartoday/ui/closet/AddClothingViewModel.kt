@@ -18,7 +18,11 @@ import com.yehyun.whatshouldiweartoday.ai.AiModelProvider
 import com.yehyun.whatshouldiweartoday.data.database.AppDatabase
 import com.yehyun.whatshouldiweartoday.data.database.ClothingItem
 import com.yehyun.whatshouldiweartoday.data.preference.SettingsManager
+import com.yehyun.whatshouldiweartoday.util.PERCEPTUAL_HASH_THRESHOLD
+import com.yehyun.whatshouldiweartoday.util.computePerceptualHash
+import com.yehyun.whatshouldiweartoday.util.hammingDistance
 import com.yehyun.whatshouldiweartoday.util.isNetworkAvailable
+import com.yehyun.whatshouldiweartoday.util.trimBorders
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -79,7 +83,7 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
     val segmentationSucceeded: LiveData<Boolean> = _segmentationSucceeded
 
     val fitLevelText = MutableLiveData<String>()
-    val purposeText = MutableLiveData<String>()
+    val purposeList = MutableLiveData<List<String>>(emptyList())
     val sizeLabelText = MutableLiveData<String>()
 
     private val settingsManager = SettingsManager(application)
@@ -92,6 +96,7 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
     private var processedImageJob: Deferred<Bitmap?>? = null
     private var originalImageJob: Deferred<Bitmap>? = null
     private var isImageProcessing = false
+    private var currentImageHash: String? = null
 
     init {
         _analysisResult.observeForever { result ->
@@ -111,16 +116,33 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
             return
         }
         resetAllState()
-        _originalBitmap.value = bitmap
+        val trimmed = trimBorders(bitmap)
+        _originalBitmap.value = trimmed
         generativeModel = AiModelProvider.getModel(getApplication(), apiKey)
         isImageProcessing = true
 
         _isAiAnalyzing.value = true
 
         viewModelScope.launch {
-            val analysisJob = async(Dispatchers.IO) { analyzeImageWithRetry(bitmap) }
-            processedImageJob = async(Dispatchers.IO) { createProcessedBitmap(bitmap) }
-            originalImageJob = async(Dispatchers.Default) { bitmap }
+            val analysisJob = async(Dispatchers.IO) { analyzeImageWithRetry(trimmed) }
+            val hashJob = async(Dispatchers.IO) { computePerceptualHash(trimmed) }
+            processedImageJob = async(Dispatchers.IO) { createProcessedBitmap(trimmed) }
+            originalImageJob = async(Dispatchers.Default) { trimmed }
+
+            currentImageHash = hashJob.await()
+
+            val existingHashes = withContext(Dispatchers.IO) {
+                AppDatabase.getDatabase(getApplication()).clothingDao().getAllImageHashes()
+            }
+            if (existingHashes.any { hammingDistance(currentImageHash!!, it) <= PERCEPTUAL_HASH_THRESHOLD }) {
+                analysisJob.cancel()
+                withContext(Dispatchers.Main) {
+                    _isAiAnalyzing.value = false
+                    _errorMessage.value = "이미 옷장에 등록된 사진입니다."
+                    resetAllState()
+                }
+                return@launch
+            }
 
             val result = analysisJob.await()
             _isAiAnalyzing.postValue(false)
@@ -130,13 +152,35 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
                     _errorMessage.value = "분석 중 오류가 발생했습니다. 다시 시도해주세요."
                     resetAllState()
                 }
+            } else if (result.rejection_reason != null) {
+                val message = when (result.rejection_reason) {
+                    "not_wearable" -> "의류가 감지되지 않았습니다. 의류 사진을 사용해주세요."
+                    "too_small" -> "의류가 너무 작거나 일부만 보입니다.\n의류 전체가 잘 보이는 사진을 사용해주세요."
+                    "too_cropped" -> "옷의 일부분만 보입니다.\n옷 전체가 나온 사진을 사용해주세요."
+                    else -> "적합하지 않은 이미지입니다. 다른 사진을 사용해주세요."
+                }
+                withContext(Dispatchers.Main) {
+                    _errorMessage.value = message
+                    resetAllState()
+                }
             } else if (!result.is_wearable) {
                 withContext(Dispatchers.Main) {
                     _errorMessage.value = "의류가 감지되지 않았습니다. 의류 사진을 사용해주세요."
                     resetAllState()
                 }
+            } else if ((result.clothing_area_ratio ?: 1.0) < 0.1) {
+                withContext(Dispatchers.Main) {
+                    _errorMessage.value = "의류가 너무 작거나 일부만 보입니다.\n의류 전체가 잘 보이는 사진을 사용해주세요."
+                    resetAllState()
+                }
+            } else if ((result.clothing_completeness_ratio ?: 1.0) < 0.3) {
+                withContext(Dispatchers.Main) {
+                    _errorMessage.value = "옷의 일부분만 보입니다.\n옷 전체가 나온 사진을 사용해주세요."
+                    resetAllState()
+                }
             } else {
                 initialAnalysisResult = result.copy()
+                purposeList.postValue(result.purposes?.take(2) ?: emptyList())
                 _analysisResult.postValue(result)
                 val processed = processedImageJob?.await()
                 withContext(Dispatchers.Main) {
@@ -175,6 +219,17 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
                 _errorMessage.value = "AI 분석 결과가 없습니다."
                 return@launch
             }
+            val hash = currentImageHash
+            if (hash != null) {
+                val isDuplicate = withContext(Dispatchers.IO) {
+                    val existing = AppDatabase.getDatabase(getApplication()).clothingDao().getAllImageHashes()
+                    existing.any { hammingDistance(hash, it) <= PERCEPTUAL_HASH_THRESHOLD }
+                }
+                if (isDuplicate) {
+                    _errorMessage.value = "이미 옷장에 등록된 사진입니다."
+                    return@launch
+                }
+            }
             _isSaving.value = true
             try {
                 val original = originalImageJob?.await()
@@ -202,7 +257,7 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
                 val initialCategory = initialAnalysis.category ?: currentCategory
                 val finalTemp = defaultTemperatureForCategory(currentCategory, currentBaseTemp)
 
-                val purposeStr = analysis.purposes?.take(2)?.joinToString(",") ?: ""
+                val purposeStr = purposeList.value?.joinToString(",") ?: ""
                 val savedSize = selectedSize.takeUnless { it == sizeLabelText.value }
 
                 val safeColorHex = analysis.color_hex?.takeIf { isValidHexCode(it) } ?: "#000000"
@@ -223,7 +278,8 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
                     fitMaxWaist = analysis.fit_max_waist,
                     purpose = purposeStr,
                     size = savedSize,
-                    aiCategory = initialCategory
+                    aiCategory = initialCategory,
+                    imageHash = currentImageHash
                 )
                 withContext(Dispatchers.IO) {
                     AppDatabase.getDatabase(getApplication()).clothingDao().insert(newClothingItem)
@@ -250,8 +306,9 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
                     text("""
                         You are a Precise Climate & Fashion Analyst for Korean weather.
                         Your task is to analyze the clothing item in the image and provide a detailed analysis in a strict JSON format, without any additional text or explanations.
-                        Your JSON response MUST contain ONLY the following keys: "is_wearable", "category", "suitable_temperature", "color_hex", "fit_min_height", "fit_max_height", "fit_min_weight", "fit_max_weight", "fit_min_waist", "fit_max_waist", "purposes".
-                        - "is_wearable": (boolean) If the image contains at least one wearable clothing item, this is True. If the image contains multiple clothing items, focus on the PRIMARY/MAIN item that appears to be the subject or focus of the photo (NOT necessarily the largest one). Only return False if the image contains no clothing at all (e.g. food, scenery, etc.).
+                        Your JSON response MUST contain ONLY the following keys: "is_wearable", "rejection_reason", "category", "suitable_temperature", "color_hex", "fit_min_height", "fit_max_height", "fit_min_weight", "fit_max_weight", "fit_min_waist", "fit_max_waist", "purposes", "clothing_area_ratio", "clothing_completeness_ratio".
+                        - "rejection_reason": (string or null) This is the MOST IMPORTANT field. Critically evaluate whether the image is suitable for clothing registration. If it should be REJECTED, provide EXACTLY one of these values (be strict — when in doubt, reject): "not_wearable" (image does not clearly show a wearable item as its main subject — includes: people photos where clothing is not the focus, food, animals, scenery, furniture, screenshots, memes, backgrounds, documents, body parts without clothing, accessories like jewelry that are not worn items), "too_small" (a clothing item is visible but occupies less than 10% of the image area — e.g. tiny item in background, person standing far away), "too_cropped" (a clothing item is visible but less than 30% of the full garment is shown — e.g. only a collar, one sleeve, or just the hem). Set to null ONLY when: the image clearly and unambiguously shows a single wearable clothing item or accessory as its main subject, it fills a reasonable portion of the frame, and most of the item is visible.
+                        - "is_wearable": (boolean) True only if the image clearly shows a wearable clothing item or accessory as its main subject. False for people photos, food, scenery, or any non-clothing content.
                         - "category": (string) If wearable, one of '상의', '하의', '아우터', '신발', '가방', '모자', '기타'.
                         - "color_hex": (string) If wearable, the dominant color of the item as a hex string.
                         - "suitable_temperature": (double) If wearable, this is the most important. Estimate the MAXIMUM comfortable temperature for this item. The value can be negative for winter clothing. You MUST provide a specific, non-round number with one decimal place (e.g., 23.5, 8.0, -2.5). A generic integer like 15.0 is a bad response. Base your judgment on the visual evidence of material, thickness, and design.
@@ -262,17 +319,19 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
                         - "fit_min_waist": (double or null) Minimum waist circumference in cm that this item fits (e.g., 68.0). Use null ONLY for items where the waistline is irrelevant (oversized tops, shoes, bags, hats, loose jackets). Bottoms and fitted tops MUST have a value.
                         - "fit_max_waist": (double or null) Maximum waist circumference in cm that this item fits (e.g., 88.0). Follow the same rule as fit_min_waist.
                         - "purposes": (array of strings) If wearable, select the 1 or 2 MOST suitable purposes from this list: [$purposeListStr]. Pick only the best fitting ones. Maximum 2 purposes per item.
+                        - "clothing_area_ratio": (double) Estimate the fraction (0.0 to 1.0) of the total image area occupied by the main clothing item.
+                        - "clothing_completeness_ratio": (double) Estimate the fraction (0.0 to 1.0) of the FULL clothing item that is actually visible in the image.
                         Estimate the body size range this clothing would fit. For free-size/stretchy items, use wider ranges. Base on visual cues: size labels, proportions, material stretch. Waist range should be the user's waist circumference, not the garment's flat measurement.
                     """.trimIndent())
                 }
                 val response = generativeModel!!.generateContent(inputContent)
-                val currentAnalysis = Json { ignoreUnknownKeys = true }.decodeFromString<ClothingAnalysis>(response.text!!)
-                if (!currentAnalysis.color_hex.isNullOrBlank()) {
-                    successfulAnalysis = currentAnalysis
-                    break
-                } else {
-                    Log.w("AI_RETRY", "Attempt ${attempt + 1} succeeded but color_hex is missing. Retrying...")
-                }
+                val rawText = response.text ?: throw IllegalStateException("빈 응답")
+                val start = rawText.indexOf('{')
+                val end = rawText.lastIndexOf('}')
+                val jsonText = if (start >= 0 && end > start) rawText.substring(start, end + 1) else rawText
+                val currentAnalysis = Json { ignoreUnknownKeys = true }.decodeFromString<ClothingAnalysis>(jsonText)
+                successfulAnalysis = currentAnalysis
+                break
             } catch (e: Exception) {
                 Log.e("AI_ERROR", "Attempt ${attempt + 1} failed", e)
                 if (attempt == maxRetries - 1) return null
@@ -289,7 +348,6 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
             isTemperatureVisible.postValue(false)
             setViewColor(null)
             fitLevelText.postValue("")
-            purposeText.postValue("")
             sizeLabelText.postValue("")
             return
         }
@@ -353,12 +411,7 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
             setViewColor(null)
         }
 
-        val purposes = result.purposes
-        if (!purposes.isNullOrEmpty()) {
-            purposeText.postValue(purposes.take(2).joinToString(", "))
-        } else {
-            purposeText.postValue("")
-        }
+        // purposeList is set only during onImageSelected; refreshDisplayWithNewSettings does not reset it
     }
 
     fun increaseTemp() {
@@ -393,10 +446,15 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
     private fun setViewColor(color: Int?) { _viewColor.value = color }
     fun clearErrorMessage() { _errorMessage.value = null }
 
+    fun updatePurposes(list: List<String>) { purposeList.value = list }
+
+    fun getAvailablePurposes(): List<String> = settingsManager.getAllPurposes()
+
     fun resetAllState() {
         processedImageJob?.cancel()
         originalImageJob?.cancel()
         isImageProcessing = false
+        currentImageHash = null
 
         _originalBitmap.value = null
         _processedBitmap.value = null
@@ -413,7 +471,7 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
         temperatureText.value = ""
         _viewColor.value = null
         fitLevelText.value = ""
-        purposeText.value = ""
+        purposeList.value = emptyList()
         sizeLabelText.value = ""
     }
 
@@ -631,17 +689,61 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
     }
 
     private fun createBitmapWithMask(original: Bitmap, mask: SegmentationMask): Bitmap {
-        val maskedBitmap = Bitmap.createBitmap(original.width, original.height, Bitmap.Config.ARGB_8888)
-        val maskBuffer = mask.buffer; val maskWidth = mask.width; val maskHeight = mask.height
+        val maskWidth = mask.width
+        val maskHeight = mask.height
+        val n = maskWidth * maskHeight
         val sensitivity = settingsManager.getBackgroundSensitivityValue()
+
+        // Build foreground boolean mask
+        val fg = BooleanArray(n)
+        val buf = mask.buffer
+        for (i in 0 until n) fg[i] = buf.float > sensitivity
+        buf.rewind()
+
+        // BFS pass 1: find start index of largest connected component
+        val visited = BooleanArray(n)
+        val queue = IntArray(n)
+        var bestStart = -1
+        var bestSize = 0
+        for (seed in 0 until n) {
+            if (!fg[seed] || visited[seed]) continue
+            var head = 0; var tail = 0
+            queue[tail++] = seed; visited[seed] = true
+            while (head < tail) {
+                val idx = queue[head++]
+                val x = idx % maskWidth; val y = idx / maskWidth
+                if (x > 0 && fg[idx - 1] && !visited[idx - 1])                       { visited[idx - 1] = true; queue[tail++] = idx - 1 }
+                if (x < maskWidth - 1 && fg[idx + 1] && !visited[idx + 1])            { visited[idx + 1] = true; queue[tail++] = idx + 1 }
+                if (y > 0 && fg[idx - maskWidth] && !visited[idx - maskWidth])        { visited[idx - maskWidth] = true; queue[tail++] = idx - maskWidth }
+                if (y < maskHeight - 1 && fg[idx + maskWidth] && !visited[idx + maskWidth]) { visited[idx + maskWidth] = true; queue[tail++] = idx + maskWidth }
+            }
+            if (tail > bestSize) { bestSize = tail; bestStart = seed }
+        }
+
+        // BFS pass 2: mark only the largest component pixels
+        visited.fill(false)
+        if (bestStart >= 0) {
+            var head = 0; var tail = 0
+            queue[tail++] = bestStart; visited[bestStart] = true
+            while (head < tail) {
+                val idx = queue[head++]
+                val x = idx % maskWidth; val y = idx / maskWidth
+                if (x > 0 && fg[idx - 1] && !visited[idx - 1])                       { visited[idx - 1] = true; queue[tail++] = idx - 1 }
+                if (x < maskWidth - 1 && fg[idx + 1] && !visited[idx + 1])            { visited[idx + 1] = true; queue[tail++] = idx + 1 }
+                if (y > 0 && fg[idx - maskWidth] && !visited[idx - maskWidth])        { visited[idx - maskWidth] = true; queue[tail++] = idx - maskWidth }
+                if (y < maskHeight - 1 && fg[idx + maskWidth] && !visited[idx + maskWidth]) { visited[idx + maskWidth] = true; queue[tail++] = idx + maskWidth }
+            }
+        }
+
+        // Apply: keep only pixels belonging to the largest component
+        val maskedBitmap = Bitmap.createBitmap(original.width, original.height, Bitmap.Config.ARGB_8888)
         for (y in 0 until maskHeight) {
             for (x in 0 until maskWidth) {
-                if (maskBuffer.float > sensitivity) {
+                if (visited[y * maskWidth + x]) {
                     maskedBitmap.setPixel(x, y, original.getPixel(x, y))
                 }
             }
         }
-        maskBuffer.rewind()
         return maskedBitmap
     }
 

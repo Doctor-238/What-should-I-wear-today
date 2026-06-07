@@ -9,7 +9,6 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import com.google.ai.client.generativeai.type.content
-import com.yehyun.whatshouldiweartoday.R
 import com.yehyun.whatshouldiweartoday.ai.AiModelProvider
 import com.yehyun.whatshouldiweartoday.data.preference.SettingsManager
 import kotlinx.coroutines.Dispatchers
@@ -28,7 +27,6 @@ import java.util.Locale
 
 class ShoppingWebViewViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val apiKey = application.getString(R.string.gemini_api_key)
     private val settingsManager = SettingsManager(application)
 
     private val _isProcessing = MutableLiveData(false)
@@ -109,7 +107,7 @@ class ShoppingWebViewViewModel(application: Application) : AndroidViewModel(appl
     }
 
     private suspend fun detectAndCropClothing(screenshot: Bitmap): CaptureResult {
-        val model = AiModelProvider.getModel(getApplication(), apiKey)
+        val model = AiModelProvider.getModel(getApplication(), settingsManager.getEffectiveGeminiApiKey())
         val resized = resizeBitmap(screenshot, 1024)
         val isNormalMode = settingsManager.shoppingDetectionSensitivity == SettingsManager.SHOPPING_DETECTION_NORMAL
 
@@ -221,7 +219,7 @@ class ShoppingWebViewViewModel(application: Application) : AndroidViewModel(appl
         _processingMessage.postValue("AI가 옷을 분류하고 있습니다...")
 
         // Filter clothing images using AI (batch of 5 at a time)
-        val model = AiModelProvider.getModel(getApplication(), apiKey)
+        val model = AiModelProvider.getModel(getApplication(), settingsManager.getEffectiveGeminiApiKey())
         val clothingPaths = mutableListOf<String>()
 
         val isNormalMode = settingsManager.shoppingDetectionSensitivity == SettingsManager.SHOPPING_DETECTION_NORMAL

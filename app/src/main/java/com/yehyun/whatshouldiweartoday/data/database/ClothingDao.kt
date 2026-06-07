@@ -41,4 +41,7 @@ interface ClothingDao {
 
     @Query("DELETE FROM clothing_items")
     suspend fun clearAll()
+
+    @Query("SELECT imageHash FROM clothing_items WHERE imageHash IS NOT NULL")
+    suspend fun getAllImageHashes(): List<String>
 }

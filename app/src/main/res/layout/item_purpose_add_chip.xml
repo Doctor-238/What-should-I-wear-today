@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="34dp"
+    android:layout_height="34dp"
+    android:background="@drawable/bg_purpose_add_chip"
+    android:foreground="?attr/selectableItemBackgroundBorderless">
+
+    <ImageView
+        android:layout_width="16dp"
+        android:layout_height="16dp"
+        android:layout_gravity="center"
+        android:src="@drawable/ic_plus"
+        android:tint="@color/primary"
+        android:contentDescription="용도 추가"/>
+
+</FrameLayout>

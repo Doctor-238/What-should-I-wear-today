@@ -9,5 +9,6 @@ data class SavedStyle(
     val styleId: Long = 0,
     val styleName: String,
     val season: String,
-    val timestamp: Long = System.currentTimeMillis()
+    val timestamp: Long = System.currentTimeMillis(),
+    val purpose: String = ""
 )

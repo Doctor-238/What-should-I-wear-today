@@ -13,12 +13,20 @@ import com.yehyun.whatshouldiweartoday.ui.home.DailyWeatherSummary
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.Calendar
 
 data class MallRecommendationResult(
     val tops: List<MallItem>,
     val bottoms: List<MallItem>,
     val outers: List<MallItem>
 )
+
+private fun monthToSeason(month: Int): String = when (month) {
+    3, 4, 5 -> "봄"
+    6, 7, 8 -> "여름"
+    9, 10, 11 -> "가을"
+    else -> "겨울"
+}
 
 class MallRecommendationViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -55,6 +63,13 @@ class MallRecommendationViewModel(application: Application) : AndroidViewModel(a
             val purposeEnabled = settings.clothingPurposeEnabled
             val selectedPurpose = settings.selectedPurpose
 
+            val cal = Calendar.getInstance()
+            val currentMonth = cal.get(Calendar.MONTH) + 1
+            val nextMonth = if (currentMonth == 12) 1 else currentMonth + 1
+            val currentSeason = monthToSeason(currentMonth)
+            val nextSeason = monthToSeason(nextMonth)
+            val hasUpcomingTransition = nextSeason != currentSeason
+
             fun matchTemp(item: MallItem) = avgTemp in item.suitableMinTemp..item.suitableMaxTemp
 
             fun sizeFilter(item: MallItem): Boolean {
@@ -74,13 +89,21 @@ class MallRecommendationViewModel(application: Application) : AndroidViewModel(a
                 return if (purposes.contains(selectedPurpose)) 0 else 1
             }
 
+            fun seasonScore(item: MallItem): Int {
+                val seasons = item.season.split(",").map { it.trim() }.filter { it.isNotBlank() }
+                if (seasons.isEmpty()) return 0
+                if (seasons.contains(currentSeason)) return 0
+                if (hasUpcomingTransition && seasons.contains(nextSeason)) return 1
+                return 2
+            }
+
             val max = maxItemsPerCategory
 
             fun filterAndSort(category: String): List<MallItem> {
                 val tempMatched = allItems.filter { it.category == category && matchTemp(it) }
                 val sizeFiltered = tempMatched.filter { sizeFilter(it) }
                 val base = if (sizeFiltered.isNotEmpty()) sizeFiltered else tempMatched
-                return base.sortedBy { purposeScore(it) }.take(max)
+                return base.sortedWith(compareBy({ purposeScore(it) }, { seasonScore(it) })).take(max)
             }
 
             val tops = if (recommendTops) filterAndSort("상의") else emptyList()

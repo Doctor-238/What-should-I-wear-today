@@ -50,6 +50,18 @@ val MIGRATION_19_20 = object : Migration(19, 20) {
     }
 }
 
+val MIGRATION_20_21 = object : Migration(20, 21) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE clothing_items ADD COLUMN imageHash TEXT")
+    }
+}
+
+val MIGRATION_21_22 = object : Migration(21, 22) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE saved_styles ADD COLUMN purpose TEXT NOT NULL DEFAULT ''")
+    }
+}
+
 val ALL_MIGRATIONS = arrayOf(
     MIGRATION_13_14,
     MIGRATION_14_15,
@@ -57,5 +69,7 @@ val ALL_MIGRATIONS = arrayOf(
     MIGRATION_16_17,
     MIGRATION_17_18,
     MIGRATION_18_19,
-    MIGRATION_19_20
+    MIGRATION_19_20,
+    MIGRATION_20_21,
+    MIGRATION_21_22
 )

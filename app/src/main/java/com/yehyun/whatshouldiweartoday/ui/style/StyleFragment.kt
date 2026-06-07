@@ -26,7 +26,9 @@ import com.google.android.material.tabs.TabLayoutMediator
 import com.yehyun.whatshouldiweartoday.MainViewModel
 import com.yehyun.whatshouldiweartoday.R
 import com.yehyun.whatshouldiweartoday.databinding.FragmentStyleBinding
+import com.yehyun.whatshouldiweartoday.data.preference.SettingsManager
 import com.yehyun.whatshouldiweartoday.ui.OnTabReselectedListener
+import com.yehyun.whatshouldiweartoday.ui.SectionedSpinnerAdapter
 import kotlinx.coroutines.launch
 
 class StyleFragment : Fragment(), OnTabReselectedListener {
@@ -283,30 +285,24 @@ class StyleFragment : Fragment(), OnTabReselectedListener {
 
     private fun setupSortSpinner() {
         val spinner: Spinner = binding.spinnerSortStyle
-        val sortOptions = listOf("최신순", "오래된 순", "이름 오름차순", "이름 내림차순")
-        val adapter = ArrayAdapter(requireContext(), R.layout.spinner_item_centered_normal, sortOptions)
-        adapter.setDropDownViewResource(R.layout.spinner_dropdown_item)
-        spinner.adapter = adapter
+        val base = listOf("최신순", "오래된 순", "이름 오름차순", "이름 내림차순")
+        val purposes = SettingsManager(requireContext()).getAllPurposes()
+        val sa = SectionedSpinnerAdapter(requireContext(), base, "용도로 정렬", purposes)
+        spinner.adapter = sa
 
-        val currentSortType = viewModel.getCurrentSortType()
-        val currentPosition = sortOptions.indexOf(currentSortType)
-        if (currentPosition >= 0) {
-            spinner.setSelection(currentPosition)
-        }
+        spinner.setSelection(sa.positionOf(viewModel.getCurrentSortType()))
 
         spinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
-                if(position!=currentPosition){
-                    viewModel.setSortType(sortOptions[position])
-                    val current = binding.viewPagerStyle.currentItem
-                    val fragment =
-                        childFragmentManager.findFragmentByTag("f$current") as? StyleListFragment
-                    fragment?.scrollToTop()
-                }else{viewModel.setSortType(sortOptions[position])}
+                val text = sa.textAt(position) ?: return
+                val changed = text != viewModel.getCurrentSortType()
+                viewModel.setSortType(text)
+                if (changed) {
+                    val cur = binding.viewPagerStyle.currentItem
+                    (childFragmentManager.findFragmentByTag("f$cur") as? StyleListFragment)?.scrollToTop()
+                }
             }
-            override fun onNothingSelected(parent: AdapterView<*>?) {
-
-            }
+            override fun onNothingSelected(parent: AdapterView<*>?) {}
         }
     }
 
