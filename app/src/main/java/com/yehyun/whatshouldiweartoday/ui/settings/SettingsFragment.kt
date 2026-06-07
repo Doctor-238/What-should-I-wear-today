@@ -124,6 +124,7 @@ class SettingsFragment : Fragment(), OnTabReselectedListener {
 
     private fun setupApiKeySection() {
         updateApiKeyStatusView()
+        updateOpenWeatherApiKeyStatusView()
 
         binding.buttonApiKeyConfirm.setOnClickListener {
             val key = binding.etApiKey.text?.toString() ?: ""
@@ -134,6 +135,16 @@ class SettingsFragment : Fragment(), OnTabReselectedListener {
             viewModel.resetApiKeyToDefault()
             binding.etApiKey.setText("")
         }
+
+        binding.buttonOpenweatherApiKeyConfirm.setOnClickListener {
+            val key = binding.etOpenweatherApiKey.text?.toString() ?: ""
+            viewModel.validateAndSaveOpenWeatherApiKey(key)
+        }
+
+        binding.buttonOpenweatherApiKeyReset.setOnClickListener {
+            viewModel.resetOpenWeatherApiKeyToDefault()
+            binding.etOpenweatherApiKey.setText("")
+        }
     }
 
     private fun updateApiKeyStatusView() {
@@ -143,6 +154,16 @@ class SettingsFragment : Fragment(), OnTabReselectedListener {
         } else {
             binding.tvApiKeyStatus.text = "기본 키 사용 중"
             binding.tvApiKeyStatus.setTextColor(resources.getColor(R.color.text_tertiary, null))
+        }
+    }
+
+    private fun updateOpenWeatherApiKeyStatusView() {
+        if (settingsManager.isUsingCustomOpenWeatherApiKey) {
+            binding.tvOpenweatherApiKeyStatus.text = "사용자 키 사용 중"
+            binding.tvOpenweatherApiKeyStatus.setTextColor(resources.getColor(R.color.fit_green, null))
+        } else {
+            binding.tvOpenweatherApiKeyStatus.text = "기본 키 사용 중"
+            binding.tvOpenweatherApiKeyStatus.setTextColor(resources.getColor(R.color.text_tertiary, null))
         }
     }
 

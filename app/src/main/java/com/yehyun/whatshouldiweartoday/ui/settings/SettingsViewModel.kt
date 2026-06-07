@@ -39,6 +39,9 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     private val _isApiKeyValidating = MutableLiveData(false)
     val isApiKeyValidating: LiveData<Boolean> = _isApiKeyValidating
 
+    private val _isOpenWeatherApiKeyValidating = MutableLiveData(false)
+    val isOpenWeatherApiKeyValidating: LiveData<Boolean> = _isOpenWeatherApiKeyValidating
+
     sealed class ApiKeyResult {
         data class Success(val isCustomKey: Boolean) : ApiKeyResult()
         data class Error(val message: String) : ApiKeyResult()
@@ -46,6 +49,9 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 
     private val _apiKeyResult = MutableLiveData<Event<ApiKeyResult>>()
     val apiKeyResult: LiveData<Event<ApiKeyResult>> = _apiKeyResult
+
+    private val _openWeatherApiKeyResult = MutableLiveData<Event<ApiKeyResult>>()
+    val openWeatherApiKeyResult: LiveData<Event<ApiKeyResult>> = _openWeatherApiKeyResult
 
     fun validateAndSaveApiKey(apiKey: String) {
         if (_isApiKeyValidating.value == true) return
@@ -78,6 +84,43 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     fun resetApiKeyToDefault() {
         settingsManager.customGeminiApiKey = ""
         _apiKeyResult.value = Event(ApiKeyResult.Success(false))
+    }
+
+    fun validateAndSaveOpenWeatherApiKey(apiKey: String) {
+        if (_isOpenWeatherApiKeyValidating.value == true) return
+        val trimmedKey = apiKey.trim()
+        if (trimmedKey.isEmpty()) {
+            _openWeatherApiKeyResult.value = Event(ApiKeyResult.Error("API 키를 입력해주세요."))
+            return
+        }
+        _isOpenWeatherApiKeyValidating.value = true
+        viewModelScope.launch {
+            try {
+                withContext(Dispatchers.IO) {
+                    val url = java.net.URL("https://api.openweathermap.org/data/2.5/weather?q=Seoul&appid=\$trimmedKey")
+                    val connection = url.openConnection() as java.net.HttpURLConnection
+                    connection.requestMethod = "GET"
+                    val responseCode = connection.responseCode
+                    if (responseCode == 200) {
+                        settingsManager.customOpenWeatherApiKey = trimmedKey
+                        _openWeatherApiKeyResult.postValue(Event(ApiKeyResult.Success(true)))
+                    } else if (responseCode == 401) {
+                         _openWeatherApiKeyResult.postValue(Event(ApiKeyResult.Error("유효하지 않은 API 키입니다.")))
+                    } else {
+                        _openWeatherApiKeyResult.postValue(Event(ApiKeyResult.Error("서버 오류: \$responseCode")))
+                    }
+                }
+            } catch (e: Exception) {
+                _openWeatherApiKeyResult.postValue(Event(ApiKeyResult.Error("네트워크 또는 검증 실패: \${e.message}")))
+            } finally {
+                _isOpenWeatherApiKeyValidating.postValue(false)
+            }
+        }
+    }
+
+    fun resetOpenWeatherApiKeyToDefault() {
+        settingsManager.customOpenWeatherApiKey = ""
+        _openWeatherApiKeyResult.value = Event(ApiKeyResult.Success(false))
     }
 
     private fun categorizeApiKeyError(e: Exception): String {

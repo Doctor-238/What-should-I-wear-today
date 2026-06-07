@@ -200,6 +200,21 @@ class SettingsManager(context: Context) {
         else appContext.getString(R.string.gemini_api_key)
     }
 
+    var customOpenWeatherApiKey: String
+        get() = prefs.getString(KEY_CUSTOM_OPENWEATHER_API_KEY, "") ?: ""
+        set(value) {
+            prefs.edit().putString(KEY_CUSTOM_OPENWEATHER_API_KEY, value).commit()
+        }
+
+    val isUsingCustomOpenWeatherApiKey: Boolean
+        get() = customOpenWeatherApiKey.isNotEmpty()
+
+    fun getEffectiveOpenWeatherApiKey(): String {
+        val customKey = customOpenWeatherApiKey
+        return if (customKey.isNotEmpty()) customKey
+        else appContext.getString(R.string.openweathermap_api_key)
+    }
+
     var wishlistedItemIds: Set<String>
         get() = prefs.getStringSet(KEY_WISHLISTED_ITEMS, emptySet()) ?: emptySet()
         set(value) { prefs.edit().putStringSet(KEY_WISHLISTED_ITEMS, value).commit() }
@@ -243,6 +258,7 @@ class SettingsManager(context: Context) {
         private const val KEY_CUSTOM_PURPOSES = "custom_purposes"
         private const val KEY_WISHLISTED_ITEMS = "wishlisted_item_ids"
         private const val KEY_CUSTOM_GEMINI_API_KEY = "custom_gemini_api_key"
+        private const val KEY_CUSTOM_OPENWEATHER_API_KEY = "custom_openweather_api_key"
 
         val DEFAULT_PURPOSES = listOf("격식있는 자리용", "일상용", "활동용", "데이트용", "집앞용")
 
