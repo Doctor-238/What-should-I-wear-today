@@ -302,7 +302,21 @@
         android:id="@+id/settingsFragment"
         android:name="com.yehyun.whatshouldiweartoday.ui.settings.SettingsFragment"
         android:label="fragment_settings"
-        tools:layout="@layout/fragment_settings" />
+        tools:layout="@layout/fragment_settings" >
+        <action
+            android:id="@+id/action_settingsFragment_to_apiKeySettingsFragment"
+            app:destination="@id/apiKeySettingsFragment"
+            app:enterAnim="@anim/enter_from_right"
+            app:exitAnim="@anim/exit_to_left"
+            app:popEnterAnim="@anim/pop_enter_from_left"
+            app:popExitAnim="@anim/pop_exit_to_right" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/apiKeySettingsFragment"
+        android:name="com.yehyun.whatshouldiweartoday.ui.settings.ApiKeySettingsFragment"
+        android:label="ApiKeySettingsFragment"
+        tools:layout="@layout/fragment_api_key_settings" />
 
     <action
         android:id="@+id/action_global_saveStyleFragment"

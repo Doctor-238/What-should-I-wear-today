@@ -117,55 +117,12 @@ class SettingsFragment : Fragment(), OnTabReselectedListener {
         setupSpinners()
         setupSliders()
         setupPurposeSection()
-        setupApiKeySection()
-        setupListeners()
+                setupListeners()
         observeViewModel()
     }
 
-    private fun setupApiKeySection() {
-        updateApiKeyStatusView()
-        updateOpenWeatherApiKeyStatusView()
 
-        binding.buttonApiKeyConfirm.setOnClickListener {
-            val key = binding.etApiKey.text?.toString() ?: ""
-            viewModel.validateAndSaveApiKey(key)
-        }
 
-        binding.buttonApiKeyReset.setOnClickListener {
-            viewModel.resetApiKeyToDefault()
-            binding.etApiKey.setText("")
-        }
-
-        binding.buttonOpenweatherApiKeyConfirm.setOnClickListener {
-            val key = binding.etOpenweatherApiKey.text?.toString() ?: ""
-            viewModel.validateAndSaveOpenWeatherApiKey(key)
-        }
-
-        binding.buttonOpenweatherApiKeyReset.setOnClickListener {
-            viewModel.resetOpenWeatherApiKeyToDefault()
-            binding.etOpenweatherApiKey.setText("")
-        }
-    }
-
-    private fun updateApiKeyStatusView() {
-        if (settingsManager.isUsingCustomGeminiApiKey) {
-            binding.tvApiKeyStatus.text = "사용자 키 사용 중"
-            binding.tvApiKeyStatus.setTextColor(resources.getColor(R.color.fit_green, null))
-        } else {
-            binding.tvApiKeyStatus.text = "기본 키 사용 중"
-            binding.tvApiKeyStatus.setTextColor(resources.getColor(R.color.text_tertiary, null))
-        }
-    }
-
-    private fun updateOpenWeatherApiKeyStatusView() {
-        if (settingsManager.isUsingCustomOpenWeatherApiKey) {
-            binding.tvOpenweatherApiKeyStatus.text = "사용자 키 사용 중"
-            binding.tvOpenweatherApiKeyStatus.setTextColor(resources.getColor(R.color.fit_green, null))
-        } else {
-            binding.tvOpenweatherApiKeyStatus.text = "기본 키 사용 중"
-            binding.tvOpenweatherApiKeyStatus.setTextColor(resources.getColor(R.color.text_tertiary, null))
-        }
-    }
 
     private fun observeViewModel() {
         viewModel.isProcessing.observe(viewLifecycleOwner) { isProcessing ->
@@ -200,32 +157,6 @@ class SettingsFragment : Fragment(), OnTabReselectedListener {
         viewModel.isPurposeValidating.observe(viewLifecycleOwner) { isValidating ->
             binding.progressBarPurpose.isVisible = isValidating
             binding.buttonAddPurpose.isEnabled = !isValidating
-        }
-
-        viewModel.isApiKeyValidating.observe(viewLifecycleOwner) { isValidating ->
-            binding.progressBarApiKey.isVisible = isValidating
-            binding.buttonApiKeyConfirm.isEnabled = !isValidating
-            binding.buttonApiKeyReset.isEnabled = !isValidating
-        }
-
-        viewModel.apiKeyResult.observe(viewLifecycleOwner) { event ->
-            event.getContentIfNotHandled()?.let { result ->
-                when (result) {
-                    is SettingsViewModel.ApiKeyResult.Success -> {
-                        if (result.isCustomKey) {
-                            showToast("API 키가 등록되었습니다.")
-                            binding.etApiKey.setText("")
-                        } else {
-                            showToast("기본 API 키로 초기화되었습니다.")
-                        }
-                        updateApiKeyStatusView()
-                        mainViewModel.notifySettingsChanged()
-                    }
-                    is SettingsViewModel.ApiKeyResult.Error -> {
-                        showToast(result.message, Toast.LENGTH_LONG)
-                    }
-                }
-            }
         }
 
         viewModel.purposeValidationResult.observe(viewLifecycleOwner) { event ->
@@ -615,6 +546,13 @@ class SettingsFragment : Fragment(), OnTabReselectedListener {
         binding.tvGithubLink.setOnClickListener {
             val intent = Intent(Intent.ACTION_VIEW, Uri.parse(binding.tvGithubLink.text.toString()))
             startActivity(intent)
+        }
+
+        binding.cardApiKeys.setOnClickListener {
+            findNavController().navigate(R.id.action_settingsFragment_to_apiKeySettingsFragment)
+        }
+        binding.buttonApiKeySettings.setOnClickListener {
+            findNavController().navigate(R.id.action_settingsFragment_to_apiKeySettingsFragment)
         }
 
         binding.cardReset.setOnClickListener { showResetConfirmDialog() }
