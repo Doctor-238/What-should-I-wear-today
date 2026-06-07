@@ -97,7 +97,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         viewModelScope.launch {
             try {
                 withContext(Dispatchers.IO) {
-                    val url = java.net.URL("https://api.openweathermap.org/data/2.5/weather?q=Seoul&appid=\$trimmedKey")
+                    val url = java.net.URL("https://api.openweathermap.org/data/2.5/weather?q=Seoul&appid=$trimmedKey")
                     val connection = url.openConnection() as java.net.HttpURLConnection
                     connection.requestMethod = "GET"
                     val responseCode = connection.responseCode
@@ -107,11 +107,11 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
                     } else if (responseCode == 401) {
                          _openWeatherApiKeyResult.postValue(Event(ApiKeyResult.Error("유효하지 않은 API 키입니다.")))
                     } else {
-                        _openWeatherApiKeyResult.postValue(Event(ApiKeyResult.Error("서버 오류: \$responseCode")))
+                        _openWeatherApiKeyResult.postValue(Event(ApiKeyResult.Error("서버 오류: $responseCode")))
                     }
                 }
             } catch (e: Exception) {
-                _openWeatherApiKeyResult.postValue(Event(ApiKeyResult.Error("네트워크 또는 검증 실패: \${e.message}")))
+                _openWeatherApiKeyResult.postValue(Event(ApiKeyResult.Error("네트워크 또는 검증 실패: ${e.message}")))
             } finally {
                 _isOpenWeatherApiKeyValidating.postValue(false)
             }
