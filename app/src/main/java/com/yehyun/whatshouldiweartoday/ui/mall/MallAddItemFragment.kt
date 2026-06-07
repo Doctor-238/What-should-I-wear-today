@@ -14,7 +14,6 @@ import androidx.work.OutOfQuotaPolicy
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import androidx.work.workDataOf
-import com.yehyun.whatshouldiweartoday.R
 import com.yehyun.whatshouldiweartoday.databinding.FragmentMallAddItemBinding
 import java.io.File
 import java.io.FileOutputStream
@@ -93,7 +92,7 @@ class MallAddItemFragment : Fragment() {
                 workDataOf(
                     MallBatchAddWorker.KEY_BATCH_ID to batchId,
                     MallBatchAddWorker.KEY_PATHS_FILE to pathsFile.absolutePath,
-                    MallBatchAddWorker.KEY_API to getString(R.string.gemini_api_key)
+                    MallBatchAddWorker.KEY_API to com.yehyun.whatshouldiweartoday.data.preference.SettingsManager(requireContext()).getEffectiveGeminiApiKey()
                 )
             )
             .addTag(MallBatchAddWorker.TAG)

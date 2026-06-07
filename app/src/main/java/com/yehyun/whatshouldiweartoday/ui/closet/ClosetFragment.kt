@@ -402,7 +402,7 @@ class ClosetFragment : Fragment(), OnTabReselectedListener {
                 .setInputData(workDataOf(
                     BatchAddWorker.KEY_BATCH_ID to batchId,
                     BatchAddWorker.KEY_PATHS_FILE to pathsFile.absolutePath,
-                    BatchAddWorker.KEY_API to getString(R.string.gemini_api_key)
+                    BatchAddWorker.KEY_API to SettingsManager(requireContext()).getEffectiveGeminiApiKey()
                 ))
                 .build()
             viewModel.workManager.enqueueUniqueWork("batch_add", ExistingWorkPolicy.APPEND_OR_REPLACE, workRequest)

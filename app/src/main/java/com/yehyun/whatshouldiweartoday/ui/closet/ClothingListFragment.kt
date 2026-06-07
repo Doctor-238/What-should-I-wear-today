@@ -51,10 +51,6 @@ class ClothingListFragment : Fragment() {
         setupRecyclerView()
         observeViewModel()
 
-        viewModel.getClothesForCategory(category).observe(viewLifecycleOwner) {
-            adapter.submitList(it)
-        }
-
         viewModel.sortChangedEvent.observe(viewLifecycleOwner, Observer {
             if (!isViewJustCreated) {
                 scrollOnNextDataUpdate = true

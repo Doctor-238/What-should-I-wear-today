@@ -240,13 +240,12 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
             val analysisResult = analysisJob.await()
             if (isStopped) return@coroutineScope
 
-            if (analysisResult == null || !analysisResult.is_wearable) {
-                return@coroutineScope
-            }
-            if ((analysisResult.clothing_area_ratio ?: 1.0) < 0.1) {
-                return@coroutineScope
-            }
-            if ((analysisResult.clothing_completeness_ratio ?: 1.0) < 0.3) {
+            if (analysisResult == null
+                || analysisResult.rejection_reason != null
+                || !analysisResult.is_wearable
+                || (analysisResult.clothing_area_ratio ?: 1.0) < 0.1
+                || (analysisResult.clothing_completeness_ratio ?: 1.0) < 0.3
+            ) {
                 return@coroutineScope
             }
 
@@ -344,8 +343,9 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
                     text("""
                         You are a Precise Climate & Fashion Analyst for Korean weather.
                         Your task is to analyze the clothing item in the image and provide a detailed analysis in a strict JSON format, without any additional text or explanations.
-                        Your JSON response MUST contain ONLY the following keys: "is_wearable", "category", "suitable_temperature", "color_hex", "fit_min_height", "fit_max_height", "fit_min_weight", "fit_max_weight", "fit_min_waist", "fit_max_waist", "purposes", "clothing_area_ratio", "clothing_completeness_ratio".
-                        - "is_wearable": (boolean) If the image contains at least one wearable clothing item, this is True. If the image contains multiple clothing items, focus on the PRIMARY/MAIN item that appears to be the subject or focus of the photo (NOT necessarily the largest one). Only return False if the image contains no clothing at all (e.g. food, scenery, etc.).
+                        Your JSON response MUST contain ONLY the following keys: "is_wearable", "rejection_reason", "category", "suitable_temperature", "color_hex", "fit_min_height", "fit_max_height", "fit_min_weight", "fit_max_weight", "fit_min_waist", "fit_max_waist", "purposes", "clothing_area_ratio", "clothing_completeness_ratio".
+                        - "rejection_reason": (string or null) This is the MOST IMPORTANT field. Critically evaluate whether the image is suitable for clothing registration. If it should be REJECTED, provide EXACTLY one of these values (be strict — when in doubt, reject): "not_wearable" (image does not clearly show a wearable item as its main subject — includes: people photos where clothing is not the focus, food, animals, scenery, furniture, screenshots, memes, backgrounds, documents, body parts without clothing, accessories like jewelry that are not worn items), "too_small" (a clothing item is visible but occupies less than 10% of the image area — e.g. tiny item in background, person standing far away), "too_cropped" (a clothing item is visible but less than 30% of the full garment is shown — e.g. only a collar, one sleeve, or just the hem). Set to null ONLY when: the image clearly and unambiguously shows a single wearable clothing item or accessory as its main subject, it fills a reasonable portion of the frame, and most of the item is visible.
+                        - "is_wearable": (boolean) True only if the image clearly shows a wearable clothing item or accessory as its main subject. False for people photos, food, scenery, or any non-clothing content.
                         - "category": (string) If wearable, one of '상의', '하의', '아우터', '신발', '가방', '모자', '기타'.
                         - "color_hex": (string) If wearable, the dominant color of the item as a hex string.
                         - "suitable_temperature": (double) If wearable, this is the most important. Estimate the MAXIMUM comfortable temperature for this item. The value can be negative for winter clothing. You MUST provide a specific, non-round number with one decimal place (e.g., 23.5, 8.0, -2.5). A generic integer like 15.0 is a bad response. Base your judgment on the visual evidence of material, thickness, and design.
@@ -356,19 +356,19 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
                         - "fit_min_waist": (double or null) Minimum waist circumference in cm that this item fits (e.g., 68.0). Use null ONLY for items where the waistline is irrelevant (oversized tops, shoes, bags, hats, loose jackets). Bottoms and fitted tops MUST have a value.
                         - "fit_max_waist": (double or null) Maximum waist circumference in cm that this item fits (e.g., 88.0). Follow the same rule as fit_min_waist.
                         - "purposes": (array of strings) If wearable, select the 1 or 2 MOST suitable purposes from this list: [$purposeListStr]. Pick only the best fitting ones. Maximum 2 purposes per item.
-                        - "clothing_area_ratio": (double) Estimate the fraction (0.0 to 1.0) of the total image area occupied by the main clothing item. A close-up shot filling the frame = 0.7-0.9. A small item in a wider scene = 0.1-0.3. Only a tiny corner or fragment visible = 0.05 or less.
-                        - "clothing_completeness_ratio": (double) Estimate the fraction (0.0 to 1.0) of the FULL clothing item that is actually visible in the image, regardless of how large it appears. A fully visible garment = 0.9-1.0. Heavily cropped but most is visible = 0.5-0.8. Only a collar, sleeve, hem, or small detail = 0.1-0.2. Only an extreme fragment = 0.05 or less.
+                        - "clothing_area_ratio": (double) Estimate the fraction (0.0 to 1.0) of the total image area occupied by the main clothing item.
+                        - "clothing_completeness_ratio": (double) Estimate the fraction (0.0 to 1.0) of the FULL clothing item that is actually visible in the image.
                         Estimate the body size range this clothing would fit. For free-size/stretchy items, use wider ranges. Base on visual cues: size labels, proportions, material stretch. Waist range should be the user's waist circumference, not the garment's flat measurement.
                     """.trimIndent())
                 }
                 val response = model.generateContent(inputContent)
-                val currentAnalysis = Json { ignoreUnknownKeys = true }.decodeFromString<ClothingAnalysis>(response.text!!)
-                if (!currentAnalysis.color_hex.isNullOrBlank()) {
-                    successfulAnalysis = currentAnalysis
-                    break
-                } else {
-                    Log.w("AI_RETRY_WORKER", "Attempt ${attempt + 1} succeeded but color_hex is missing. Retrying...")
-                }
+                val rawText = response.text ?: throw IllegalStateException("빈 응답")
+                val start = rawText.indexOf('{')
+                val end = rawText.lastIndexOf('}')
+                val jsonText = if (start >= 0 && end > start) rawText.substring(start, end + 1) else rawText
+                val currentAnalysis = Json { ignoreUnknownKeys = true }.decodeFromString<ClothingAnalysis>(jsonText)
+                successfulAnalysis = currentAnalysis
+                break
             } catch (e: Exception) {
                 Log.e("AI_ERROR_WORKER", "Attempt ${attempt + 1} failed", e)
                 if (attempt == maxRetries - 1) return null

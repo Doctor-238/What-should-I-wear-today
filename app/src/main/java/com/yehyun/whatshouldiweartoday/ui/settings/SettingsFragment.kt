@@ -54,7 +54,7 @@ class SettingsFragment : Fragment(), OnTabReselectedListener {
         uri?.let {
             val bitmap = getCorrectlyOrientedBitmap(it)
             if (bitmap != null) {
-                mainViewModel.analyzeBodyPhoto(bitmap, getString(R.string.gemini_api_key))
+                mainViewModel.analyzeBodyPhoto(bitmap, settingsManager.getEffectiveGeminiApiKey())
             } else {
                 showToast("이미지를 불러오는 데 실패했습니다.")
             }
@@ -68,7 +68,7 @@ class SettingsFragment : Fragment(), OnTabReselectedListener {
             cameraPhotoUri?.let { uri ->
                 val bitmap = getCorrectlyOrientedBitmap(uri)
                 if (bitmap != null) {
-                    mainViewModel.analyzeBodyPhoto(bitmap, getString(R.string.gemini_api_key))
+                    mainViewModel.analyzeBodyPhoto(bitmap, settingsManager.getEffectiveGeminiApiKey())
                 } else {
                     showToast("이미지를 불러오는 데 실패했습니다.")
                 }
@@ -117,8 +117,33 @@ class SettingsFragment : Fragment(), OnTabReselectedListener {
         setupSpinners()
         setupSliders()
         setupPurposeSection()
+        setupApiKeySection()
         setupListeners()
         observeViewModel()
+    }
+
+    private fun setupApiKeySection() {
+        updateApiKeyStatusView()
+
+        binding.buttonApiKeyConfirm.setOnClickListener {
+            val key = binding.etApiKey.text?.toString() ?: ""
+            viewModel.validateAndSaveApiKey(key)
+        }
+
+        binding.buttonApiKeyReset.setOnClickListener {
+            viewModel.resetApiKeyToDefault()
+            binding.etApiKey.setText("")
+        }
+    }
+
+    private fun updateApiKeyStatusView() {
+        if (settingsManager.isUsingCustomGeminiApiKey) {
+            binding.tvApiKeyStatus.text = "사용자 키 사용 중"
+            binding.tvApiKeyStatus.setTextColor(resources.getColor(R.color.fit_green, null))
+        } else {
+            binding.tvApiKeyStatus.text = "기본 키 사용 중"
+            binding.tvApiKeyStatus.setTextColor(resources.getColor(R.color.text_tertiary, null))
+        }
     }
 
     private fun observeViewModel() {
@@ -154,6 +179,32 @@ class SettingsFragment : Fragment(), OnTabReselectedListener {
         viewModel.isPurposeValidating.observe(viewLifecycleOwner) { isValidating ->
             binding.progressBarPurpose.isVisible = isValidating
             binding.buttonAddPurpose.isEnabled = !isValidating
+        }
+
+        viewModel.isApiKeyValidating.observe(viewLifecycleOwner) { isValidating ->
+            binding.progressBarApiKey.isVisible = isValidating
+            binding.buttonApiKeyConfirm.isEnabled = !isValidating
+            binding.buttonApiKeyReset.isEnabled = !isValidating
+        }
+
+        viewModel.apiKeyResult.observe(viewLifecycleOwner) { event ->
+            event.getContentIfNotHandled()?.let { result ->
+                when (result) {
+                    is SettingsViewModel.ApiKeyResult.Success -> {
+                        if (result.isCustomKey) {
+                            showToast("API 키가 등록되었습니다.")
+                            binding.etApiKey.setText("")
+                        } else {
+                            showToast("기본 API 키로 초기화되었습니다.")
+                        }
+                        updateApiKeyStatusView()
+                        mainViewModel.notifySettingsChanged()
+                    }
+                    is SettingsViewModel.ApiKeyResult.Error -> {
+                        showToast(result.message, Toast.LENGTH_LONG)
+                    }
+                }
+            }
         }
 
         viewModel.purposeValidationResult.observe(viewLifecycleOwner) { event ->
@@ -479,7 +530,7 @@ class SettingsFragment : Fragment(), OnTabReselectedListener {
             .setPositiveButton("추가") { _, _ ->
                 val purpose = editText.text.toString().trim()
                 if (purpose.isNotEmpty()) {
-                    viewModel.validateAndAddPurpose(purpose, getString(R.string.gemini_api_key))
+                    viewModel.validateAndAddPurpose(purpose, settingsManager.getEffectiveGeminiApiKey())
                 }
             }
             .setNegativeButton("취소", null)

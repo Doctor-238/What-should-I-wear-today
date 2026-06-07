@@ -11,6 +11,7 @@ object AiModelProvider {
     @Volatile
     private var instance: GenerativeModel? = null
     private var currentModelName: String? = null
+    private var currentApiKey: String? = null
 
     @Volatile
     private var bodyAnalysisInstance: GenerativeModel? = null
@@ -22,8 +23,9 @@ object AiModelProvider {
         val settingsManager = SettingsManager(context)
         val requestedModelName = settingsManager.getAiModelName()
 
-        if (instance == null || requestedModelName != currentModelName) {
+        if (instance == null || requestedModelName != currentModelName || apiKey != currentApiKey) {
             currentModelName = requestedModelName
+            currentApiKey = apiKey
             val config = GenerationConfig.Builder().apply {
                 responseMimeType = "application/json"
             }.build()

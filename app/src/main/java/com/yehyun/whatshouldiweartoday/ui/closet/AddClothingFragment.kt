@@ -61,7 +61,8 @@ data class ClothingAnalysis(
     val fit_max_waist: Double? = null,
     val purposes: List<String>? = null,
     val clothing_area_ratio: Double? = null,
-    val clothing_completeness_ratio: Double? = null
+    val clothing_completeness_ratio: Double? = null,
+    val rejection_reason: String? = null
 )
 
 class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabReselectedListener {
@@ -107,7 +108,7 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabResel
         uri?.let {
             val bitmap = getCorrectlyOrientedBitmap(it)
             if (bitmap != null) {
-                viewModel.onImageSelected(bitmap, getString(R.string.gemini_api_key))
+                viewModel.onImageSelected(bitmap, SettingsManager(requireContext()).getEffectiveGeminiApiKey())
             } else {
                 showToast("이미지를 불러오는 데 실패했습니다.")
             }

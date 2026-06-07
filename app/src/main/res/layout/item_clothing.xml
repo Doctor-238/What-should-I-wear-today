@@ -49,6 +49,7 @@
                 android:layout_width="22dp"
                 android:layout_height="22dp"
                 android:layout_margin="6dp"
+                android:elevation="4dp"
                 android:src="@drawable/ic_packable_bag"
                 android:visibility="gone"
                 app:layout_constraintBottom_toBottomOf="@id/image_container"
