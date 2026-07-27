@@ -54,17 +54,17 @@ fun trimBorders(bitmap: Bitmap): Bitmap {
         abs(Color.blue(pixel) - bgB) <= tol
 
     fun rowIsBg(y: Int): Boolean {
-        val step = max(1, w / 20)
-        var bg = 0; var total = 0
-        for (x in 0 until w step step) { if (isBg(bitmap.getPixel(x, y))) bg++; total++ }
-        return total > 0 && bg.toFloat() / total >= 0.90f
+        for (x in 0 until w) {
+            if (!isBg(bitmap.getPixel(x, y))) return false
+        }
+        return true
     }
 
     fun colIsBg(x: Int): Boolean {
-        val step = max(1, h / 20)
-        var bg = 0; var total = 0
-        for (y in 0 until h step step) { if (isBg(bitmap.getPixel(x, y))) bg++; total++ }
-        return total > 0 && bg.toFloat() / total >= 0.90f
+        for (y in 0 until h) {
+            if (!isBg(bitmap.getPixel(x, y))) return false
+        }
+        return true
     }
 
     var top = 0; var bottom = h - 1; var left = 0; var right = w - 1

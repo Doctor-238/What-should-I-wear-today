@@ -114,14 +114,17 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
                 try {
                     val raw = getCorrectlyOrientedBitmap(path)
                     if (raw != null) {
-                        val bitmap = trimBorders(raw).also { if (it !== raw) raw.recycle() }
-                        val hash = computePerceptualHash(bitmap)
-                        if (existingHashes.any { hammingDistance(hash, it) <= PERCEPTUAL_HASH_THRESHOLD }) {
+                        val hashOriginal = computePerceptualHash(raw)
+                        val trimmed = trimBorders(raw)
+                        val hashTrimmed = computePerceptualHash(trimmed)
+                        if (trimmed !== raw) trimmed.recycle() // Recycle trimmed if it's different from raw since we don't need it yet
+                        
+                        if (existingHashes.any { hammingDistance(hashOriginal, it) <= PERCEPTUAL_HASH_THRESHOLD || hammingDistance(hashTrimmed, it) <= PERCEPTUAL_HASH_THRESHOLD }) {
                             failureCount++
                         } else {
-                            val saved = analyzeAndSave(bitmap, hash, generativeModel, purchaseSource)
+                            val saved = analyzeAndSave(raw, hashOriginal, generativeModel, purchaseSource)
                             if (saved) {
-                                existingHashes.add(hash)
+                                existingHashes.add(hashOriginal)
                                 successCount++
                                 completedPaths.add(path)
                                 prefs.edit().putStringSet(batchId, completedPaths).apply()
@@ -227,37 +230,14 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
         coroutineScope {
             if (isStopped) return@coroutineScope
 
-            // Run segmentation first to compute foreground ratio
-            val segmentationJob = async {
+            val analysisJob = async { analyzeImageWithRetry(bitmap, model) }
+            val processedImageJob = async {
                 try {
                     val segmenter = Segmentation.getClient(SelfieSegmenterOptions.Builder().setDetectorMode(SelfieSegmenterOptions.SINGLE_IMAGE_MODE).build())
                     val mask = segmenter.process(InputImage.fromBitmap(bitmap, 0)).await()
-                    if (mask != null) {
-                        val sensitivity = settingsManager.getBackgroundSensitivityValue()
-                        val n = mask.width * mask.height
-                        val buf = mask.buffer
-                        var fgCount = 0
-                        for (i in 0 until n) {
-                            if (buf.float > sensitivity) fgCount++
-                        }
-                        buf.rewind()
-                        val ratio = fgCount.toDouble() / n.toDouble()
-                        val processedBitmap = createBitmapWithMask(bitmap, mask)
-                        Pair(processedBitmap, ratio)
-                    } else null
+                    if (mask != null) createBitmapWithMask(bitmap, mask) else null
                 } catch (e: Exception) { null }
             }
-
-            val segResult = segmentationJob.await()
-            if (isStopped) return@coroutineScope
-
-            // Validate foreground ratio: too zoomed (>0.92) or too small (<0.15)
-            val fgRatio = segResult?.second ?: -1.0
-            if (fgRatio >= 0 && (fgRatio > 0.92 || fgRatio < 0.15)) {
-                return@coroutineScope
-            }
-
-            val analysisJob = async { analyzeImageWithRetry(bitmap, model) }
             val originalImageJob = async { bitmap }
 
             val analysisResult = analysisJob.await()
@@ -266,11 +246,13 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
             if (analysisResult == null
                 || analysisResult.rejection_reason != null
                 || !analysisResult.is_wearable
+                || (analysisResult.clothing_area_ratio ?: 1.0) < 0.1
+                || (analysisResult.clothing_completeness_ratio ?: 1.0) < 0.3
             ) {
                 return@coroutineScope
             }
 
-            val processedBitmap = segResult?.first
+            val processedBitmap = processedImageJob.await()
             val originalBitmap = originalImageJob.await()
 
             val temp = analysisResult.suitable_temperature
@@ -365,7 +347,7 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
                         You are a Precise Climate & Fashion Analyst for Korean weather.
                         Your task is to analyze the clothing item in the image and provide a detailed analysis in a strict JSON format, without any additional text or explanations.
                         Your JSON response MUST contain ONLY the following keys: "is_wearable", "rejection_reason", "category", "suitable_temperature", "color_hex", "fit_min_height", "fit_max_height", "fit_min_weight", "fit_max_weight", "fit_min_waist", "fit_max_waist", "purposes", "clothing_area_ratio", "clothing_completeness_ratio".
-                        - "rejection_reason": (string or null) This is the MOST IMPORTANT field. Critically evaluate whether the image is suitable for clothing registration. If it should be REJECTED, provide EXACTLY one of these values (be strict — when in doubt, reject): "not_wearable" (image does not clearly show a wearable item as its main subject — includes: people photos where clothing is not the focus, food, animals, scenery, furniture, screenshots, memes, backgrounds, documents, body parts without clothing, accessories like jewelry that are not worn items), "too_small" (a clothing item is visible but occupies less than 15% of the image area — too much empty space around a tiny clothing item, person standing very far away, or the item is just a small part of a larger scene), "too_cropped" (a clothing item is visible but less than 30% of the full garment is shown — e.g. only a collar, one sleeve, or just the hem), "too_zoomed" (the clothing item fills more than 92% of the image with almost no margin/whitespace around it — the item is so zoomed in that you cannot see its full outline with some breathing room). Set to null ONLY when: the image clearly shows a wearable clothing item that occupies roughly 15-92% of the image area with most of the item visible.
+                        - "rejection_reason": (string or null) This is the MOST IMPORTANT field. Critically evaluate whether the image is suitable for clothing registration. If it should be REJECTED, provide EXACTLY one of these values (be strict — when in doubt, reject): "not_wearable" (image does not clearly show a wearable item as its main subject — includes: people photos where clothing is not the focus, food, animals, scenery, furniture, screenshots, memes, backgrounds, documents, body parts without clothing, accessories like jewelry that are not worn items), "too_small" (a clothing item is visible but occupies less than 10% of the image area — e.g. tiny item in background, person standing far away), "too_cropped" (a clothing item is visible but less than 30% of the full garment is shown — e.g. only a collar, one sleeve, or just the hem). Set to null ONLY when: the image clearly and unambiguously shows a single wearable clothing item or accessory as its main subject, it fills a reasonable portion of the frame, and most of the item is visible.
                         - "is_wearable": (boolean) True only if the image clearly shows a wearable clothing item or accessory as its main subject. False for people photos, food, scenery, or any non-clothing content.
                         - "category": (string) If wearable, one of '상의', '하의', '아우터', '신발', '가방', '모자', '기타'.
                         - "color_hex": (string) If wearable, the dominant color of the item as a hex string.
@@ -377,7 +359,7 @@ class BatchAddWorker(private val context: Context, workerParams: WorkerParameter
                         - "fit_min_waist": (double or null) Minimum waist circumference in cm that this item fits (e.g., 68.0). Use null ONLY for items where the waistline is irrelevant (oversized tops, shoes, bags, hats, loose jackets). Bottoms and fitted tops MUST have a value.
                         - "fit_max_waist": (double or null) Maximum waist circumference in cm that this item fits (e.g., 88.0). Follow the same rule as fit_min_waist.
                         - "purposes": (array of strings) If wearable, select the 1 or 2 MOST suitable purposes from this list: [$purposeListStr]. Pick only the best fitting ones. Maximum 2 purposes per item.
-                        - "clothing_area_ratio": (double) Estimate the fraction (0.0 to 1.0) of the total image area occupied by the main clothing item. Be precise: a small item with lots of background should be 0.05-0.15, a normal product photo should be 0.3-0.7, and a very zoomed-in item filling the frame should be 0.85-0.98.
+                        - "clothing_area_ratio": (double) Estimate the fraction (0.0 to 1.0) of the total image area occupied by the main clothing item.
                         - "clothing_completeness_ratio": (double) Estimate the fraction (0.0 to 1.0) of the FULL clothing item that is actually visible in the image.
                         Estimate the body size range this clothing would fit. Keep ranges NARROW and realistic — do NOT use overly wide ranges. Base on visual cues: size labels, proportions, material stretch. A typical single-size garment should span about 10-15cm in height range and 10-15kg in weight range. Waist range should be the user's waist circumference, not the garment's flat measurement.
                     """.trimIndent())
