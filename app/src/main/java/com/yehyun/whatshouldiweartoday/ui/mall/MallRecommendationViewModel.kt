@@ -80,7 +80,7 @@ class MallRecommendationViewModel(application: Application) : AndroidViewModel(a
                     item.fitMinWeight, item.fitMaxWeight,
                     item.fitMinWaist, item.fitMaxWaist
                 )
-                return level != AddClothingViewModel.FIT_BAD && level != AddClothingViewModel.FIT_VERY_BAD
+                return level != AddClothingViewModel.FIT_BAD
             }
 
             fun purposeScore(item: MallItem): Int {

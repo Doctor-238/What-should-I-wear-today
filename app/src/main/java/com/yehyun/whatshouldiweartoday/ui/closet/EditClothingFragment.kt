@@ -551,9 +551,8 @@ class EditClothingFragment : Fragment(R.layout.fragment_edit_clothing), OnTabRes
         if (userIdx < 0 || itemIdx < 0) return
         val diff = kotlin.math.abs(userIdx - itemIdx)
         val level = when (diff) {
-            0 -> AddClothingViewModel.FIT_VERY_GOOD
-            1 -> AddClothingViewModel.FIT_GOOD
-            2 -> AddClothingViewModel.FIT_NORMAL
+            0 -> AddClothingViewModel.FIT_GOOD
+            1 -> AddClothingViewModel.FIT_NORMAL
             else -> AddClothingViewModel.FIT_BAD
         }
         tvEditFitLevel.text = level

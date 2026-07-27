@@ -492,9 +492,9 @@ class AddClothingFragment : Fragment(R.layout.fragment_add_clothing), OnTabResel
     companion object {
         fun fitLevelColorRes(level: String): Int {
             return when (level) {
-                AddClothingViewModel.FIT_VERY_GOOD, AddClothingViewModel.FIT_GOOD -> R.color.fit_green
+                AddClothingViewModel.FIT_GOOD -> R.color.fit_green
                 AddClothingViewModel.FIT_NORMAL -> R.color.text_secondary
-                AddClothingViewModel.FIT_BAD, AddClothingViewModel.FIT_VERY_BAD -> R.color.fit_red
+                AddClothingViewModel.FIT_BAD -> R.color.fit_red
                 else -> R.color.text_tertiary
             }
         }

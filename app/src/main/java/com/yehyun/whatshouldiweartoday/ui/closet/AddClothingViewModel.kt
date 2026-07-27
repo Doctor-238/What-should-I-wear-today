@@ -124,10 +124,9 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
         _isAiAnalyzing.value = true
 
         viewModelScope.launch {
-            val analysisJob = async(Dispatchers.IO) { analyzeImageWithRetry(trimmed) }
             val hashJob = async(Dispatchers.IO) { computePerceptualHash(trimmed) }
-            processedImageJob = async(Dispatchers.IO) { createProcessedBitmap(trimmed) }
-            originalImageJob = async(Dispatchers.Default) { trimmed }
+            // Run segmentation early to compute foreground ratio for image validation
+            val segmentationJob = async(Dispatchers.IO) { runSegmentation(trimmed) }
 
             currentImageHash = hashJob.await()
 
@@ -135,7 +134,6 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
                 AppDatabase.getDatabase(getApplication()).clothingDao().getAllImageHashes()
             }
             if (existingHashes.any { hammingDistance(currentImageHash!!, it) <= PERCEPTUAL_HASH_THRESHOLD }) {
-                analysisJob.cancel()
                 withContext(Dispatchers.Main) {
                     _isAiAnalyzing.value = false
                     _errorMessage.value = "이미 옷장에 등록된 사진입니다."
@@ -144,7 +142,28 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
                 return@launch
             }
 
-            val result = analysisJob.await()
+            // Get segmentation result and compute foreground ratio
+            val segResult = segmentationJob.await()
+            val fgRatio = segResult?.foregroundRatio ?: -1.0
+
+            // Validate image based on foreground ratio from segmentation
+            if (fgRatio >= 0) {
+                if (fgRatio > 0.92 || fgRatio < 0.15) {
+                    withContext(Dispatchers.Main) {
+                        _isAiAnalyzing.value = false
+                        _errorMessage.value = "이미지의 비율이 적합하지 않습니다."
+                        resetAllState()
+                    }
+                    return@launch
+                }
+            }
+
+            // Store processed bitmap from segmentation
+            processedImageJob = async(Dispatchers.Default) { segResult?.processedBitmap }
+            originalImageJob = async(Dispatchers.Default) { trimmed }
+
+            // Now run AI analysis
+            val result = withContext(Dispatchers.IO) { analyzeImageWithRetry(trimmed) }
             _isAiAnalyzing.postValue(false)
 
             if (result == null) {
@@ -155,8 +174,7 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
             } else if (result.rejection_reason != null) {
                 val message = when (result.rejection_reason) {
                     "not_wearable" -> "의류가 감지되지 않았습니다. 의류 사진을 사용해주세요."
-                    "too_small" -> "의류가 너무 작거나 일부만 보입니다.\n의류 전체가 잘 보이는 사진을 사용해주세요."
-                    "too_cropped" -> "옷의 일부분만 보입니다.\n옷 전체가 나온 사진을 사용해주세요."
+                    "too_small", "too_cropped", "too_zoomed" -> "이미지의 비율이 적합하지 않습니다."
                     else -> "적합하지 않은 이미지입니다. 다른 사진을 사용해주세요."
                 }
                 withContext(Dispatchers.Main) {
@@ -166,16 +184,6 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
             } else if (!result.is_wearable) {
                 withContext(Dispatchers.Main) {
                     _errorMessage.value = "의류가 감지되지 않았습니다. 의류 사진을 사용해주세요."
-                    resetAllState()
-                }
-            } else if ((result.clothing_area_ratio ?: 1.0) < 0.1) {
-                withContext(Dispatchers.Main) {
-                    _errorMessage.value = "의류가 너무 작거나 일부만 보입니다.\n의류 전체가 잘 보이는 사진을 사용해주세요."
-                    resetAllState()
-                }
-            } else if ((result.clothing_completeness_ratio ?: 1.0) < 0.3) {
-                withContext(Dispatchers.Main) {
-                    _errorMessage.value = "옷의 일부분만 보입니다.\n옷 전체가 나온 사진을 사용해주세요."
                     resetAllState()
                 }
             } else {
@@ -189,6 +197,40 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
                     isImageProcessing = false
                 }
             }
+        }
+    }
+
+    private data class SegmentationResult(
+        val processedBitmap: Bitmap?,
+        val foregroundRatio: Double
+    )
+
+    private suspend fun runSegmentation(bitmap: Bitmap): SegmentationResult? {
+        return try {
+            val segmenter = Segmentation.getClient(
+                SelfieSegmenterOptions.Builder()
+                    .setDetectorMode(SelfieSegmenterOptions.SINGLE_IMAGE_MODE)
+                    .build()
+            )
+            val mask = segmenter.process(InputImage.fromBitmap(bitmap, 0)).await()
+            if (mask != null) {
+                val sensitivity = settingsManager.getBackgroundSensitivityValue()
+                val n = mask.width * mask.height
+                val buf = mask.buffer
+                var fgCount = 0
+                for (i in 0 until n) {
+                    if (buf.float > sensitivity) fgCount++
+                }
+                buf.rewind()
+                val ratio = fgCount.toDouble() / n.toDouble()
+                val processedBitmap = createBitmapWithMask(bitmap, mask)
+                SegmentationResult(processedBitmap, ratio)
+            } else {
+                null
+            }
+        } catch (e: Exception) {
+            Log.e("AddClothingVM", "Segmentation failed", e)
+            null
         }
     }
 
@@ -307,21 +349,21 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
                         You are a Precise Climate & Fashion Analyst for Korean weather.
                         Your task is to analyze the clothing item in the image and provide a detailed analysis in a strict JSON format, without any additional text or explanations.
                         Your JSON response MUST contain ONLY the following keys: "is_wearable", "rejection_reason", "category", "suitable_temperature", "color_hex", "fit_min_height", "fit_max_height", "fit_min_weight", "fit_max_weight", "fit_min_waist", "fit_max_waist", "purposes", "clothing_area_ratio", "clothing_completeness_ratio".
-                        - "rejection_reason": (string or null) This is the MOST IMPORTANT field. Critically evaluate whether the image is suitable for clothing registration. If it should be REJECTED, provide EXACTLY one of these values (be strict — when in doubt, reject): "not_wearable" (image does not clearly show a wearable item as its main subject — includes: people photos where clothing is not the focus, food, animals, scenery, furniture, screenshots, memes, backgrounds, documents, body parts without clothing, accessories like jewelry that are not worn items), "too_small" (a clothing item is visible but occupies less than 10% of the image area — e.g. tiny item in background, person standing far away), "too_cropped" (a clothing item is visible but less than 30% of the full garment is shown — e.g. only a collar, one sleeve, or just the hem). Set to null ONLY when: the image clearly and unambiguously shows a single wearable clothing item or accessory as its main subject, it fills a reasonable portion of the frame, and most of the item is visible.
+                        - "rejection_reason": (string or null) This is the MOST IMPORTANT field. Critically evaluate whether the image is suitable for clothing registration. If it should be REJECTED, provide EXACTLY one of these values (be strict — when in doubt, reject): "not_wearable" (image does not clearly show a wearable item as its main subject — includes: people photos where clothing is not the focus, food, animals, scenery, furniture, screenshots, memes, backgrounds, documents, body parts without clothing, accessories like jewelry that are not worn items), "too_small" (a clothing item is visible but occupies less than 15% of the image area — too much empty space around a tiny clothing item, person standing very far away, or the item is just a small part of a larger scene), "too_cropped" (a clothing item is visible but less than 30% of the full garment is shown — e.g. only a collar, one sleeve, or just the hem), "too_zoomed" (the clothing item fills more than 92% of the image with almost no margin/whitespace around it — the item is so zoomed in that you cannot see its full outline with some breathing room). Set to null ONLY when: the image clearly shows a wearable clothing item that occupies roughly 15-92% of the image area with most of the item visible.
                         - "is_wearable": (boolean) True only if the image clearly shows a wearable clothing item or accessory as its main subject. False for people photos, food, scenery, or any non-clothing content.
                         - "category": (string) If wearable, one of '상의', '하의', '아우터', '신발', '가방', '모자', '기타'.
                         - "color_hex": (string) If wearable, the dominant color of the item as a hex string.
                         - "suitable_temperature": (double) If wearable, this is the most important. Estimate the MAXIMUM comfortable temperature for this item. The value can be negative for winter clothing. You MUST provide a specific, non-round number with one decimal place (e.g., 23.5, 8.0, -2.5). A generic integer like 15.0 is a bad response. Base your judgment on the visual evidence of material, thickness, and design.
-                        - "fit_min_height": (double) Minimum height in cm for wearing this item (e.g., 155.0).
-                        - "fit_max_height": (double) Maximum height in cm for wearing this item (e.g., 180.0).
-                        - "fit_min_weight": (double) Minimum weight in kg for wearing this item (e.g., 45.0).
-                        - "fit_max_weight": (double) Maximum weight in kg for wearing this item (e.g., 75.0).
+                        - "fit_min_height": (double) Minimum height in cm for wearing this item (e.g., 155.0). Set a TIGHT, REALISTIC range based on the actual garment size. Do NOT default to wide ranges like 150-190. A small women's top should be 150-165, a large men's jacket should be 175-190.
+                        - "fit_max_height": (double) Maximum height in cm for wearing this item (e.g., 180.0). Keep ranges narrow and realistic.
+                        - "fit_min_weight": (double) Minimum weight in kg for wearing this item (e.g., 45.0). Set a TIGHT, REALISTIC range. A small women's top should be 42-55, a large men's jacket should be 70-90.
+                        - "fit_max_weight": (double) Maximum weight in kg for wearing this item (e.g., 75.0). Keep ranges narrow and realistic.
                         - "fit_min_waist": (double or null) Minimum waist circumference in cm that this item fits (e.g., 68.0). Use null ONLY for items where the waistline is irrelevant (oversized tops, shoes, bags, hats, loose jackets). Bottoms and fitted tops MUST have a value.
                         - "fit_max_waist": (double or null) Maximum waist circumference in cm that this item fits (e.g., 88.0). Follow the same rule as fit_min_waist.
                         - "purposes": (array of strings) If wearable, select the 1 or 2 MOST suitable purposes from this list: [$purposeListStr]. Pick only the best fitting ones. Maximum 2 purposes per item.
-                        - "clothing_area_ratio": (double) Estimate the fraction (0.0 to 1.0) of the total image area occupied by the main clothing item.
+                        - "clothing_area_ratio": (double) Estimate the fraction (0.0 to 1.0) of the total image area occupied by the main clothing item. Be precise: a small item with lots of background should be 0.05-0.15, a normal product photo should be 0.3-0.7, and a very zoomed-in item filling the frame should be 0.85-0.98.
                         - "clothing_completeness_ratio": (double) Estimate the fraction (0.0 to 1.0) of the FULL clothing item that is actually visible in the image.
-                        Estimate the body size range this clothing would fit. For free-size/stretchy items, use wider ranges. Base on visual cues: size labels, proportions, material stretch. Waist range should be the user's waist circumference, not the garment's flat measurement.
+                        Estimate the body size range this clothing would fit. Keep ranges NARROW and realistic — do NOT use overly wide ranges. Base on visual cues: size labels, proportions, material stretch. A typical single-size garment should span about 10-15cm in height range and 10-15kg in weight range. Waist range should be the user's waist circumference, not the garment's flat measurement.
                     """.trimIndent())
                 }
                 val response = generativeModel!!.generateContent(inputContent)
@@ -476,74 +518,57 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
     }
 
     companion object {
-        const val FIT_VERY_GOOD = "매우 적합"
         const val FIT_GOOD = "적합"
         const val FIT_NORMAL = "보통"
         const val FIT_BAD = "맞지않음"
-        const val FIT_VERY_BAD = "매우 맞지않음"
         const val FIT_NO_INFO = "정보 없음"
 
-        // Score a single body axis: 4 = inner band (매우 적합), 3 = within range,
-        // 2 = within ~5 units of range, 1 = within ~10 units, 0 = far off.
+        // Score a single body axis: 2 = within range (적합),
+        // 1 = within nearMargin of range (보통), 0 = outside (맞지않음).
         // Returns null if the clothing does not define this axis (treat as neutral).
-        private fun axisScore(userValue: Double, min: Double?, max: Double?, nearMargin: Double, farMargin: Double): Int? {
+        private fun axisScore(userValue: Double, min: Double?, max: Double?, nearMargin: Double): Int? {
             if (min == null || max == null) return null
-            val range = max - min
-            val shrink = range * 0.15
             return when {
-                userValue in (min + shrink)..(max - shrink) -> 4
-                userValue in min..max -> 3
-                userValue in (min - nearMargin)..(max + nearMargin) -> 2
-                userValue in (min - farMargin)..(max + farMargin) -> 1
+                userValue in min..max -> 2
+                userValue in (min - nearMargin)..(max + nearMargin) -> 1
                 else -> 0
             }
         }
 
-        // Weighted fit level. Height and weight are primary (weight 0.4 each),
-        // waist is supplementary (0.2) and only counts when both the user has
-        // registered a waist AND the clothing defines a waist range.
-        // If only one of those holds, waist is skipped and height/weight renormalize to 0.5 each.
+        // 3-level fit evaluation. Any axis scoring 0 (outside nearMargin)
+        // immediately results in "맞지않음". All axes within range = "적합".
+        // Otherwise "보통".
         fun calculateFitLevel(
             userHeight: Float, userWeight: Float, userWaist: Float,
             minH: Double?, maxH: Double?,
             minW: Double?, maxW: Double?,
             minWaist: Double?, maxWaist: Double?
         ): String {
-            val hScore = axisScore(userHeight.toDouble(), minH, maxH, 5.0, 10.0)
-            val wScore = axisScore(userWeight.toDouble(), minW, maxW, 5.0, 10.0)
+            val hScore = axisScore(userHeight.toDouble(), minH, maxH, 3.0)
+            val wScore = axisScore(userWeight.toDouble(), minW, maxW, 3.0)
             if (hScore == null || wScore == null) return FIT_NO_INFO
 
             val waistKnown = userWaist > 0f
-            val waistScore = if (waistKnown) axisScore(userWaist.toDouble(), minWaist, maxWaist, 4.0, 8.0) else null
+            val waistScore = if (waistKnown) axisScore(userWaist.toDouble(), minWaist, maxWaist, 3.0) else null
 
-            val combined = if (waistScore != null) {
-                hScore * 0.4 + wScore * 0.4 + waistScore * 0.2
-            } else {
-                hScore * 0.5 + wScore * 0.5
-            }
+            // Any axis outside nearMargin → 맞지않음
+            if (hScore == 0 || wScore == 0) return FIT_BAD
+            if (waistScore != null && waistScore == 0) return FIT_BAD
 
-            // Gate the top band so that both primary axes are at least within-range.
-            val primaryInRange = hScore >= 3 && wScore >= 3
-            // Waist being very wrong should pull down "매우 적합" but not dominate.
-            val waistBad = waistScore != null && waistScore <= 1
+            // All axes within range → 적합
+            val allInRange = hScore == 2 && wScore == 2 && (waistScore == null || waistScore == 2)
+            if (allInRange) return FIT_GOOD
 
-        return when {
-            combined >= 3.7 && primaryInRange && !waistBad -> FIT_VERY_GOOD
-                combined >= 3.0 && primaryInRange -> FIT_GOOD
-                combined >= 2.0 -> FIT_NORMAL
-                combined >= 1.0 -> FIT_BAD
-                else -> FIT_VERY_BAD
-            }
+            // Otherwise → 보통
+            return FIT_NORMAL
         }
 
         fun fitLevelToOrder(level: String): Int {
             return when (level) {
-                FIT_VERY_GOOD -> 0
-                FIT_GOOD -> 1
-                FIT_NORMAL -> 2
-                FIT_BAD -> 3
-                FIT_VERY_BAD -> 4
-                else -> 5
+                FIT_GOOD -> 0
+                FIT_NORMAL -> 1
+                FIT_BAD -> 2
+                else -> 3
             }
         }
 
@@ -632,17 +657,17 @@ class AddClothingViewModel(application: Application) : AndroidViewModel(applicat
                     val maxH = fitMaxHeight ?: return null
                     val minW = fitMinWeight ?: return null
                     val maxW = fitMaxWeight ?: return null
-                    val h = minH + (maxH - minH) * 0.20
-                    val w = minW + (maxW - minW) * 0.20
+                    val h = minH + (maxH - minH) * 0.40
+                    val w = minW + (maxW - minW) * 0.40
                     if (notationType == com.yehyun.whatshouldiweartoday.data.preference.SettingsManager.SIZE_NOTATION_NUMERIC)
                         topNumericSize(h, w) else topLetterSize(h, w)
                 }
                 category == "하의" -> {
                     val waist = if (fitMinWaist != null && fitMaxWaist != null)
-                        fitMinWaist + (fitMaxWaist - fitMinWaist) * 0.20 else null
+                        fitMinWaist + (fitMaxWaist - fitMinWaist) * 0.40 else null
                     val minW = fitMinWeight ?: return null
                     val maxW = fitMaxWeight ?: return null
-                    val w = minW + (maxW - minW) * 0.20
+                    val w = minW + (maxW - minW) * 0.40
                     if (notationType == com.yehyun.whatshouldiweartoday.data.preference.SettingsManager.SIZE_NOTATION_NUMERIC)
                         bottomNumericSize(w, waist) else bottomLetterSize(w, waist)
                 }

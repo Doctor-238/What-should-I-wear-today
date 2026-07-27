@@ -119,9 +119,9 @@ class RecommendationAdapter(
                 item.fitMinWaist, item.fitMaxWaist
             )
             return when (level) {
-                AddClothingViewModel.FIT_VERY_GOOD, AddClothingViewModel.FIT_GOOD ->
+                AddClothingViewModel.FIT_GOOD ->
                     ContextCompat.getColor(context, R.color.fit_green)
-                AddClothingViewModel.FIT_BAD, AddClothingViewModel.FIT_VERY_BAD ->
+                AddClothingViewModel.FIT_BAD ->
                     ContextCompat.getColor(context, R.color.fit_red)
                 else -> defaultColor
             }
